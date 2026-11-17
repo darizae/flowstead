@@ -1,6 +1,6 @@
-# Flowstead — proposed implementation sequence (planning-only PR)
+# Flowstead — canonical implementation sequence
 
-**Owner approved publication of this planning-only PR on 2026-11-17; NO executable task or local implementation has been authorized by that approval.** Existing `main` remains authoritative until this PR is separately reviewed and merged. One assigned task at a time per repository. The control plane may queue only an owner-released task with exact commit and preflight, then pauses for normal-chat ChatGPT PR review (`waiting_chat`) before dependent merges. M0 is DONE; never requeue it. No AWS, S3, object store, 24-hour soak or independently created planning queue.
+**Owner approved publication and review of the planning backlog on 2026-11-17; NO executable task or local implementation has been authorized by that approval.** Only content merged to `main` becomes authoritative. One assigned task at a time per repository. The control plane may queue only an owner-released task with exact commit and preflight, then pauses for normal-chat ChatGPT PR review (`waiting_chat`) before dependent merges. M0 is DONE; never requeue it. No AWS, S3, object store, 24-hour soak or independently created planning queue.
 
 ## Cross-repository stage and application tasks
 
@@ -37,4 +37,4 @@
 
 ## Completion rules
 
-The owner-approved planning-only PR is **NOT** approval to queue any task. Before promotion to READY, verify current repo manifests/locks and the named paths, matching model/effort runner config, allowed dependency/manifest/justfile closure, actual local commands, owner gate and exact current base SHA. Status changes follow evidence, not task creation. Each meaningful milestone ends with explicit Markdown/routing hygiene (006, 013, 018). Original approved product scope remains [`IMPLEMENTATION_SPEC.md`](IMPLEMENTATION_SPEC.md); this is the detailed downstream implementation order.
+Owner approval and merge of planning documentation is **NOT** approval to queue any task. Before promotion to READY, verify current repo manifests/locks and the named paths, matching model/effort runner config, allowed dependency/manifest/justfile closure, actual local commands, owner gate and exact current base SHA. Status changes follow evidence, not task creation. Each meaningful milestone ends with explicit Markdown/routing hygiene (006, 013, 018). Original approved product scope remains [`IMPLEMENTATION_SPEC.md`](IMPLEMENTATION_SPEC.md); this is the detailed downstream implementation order.
