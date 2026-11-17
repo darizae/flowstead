@@ -8,10 +8,10 @@
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
 
-Owning context: App migrations, importer, Auth verifier, owner-approved local smoke checks and `docs/setup/SUPABASE_DEVELOPMENT_ACCESS.md`; current Supabase published Auth/database security docs. Never read private passwords from repo.
+Owning context: the actual app **Alembic** revision chain, immutable importer, NATS job schema and Auth verifier, owner-approved local smoke checks and `docs/setup/SUPABASE_DEVELOPMENT_ACCESS.md`; current Supabase published Auth/database security docs. Never read private passwords from repo.
 
 ## Observable result and scope
-Run reviewed SQL migrations against the **existing** project only after owner grants write scope, confirm dedicated non-exposed `app` schema/limited roles/RLS on any exposed tables, import at most approved M1 synthetic records with exact digest, configure Auth for invite-only in reviewed settings and validate one or two owner-provided demo identities restricted to disjoint Plant IDs (if explicit invitation approval given). Smoke JWT signature/issuer/audience/JWKS or verified fallback, login/expiry and SQL 401/404, public endpoint only if allowed. Use environment-specific connection choice (IPv6 direct vs IPv4 session pooler), server-side secret storage, connection caps/timeouts and cleanup/backup/reseed. No destructive reset of existing unrelated schemas or other data.
+Run reviewed **Alembic upgrade-to-head** migrations against the **existing** project only after owner grants write scope, confirm dedicated non-exposed `app` schema/limited roles/RLS on any exposed tables, import at most approved M1 synthetic records with exact digest, configure Auth for invite-only in reviewed settings and validate one or two owner-provided demo identities restricted to disjoint Plant IDs (if explicit invitation approval given). Smoke JWT signature/issuer/audience/JWKS or verified fallback, login/expiry and SQL 401/404, public endpoint only if allowed. Use environment-specific connection choice (IPv6 direct vs IPv4 session pooler), server-side secret storage, connection caps/timeouts and cleanup/backup/reseed. No destructive reset of existing unrelated schemas or other data.
 
 
 
@@ -19,6 +19,8 @@ Run reviewed SQL migrations against the **existing** project only after owner gr
 No new library by default; use existing app `uv.lock`, test harness and Supabase official auth provider. Any required SQL/role changes need explicit reviewed migration files in this task scope and owner-approved write receipt. Service-role/admin secret may be used only out of band for authorized one-time Auth invitations, never in app/frontend/Git.
 
 Allowed create/edit paths: `backend/migrations/**`, `backend/src/flowstead_api/**` only for provider-specific fixes, `backend/tests/**`, `docs/setup/**`, `.env.example`, `justfile` only for explicit `dev-smoke` command, `README.md`. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+
+Cloud DB test cases must confirm the real Alembic version/revisions match local source and preserve previously seeded data; local NATS operation is **not** permission to provision a hosted broker. Use indexed plan/data guide and exact Case IDs in asserting tests.
 
 ## Test-first acceptance
 - `CLOUD-M14-SCOPE`: project ref verified and only authorized app schema objects/data touched; pre-change schema snapshot/backup recorded.
