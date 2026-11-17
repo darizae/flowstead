@@ -1,6 +1,6 @@
 # Flowstead — UI/UX parity matrix
 
-**Session-state storyboard and v2 direction:** OWNER APPROVED 2026-11-17; H-10 live map/PDF and visual reference remain pending; private original `flowstead_ui_v2.html` exists in Software Planner Kit, not reproduced here. Owner-reviewed screenshots/HTML must be made accessible through an approved repo-local reference path before UI task 007. **All rows UNVERIFIED by default.** Baseline: [UI_UX_BASELINE.md](UI_UX_BASELINE.md).
+**Session-state storyboard and v2 direction:** OWNER APPROVED 2026-11-17. OMP should produce and inspect real map tiles/marker interaction, an openable PDF and desktop/mobile visual references **during implementation tasks 007–012**, not demand screenshots before task 007. The private original `flowstead_ui_v2.html` remains in Software Planner Kit and is not copied into the app repo. **All parity rows remain UNVERIFIED until checked in a real browser/PDF.** Baseline: [UI_UX_BASELINE.md](UI_UX_BASELINE.md).
 
 | Flow / screen + state | Approved baseline and copy/hierarchy | Interaction, navigation and retained state | Size/accessibility & evidence | Status |
 | --- | --- | --- | --- | --- |

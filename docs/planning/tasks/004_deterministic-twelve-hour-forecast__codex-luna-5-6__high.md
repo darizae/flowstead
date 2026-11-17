@@ -1,6 +1,6 @@
 # T-004 — twelve-hour deterministic influent-flow baseline
 
-**Status:** DRAFT — proposed approval (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 003 API and 002 readings are locally verified. Forecast evaluation uses only fixed synthetic data; it cannot demonstrate field accuracy. Do not wire a scheduled cloud job.
@@ -18,7 +18,7 @@ Algorithm: seasonal-naive uses the valid flow at `target_time - 24h` if observed
 ## Dependencies and allowed file closure
 Use Python standard library + existing numeric/Python backend dependencies only unless an explicitly justified package needs authorization and owning `backend/pyproject.toml` + `backend/uv.lock` changes are included. Do not require NumPy, sklearn, task queue or GPU.
 
-Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/migrations/**`, `backend/pyproject.toml`, `backend/uv.lock` only for justified install, `justfile`, `README.md`. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/migrations/**`, `backend/pyproject.toml`, `backend/uv.lock` only for justified install, `justfile`, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `UT-M4-HORIZON`: exactly 12 ordered hour-aligned UTC targets with no duplicate and correct units/version.
@@ -35,4 +35,4 @@ Stop on change to measurement semantics/forecast horizon. Owner only reviews use
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP owns independent PR review and acceptance synchronization as a control-plane follow-up; do not delay this task's implementation waiting for that upgrade. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
