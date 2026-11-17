@@ -1,6 +1,6 @@
 # Flowstead UI/UX baseline — session storyboard approved, live evidence pending
 
-**Status:** Owner approved the v2-derived session-state storyboard and existing v2 visual direction on 2026-11-17. **H-10 remains PARTIALLY OPEN for actual connected-browser tiles/marker navigation, an openable PDF export and approved repo-accessible visual reference** before UI task 007 becomes eligible. This Markdown is not a substitute for a reviewed visual reference.
+**Status:** Owner approved the v2-derived session-state storyboard and existing v2 visual direction on 2026-11-17. **The v2 visual direction and auth-state storyboard are already owner-approved.** Real tile/marker walkthroughs, an openable PDF and inspectable responsive references are **evidence to generate and test during UI implementation (tasks 007–012)**, not a separate prerequisite to starting React work. This Markdown is not a substitute for a reviewed visual reference.
 
 ## User journeys
 
@@ -31,4 +31,4 @@ User-facing terms: **Plants, Plant list, Florida map, All plants, Measurement hi
 
 ## H-10 proof and deviations
 
-The preceding session-state storyboard is **approved as design direction**. Before task 007, ChatGPT must still review an actual browser run of real Florida tiles/markers, an actual downloadable/openable PDF sample, and desktop/mobile visual reference export; record explicit owner acceptance or required corrections. Unverified/deviating UI elements remain blocked. Later UI tasks must update [`UI_UX_PARITY_MATRIX.md`](UI_UX_PARITY_MATRIX.md) with real browser evidence, not just selector tests.
+The preceding session-state storyboard is **approved as design direction**. During tasks 007–012, OMP must produce and check an actual browser run with Florida tiles/markers, an openable/downloadable PDF and desktop/mobile screenshots. Record deviations and fixes against the approved v2 design. Unverified visual parity blocks **final UI acceptance**, not starting implementation. Later UI tasks must update [`UI_UX_PARITY_MATRIX.md`](UI_UX_PARITY_MATRIX.md) with real browser evidence, not just selector tests.
