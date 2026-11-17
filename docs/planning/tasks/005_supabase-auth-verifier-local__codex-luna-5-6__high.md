@@ -20,6 +20,10 @@ Approve required `PyJWT[crypto]`, `httpx` if absent, and tests in `backend/pypro
 
 Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `justfile`, `.env.example`, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
+## Reference-derived auth and integration boundaries
+
+Use the **existing** `backend/src/flowstead_api/auth.py`, `database.py`, `models.py` and `main.py` as the migration baseline. Adapt the **typed principal dependency / structured unauthorized error** concept visible in `toolkit.zip`'s FasterAPI and the **owned disjoint-client fixture** concept from `integration_tests.zip`; do **not** port their external AuthStub service, cookies/session middleware, NATS bus or new package workspace. Keep FastAPI identity verification separate from PostgreSQL Plant assignment checks, with a single explicit config-dependent production/test mode boundary. `analysis_b.zip`'s source/UI patterns may inform structure but are not provider or security authority. Test failure paths first where practical and run genuine local PostgreSQL tests for A-vs-B access with signed JWT/JWKS fixtures. Do not infer hosted Supabase validation from an offline test.
+
 ## Test-first acceptance
 - `UT-M5-JWT`: signed valid local JWKS passes; forged/wrong issuer/wrong audience/expired/unsigned/unknown `kid` rejected; rotations and cache expiry proven.
 - `UT-M5-FAIL`: JWKS/unavailable Auth endpoint/timeout fails closed; no secret-bearing logs.
