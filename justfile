@@ -3,7 +3,7 @@
 set dotenv-load := true
 
 db-up:
-    docker compose up -d db
+    python3 backend/tests/db_lifecycle.py
 
 db-down:
     docker compose down
@@ -26,7 +26,7 @@ test-forecast-unit:
     uv run --project backend pytest -q backend/tests/unit/test_forecast.py
 
 test-forecast-integration:
-    docker compose up -d db
+    python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_forecast.py
 
 check-backend:
@@ -36,7 +36,7 @@ test-backend-unit:
     uv run --project backend pytest -q backend/tests/unit
 
 test-db-integration:
-    docker compose up -d db
+    python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration
 
 audit-backend:
@@ -52,7 +52,7 @@ test-api-unit:
     uv run --project backend pytest -q backend/tests/unit/test_api_contract.py
 
 test-api-integration:
-    docker compose up -d db
+    python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_api.py
 
 default:
