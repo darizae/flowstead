@@ -3,7 +3,7 @@
 **Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
-003/004/005 API policy and 008/009 UI data views approved. Owner delegated detailed PDF aesthetics; OMP produces and visually inspects a real sample against the approved presentation contract. An owner can review the final public presentation, not every local implementation step. No public/regulatory/compliance claim.
+003/004/005 API policy and 008/009 UI data views approved. Owner delegated routine local PDF aesthetics under the approved presentation contract: OMP **generates and opens** a real synthetic PDF, while ordinary **ChatGPT normal chat independently inspects** its visual evidence and code as part of PR acceptance. The owner can separately accept final public presentation; do not require repeated owner intervention for every local PDF iteration. No public/regulatory/compliance claim.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -35,7 +35,7 @@ Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `
 ## Local verification, gates and stopping condition
 Add `just test-report` and run focused backend unit + local PG authorization tests, **`just test-e2e-local` for actual PDF request/download/open at 1330px and 390px**, `uv audit --project backend` after new dependency and final head receipt.
 
-A PDF-text test does not satisfy aesthetic owner review. Record visual gate as BLOCKED until sample approved.
+A PDF-text test does not satisfy visual acceptance. Keep **local PDF visual review PENDING/UNVERIFIED** until an actual generated/opened sample is inspected by independent normal ChatGPT chat in the Loop OMP review, with source and image/PDF evidence. Owner final public-presentation signoff remains a separate release gate; do not block ordinary local iterations waiting for a manual owner message.
 
 
 
