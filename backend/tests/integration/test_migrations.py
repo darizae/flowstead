@@ -32,7 +32,7 @@ def _historical_upgrade() -> None:
     with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
         with connection.transaction():
             connection.execute(
-                "CREATE TABLE public.schema_migrations ("
+                "CREATE TABLE IF NOT EXISTS public.schema_migrations ("
                 "version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()"
                 ")"
             )
