@@ -1,6 +1,6 @@
 # T-012 — local MVP security, UX and recovery acceptance
 
-**Status:** DRAFT — proposed approval (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — prerequisite preflight (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 007–011 implemented and integrated; backend 002–005 functioning with local PostgreSQL, deterministic offline JWKS/test principals. Owner H-10 visual direction approved and export sample available. Hosted Auth and public deployment are separate future gates.
@@ -18,7 +18,7 @@ Run a reproducible local full-journey gate (not ordinary edit loop): database re
 ## Dependencies and allowed file closure
 Use existing test libraries and Playwright (if absent, authorize compatible `@playwright/test` dev dependency in `frontend/package.json` + generated lockfile; browser binaries installed only on Mac). No optional cloud CI/soak. If a proposed dependency security remediation requires major-version updates, authorize within approved task only after planner confirms impact; don't silently suppress advisories.
 
-Allowed create/edit paths: `backend/**`, `frontend/**`, `compose.yml`, `justfile`, `README.md`, `.env.example`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/agent/ROUTING.md` directly affected rows and checked docs. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/**`, `frontend/**`, `compose.yml`, `justfile`, `README.md`, `.env.example`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/agent/ROUTING.md` directly affected rows and checked docs. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `E2E-M12-PATH`: public view/list/map; user A list/history/12h/download; user B denied A; 401/404 states; logout cache clear and no JS leaks.
@@ -36,4 +36,4 @@ Do not label live Supabase Auth or hosted recoverability verified in this local 
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
