@@ -3,7 +3,7 @@
 **Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
-003 local authorizer exists. This task needs no live project write and may proceed with configured local mock/JWKS fixtures; live validation is separately 014. Auth endpoint and public access must remain deny-by-default until configured.
+003 local authorizer exists, and D-045 T-004a Alembic / T-004b NATS local successors must first have their actual reviewed/merged receipts. This task needs no live project write and may proceed with configured local mock/JWKS fixtures; live validation is separately 014. Auth endpoint and public access must remain deny-by-default until configured.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -22,7 +22,9 @@ Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `
 
 ## Reference-derived auth and integration boundaries
 
-Use the **existing** `backend/src/flowstead_api/auth.py`, `database.py`, `models.py` and `main.py` as the migration baseline. Adapt the **typed principal dependency / structured unauthorized error** concept visible in `toolkit.zip`'s FasterAPI and the **owned disjoint-client fixture** concept from `integration_tests.zip`; do **not** port their external AuthStub service, cookies/session middleware, NATS bus or new package workspace. Keep FastAPI identity verification separate from PostgreSQL Plant assignment checks, with a single explicit config-dependent production/test mode boundary. `analysis_b.zip`'s source/UI patterns may inform structure but are not provider or security authority. Test failure paths first where practical and run genuine local PostgreSQL tests for A-vs-B access with signed JWT/JWKS fixtures. Do not infer hosted Supabase validation from an offline test.
+Use the **existing** `backend/src/flowstead_api/auth.py`, `database.py`, `models.py` and `main.py` as the migration baseline. Adapt the **typed principal dependency / structured unauthorized error** concept visible in `toolkit.zip`'s FasterAPI and the **owned disjoint-client fixture** concept from `integration_tests.zip`; do **not** port their external AuthStub service, cookies/session middleware or new package workspace. **Use the now-approved app-owned NATS transport from T-004b without inventing a separate auth service**; normal JWT/Plant access checks remain HTTP/SQL authority, never trusted to message payload alone. Keep FastAPI identity verification separate from PostgreSQL Plant assignment checks, with a single explicit config-dependent production/test mode boundary. `analysis_b.zip`'s source/UI patterns may inform structure but are not provider or security authority. Test failure paths first where practical and run genuine local PostgreSQL tests for A-vs-B access with signed JWT/JWKS fixtures. Do not infer hosted Supabase validation from an offline test.
+
+Before test changes, read `docs/testing/INDEXED_TEST_PLAN.md` and `docs/testing/TEST_DATA_GUIDE.md`, repeat existing `UT-M5-*`/`IT-M5-*` case IDs in exact asserting test docstrings, use real PostgreSQL and deterministic JWKS fixtures, and report actual case coverage. No mock-only claim of hosted Auth.
 
 ## Test-first acceptance
 - `UT-M5-JWT`: signed valid local JWKS passes; forged/wrong issuer/wrong audience/expired/unsigned/unknown `kid` rejected; rotations and cache expiry proven.
