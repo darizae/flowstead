@@ -1,6 +1,6 @@
 # Flowstead
 
-Private Flowstead application repository. **M0 synthetic generator is completed in [flowstead-sim](https://github.com/darizae/flowstead-sim); this application repository is still a scaffold**, not a deployed or coded app.
+Private Flowstead application repository. **M0 and M1 synthetic generator work are merged in [flowstead-sim](https://github.com/darizae/flowstead-sim); this repository has the merged local PostgreSQL schema/M1 importer (task 002, PR #4)**. FastAPI task 003 is not implemented, and nothing has been publicly deployed. The owner paused the OMP agent to audit the PR review workflow.
 
 ## Start here — one implementation source of truth
 
@@ -46,4 +46,4 @@ Integration tests require `DATABASE_URL`, `FLOWSTEAD_M1_MANIFEST`, and
 `FLOWSTEAD_M1_DATA` for the immutable M1 source when running the full import
 receipt. No command in this task contacts Supabase, AWS, S3, or another cloud.
 
-**Delivery:** The existing ordered local task backlog can be dispatched to OMP as prerequisites pass, without repeated per-task approval. OMP implements and tests on local task branches. A separate independent review and exact-final-SHA Mac verification are required before any policy-authorized merge and automatic status reconciliation. OMP owns unattended review/status synchronization as a follow-up; this improvement does **not** delay starting the next bounded local coding task. Existing review-ready PRs remain pending until legitimately reviewed. External/cloud/public changes remain separate owner approvals. No ChatGPT Work, 24-hour soak or general cloud deployment is implied.
+**Delivery:** OMP orchestrates the preapproved local backlog and implements/tests on Mac task branches. For the independent PR review it hands off to **ordinary ChatGPT chat in the existing Loop OMP Project via the owner's previously tested browser workflow**; only ChatGPT normal chat reviews, makes bounded GitHub corrections and decides acceptance. OMP/SAIA reviewer output is advisory. Required final-head Mac tests, authorized merge, status sync and source receipts remain separate. M1 Sim PR #5 and importer PR #4 have genuinely merged, but no ChatGPT review is evidenced; do not reimplement them or invent retroactive review. Next is task 003 (FastAPI), **not yet coded**: OMP Issue #16 failed request parsing because `schema: omp-control-plane/v1` was missing and timeout 1200 exceeded the parser's 900-second maximum. The owner has paused dispatch for audit; editing documentation does not resume it. Test-first `UT-*`/`IT-*` cases and local PostgreSQL/security gates remain mandatory. External/cloud/public actions require their separate approvals; no ChatGPT Work, 24-hour soak or AWS/S3.
