@@ -8,7 +8,7 @@
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
 
-Owning context: the actual app **Alembic** revision chain, immutable importer, NATS job schema and Auth verifier, owner-approved local smoke checks and `docs/setup/SUPABASE_DEVELOPMENT_ACCESS.md`; current Supabase published Auth/database security docs. Never read private passwords from repo.
+Owning context: the actual app **Alembic** revision chain, immutable importer, NATS job schema and Auth verifier, owner-approved local smoke checks and `docs/setup/DEPLOYMENT_ARCHITECTURE.md`; current Supabase published Auth/database security docs. Never read private passwords from repo.
 
 ## Observable result and scope
 Run reviewed **Alembic upgrade-to-head** migrations against the **existing** project only after owner grants write scope, confirm dedicated non-exposed `app` schema/limited roles/RLS on any exposed tables, import at most approved M1 synthetic records with exact digest, configure Auth for invite-only in reviewed settings and validate one or two owner-provided demo identities restricted to disjoint Plant IDs (if explicit invitation approval given). Smoke JWT signature/issuer/audience/JWKS or verified fallback, login/expiry and SQL 401/404, public endpoint only if allowed. Use environment-specific connection choice (IPv6 direct vs IPv4 session pooler), server-side secret storage, connection caps/timeouts and cleanup/backup/reseed. No destructive reset of existing unrelated schemas or other data.

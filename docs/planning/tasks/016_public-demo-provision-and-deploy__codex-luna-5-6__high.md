@@ -1,6 +1,6 @@
 # T-016 — provision isolated synthetic demo and deploy public services
 
-**Status:** DRAFT — H-14/external approvals REQUIRED (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** DRAFT — the hosted-release gate/external approvals REQUIRED (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 015 local deploy evidence accepted and 014 hosted Auth/data security evidence reviewed; owner must explicitly approve all hosted resources: actual Python API/worker and **durable NATS/JetStream broker** host and Free plan/eligibility, Vercel project/team, exact `flowstead-demo` project creation region/Free quota, Auth settings/invite count, synthetic M1 digest, both subdomains and DNS edits, permitted traffic/cost limit and deploy/release. `flowstead-demo` is **not yet created**. Confirm owner has 2-project Free quota when executing; no hidden spend or payment method work.

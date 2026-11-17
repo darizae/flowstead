@@ -8,7 +8,7 @@
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
 
-Owning context: Root docs, `docs/agent/ROUTING.md`, `docs/design/UI_UX_PARITY_MATRIX.md`, task sequence, actual scripts/lockfiles/current README and local test receipts.
+Owning context: Root docs, `AGENTS.md`, `docs/design/UI_UX_PARITY_MATRIX.md`, task sequence, actual scripts/lockfiles/current README and local test receipts.
 
 ## Observable result and scope
 Correct stale routing, dead links, incorrect status/recipe/version claims and leftover AWS requirements. Keep README accurate for operator and developer: real running workflows first, present implementation status, actionable setup with real commands. Do not expose internal planner/job/model reasoning. Verify UI matrix evidence refers to actual screens and screenshots, and the current generator pinned SHA. Do not claim future live Supabase or public demo.
@@ -18,7 +18,7 @@ Correct stale routing, dead links, incorrect status/recipe/version claims and le
 ## Dependencies and allowed file closure
 No new runtime deps. If a docs checker is needed, use existing Python stdlib or existing scripts.
 
-Allowed create/edit paths: `README.md`, `AGENTS.md`, `docs/planning/**` status/routes only, `docs/agent/ROUTING.md`, `docs/design/**` evidence links only, `justfile`, `scripts/docs_check.py` if it exists or is needed. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `README.md`, `AGENTS.md`, `docs/planning/**` status/routes only, `AGENTS.md`, `docs/design/**` evidence links only, `justfile`, `scripts/docs_check.py` if it exists or is needed. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 Reconcile exact acceptance IDs from `docs/testing/INDEXED_TEST_PLAN.md` against asserting pytest/Vitest/Playwright tests, real NATS/PG/browser receipts, IndexedDB cache checks and the generated local Playwright HTML report. Mark absent cases UNVERIFIED, not PASS. Document genuine Alembic current/head, Compose NATS/JetStream and message recovery commands.
 

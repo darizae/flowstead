@@ -18,7 +18,7 @@ Update truthful README product/demo link (only if actually live), dev install/te
 ## Dependencies and allowed file closure
 No new runtime deps; use `just docs-check` and existing low-cost local commands.
 
-Allowed create/edit paths: `README.md`, `AGENTS.md`, `docs/planning/**` task-status and link changes, `docs/agent/ROUTING.md`, `docs/design/UI_UX_PARITY_MATRIX.md` evidence, `docs/deployment/**`, root `justfile` if stale reference only. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `README.md`, `AGENTS.md`, `docs/planning/**` task-status and link changes, `AGENTS.md`, `docs/design/UI_UX_PARITY_MATRIX.md` evidence, `docs/deployment/**`, root `justfile` if stale reference only. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `DOC-M18-RELEASE`: current remote URLs, CLI commands, tested SHA/version correct and all links resolve.
