@@ -1,6 +1,6 @@
 # T-008 — MapLibre Plants map and four monitoring charts
 
-**Status:** DRAFT — blocked by H-10 and 007 (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** DRAFT — blocked by H-10 and 007 (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 007 passed app shell + parity baseline and 003 typed API contract. Map uses only authorized/API-public list. Live OpenFreeMap tile connectivity and attribution must be actually checked, not inferred from bundled assets.
@@ -18,7 +18,7 @@ Add real interactive MapLibre GL JS map using `https://tiles.openfreemap.org/sty
 ## Dependencies and allowed file closure
 Use `maplibre-gl` 6.x and its stylesheet; chart rendering preferably accessible SVG with existing local CSS/React—do not add a separate charting library unless task approval explicitly covers package, `frontend/package.json`, `package-lock.json`, tests and audit. If a graph package materially reduces code, return scoped choice upstream rather than install unapproved alternative. No geocoding API/key and no real facility coordinates.
 
-Allowed create/edit paths: `frontend/src/**`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.ts` if needed, `frontend/tests/**`, `justfile`, `docs/design/UI_UX_PARITY_MATRIX.md`, `README.md`. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `frontend/src/**`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.ts` if needed, `frontend/tests/**`, `justfile`, `docs/design/UI_UX_PARITY_MATRIX.md`, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `UI-M8-MAP`: real tile render and marker selection from API list; forbidden Plant marker absent; attribution visible; internet/WebGL failure renders list fallback.
@@ -34,4 +34,4 @@ If OpenFreeMap unavailable, implement documented map-unavailable fallback but le
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
