@@ -1,6 +1,6 @@
 # T-011 — semantically correct PDF Plant report
 
-**Status:** DRAFT — proposed approval (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — prerequisite preflight (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 003/004/005 API policy and 008/009 UI data views approved. Owner delegated detailed PDF aesthetics but reserves normal-chat sample review for final acceptance. No public/regulatory/compliance claim.
@@ -18,7 +18,7 @@ Add permission-bound on-demand endpoint `GET /api/v1/plants/{id}/report.pdf` (pl
 ## Dependencies and allowed file closure
 Use `reportlab>=4,<5` (after compatibility/license/security audit) in `backend/pyproject.toml` and `backend/uv.lock` via `uv add --project backend`. If alternate PDF library is required, planner approval before installation. Expose downloadable button only for a Plant currently shown with API-authorized state; never client-render PDFs from out-of-scope cached data.
 
-Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `frontend/src/**`, `frontend/tests/**`, `justfile`, `README.md`, `docs/design/UI_UX_PARITY_MATRIX.md`. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `frontend/src/**`, `frontend/tests/**`, `justfile`, `README.md`, `docs/design/UI_UX_PARITY_MATRIX.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `IT-M11-PDF`: signed principal A can download A report from real PostgreSQL; B gets indistinguishable 404; missing/bad auth gets 401.
@@ -34,4 +34,4 @@ A PDF-text test does not satisfy aesthetic owner review. Record visual gate as B
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
