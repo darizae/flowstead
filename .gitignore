@@ -5,3 +5,6 @@ priv/
 *.pem
 *.key
 .DS_Store
+
+# Local agent MCP config may refer to owner-authenticated development services
+.omp/mcp.json
