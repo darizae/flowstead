@@ -1,6 +1,9 @@
 # Supabase development access — future application integration
 
-Status: PLANNED, not authorized for project creation, schema write, hosted Auth or deployment. The initial application scaffold has no Supabase project. No cloud service is needed for local M0 synthetic-data work.
+**Current read-only verified status (2026-11-17):** Disposable development project `flowstead-dev` EXISTS, project ref `jryvzjwsrxctjeawnkqo`, Free organization, region `eu-west-1`, `ACTIVE_HEALTHY`, no public schema tables yet. **Owner reports** local OMP OAuth/MCP authentication complete; OMP connection is **not independently verified from this repository**. Run OMP `/mcp list` and actual project-scoped `list_tables` with read-only access before claiming setup passes. Do not recreate the project or write migrations without separate task permission.
+
+
+Status: PLANNED, not authorized for project creation, schema write, hosted Auth or deployment. The application scaffold has no provisioned schema/Auth configuration yet; the development project itself exists and is verified. No cloud service is needed for local M0 synthetic-data work.
 
 ## Ownership
 
@@ -24,7 +27,7 @@ The owner-private planner (darizae/software-planner-kit/projects/wastewater-saas
 
 - Safe nonsecret: project ref, URL, region, publishable browser API key (only when needed).
 - Secret: DB password/connection URI, Supabase secret administrative key if actually required, server-only runtime values and MCP OAuth tokens. Store in approved owner-managed runtime secrets / ignored local priv/, never in tasks, repositories or chat.
-- Maintain a typed .env.example with **variable names but no credential values** only in a future approved application task. No real project keys or database password is currently required.
+- Maintain a typed .env.example with **variable names but no credential values** only in a future approved application task. Project ID/ref is known; no project keys or database password are currently required for the local M0 work.
 - Review actual official Supabase API/Auth and release docs before modifying integrations. Test real database boundaries; mocks do not prove permissions.
 
 References:
