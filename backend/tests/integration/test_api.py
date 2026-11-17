@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import psycopg
+import pytest
+from fastapi.testclient import TestClient
+
+from backend.importer import SOURCE_SHA, import_m1
+from backend.migrate import migrate
+from flowstead_api.main import create_app
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+MANIFEST = os.environ.get("FLOWSTEAD_M1_MANIFEST")
+DATA = os.environ.get("FLOWSTEAD_M1_DATA")
+
+pytestmark = pytest.mark.skipif(
+    not DATABASE_URL or not MANIFEST or not DATA,
+    reason="set DATABASE_URL, FLOWSTEAD_M1_MANIFEST and FLOWSTEAD_M1_DATA for API integration",
+)
+
+
+@pytest.fixture(autouse=True)
+def clean_database() -> None:
+    migrate(DATABASE_URL)  # type: ignore[arg-type]
+    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
+        with connection.transaction():
+            connection.execute(
+                "TRUNCATE app.hourly_readings, app.forecast_hours, app.forecast_issuances, "
+                "app.operator_plant_access, app.plants, app.ingest_batches RESTART IDENTITY"
+            )
+    import_m1(DATABASE_URL, Path(MANIFEST), Path(DATA), SOURCE_SHA)  # type: ignore[arg-type]
+
+
+@pytest.fixture
+def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("FLOWSTEAD_AUTH_MODE", "local")
+    return TestClient(create_app(DATABASE_URL))  # type: ignore[arg-type]
+
+
+def _grant(subject_id: str, *plant_ids: str) -> None:
+    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
+        with connection.transaction():
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
+                    [(subject_id, plant_id) for plant_id in plant_ids],
+                )
+
+
+def test_disjoint_principals_receive_disjoint_private_reads(client: TestClient) -> None:
+    _grant("operator-a", "plant-01")
+    _grant("operator-b", "plant-02")
+
+    headers_a = {"X-Flowstead-Subject": "operator-a"}
+    headers_b = {"X-Flowstead-Subject": "operator-b"}
+    assert [plant["plant_id"] for plant in client.get("/api/v1/plants", headers=headers_a).json()["plants"]] == ["plant-01"]
+    assert [plant["plant_id"] for plant in client.get("/api/v1/plants", headers=headers_b).json()["plants"]] == ["plant-02"]
+    assert client.get("/api/v1/plants/plant-02/latest", headers=headers_a).status_code == 404
+    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z", headers=headers_a).status_code == 200
+    assert client.get("/api/v1/plants/plant-02/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z", headers=headers_a).status_code == 404
+
+
+def test_private_denials_and_bounded_windows(client: TestClient) -> None:
+    _grant("operator-a", "plant-01")
+    assert client.get("/api/v1/plants").status_code == 401
+    assert client.get("/api/v1/plants/plant-01/latest").status_code == 401
+    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T00:30:00Z", headers={"X-Flowstead-Subject": "operator-a"}).status_code == 422
+    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00-05:00&to=2025-01-01T02:00:00-05:00", headers={"X-Flowstead-Subject": "operator-a"}).status_code == 422
+    assert client.get("/api/v1/plants/unknown/latest", headers={"X-Flowstead-Subject": "operator-a"}).status_code == 404
+
+
+def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:
+    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
+        with connection.transaction():
+            connection.execute("UPDATE app.plants SET public_demo = false")
+    assert client.get("/api/v1/public/plants").json() == {"plants": []}
+    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
+        with connection.transaction():
+            connection.execute(
+                "UPDATE app.plants SET public_demo = true WHERE plant_id = ANY(%s)",
+                [["plant-01", "plant-02", "plant-03", "plant-04", "plant-05"]],
+            )
+
+    public = client.get("/api/v1/public/plants")
+    assert public.status_code == 200
+    assert {plant["plant_id"] for plant in public.json()["plants"]} == {
+        "plant-01", "plant-02", "plant-03", "plant-04", "plant-05"
+    }
+    assert client.get("/api/v1/public/plants/plant-01/latest").status_code == 200
+    body = client.get(
+        "/api/v1/public/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z"
+    ).json()
+    assert len(body["readings"]) == 2
+    assert set(body["readings"][0]["measurements"]) == {
+        "influent_flow", "rainfall", "dissolved_oxygen", "effluent_ph"
+    }
