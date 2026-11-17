@@ -8,10 +8,10 @@
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
 
-Owning context: `docs/deployment/LOCAL_AND_RECOVERY.md`, live deployment config, app API contracts, UI parity matrix, approved owner demo Auth identities handled out-of-band and current deployed URLs.
+Owning context: `docs/deployment/LOCAL_AND_RECOVERY.md`, live deployment config (FastAPI, **NATS/JetStream + worker**, real Alembic head, PostgreSQL), app API contracts, [indexed test catalog](../../testing/INDEXED_TEST_PLAN.md), [data guide](../../testing/TEST_DATA_GUIDE.md), UI parity matrix, approved demo Auth identities handled out-of-band and current deployed URLs.
 
 ## Observable result and scope
-Test hosted public and invited-operator journeys in actual browsers through TLS against the separate `flowstead-demo` data, including all five fixed fictional public Plants, map tiles, history, forecast, exports and owner account restrictions. Verify free-tier cold start and paused DB messaging, signed-out/expired/revoked token, disjoint assigned Plants and no private-source leak. Validate backup/reseed procedure against disposable copy, rollback drill where safe/authorized, source/digest/version tracking and alert/log access without credentials exposed. Request owner acceptance of PDF sample, map and public presentation; do not assert uptime guarantees.
+Test hosted public and invited-operator journeys in actual browsers through TLS against the separate `flowstead-demo` data, including all five fixed fictional public Plants, map tiles, history, forecast, exports and owner account restrictions. Verify free-tier cold start, **broker/consumer restart and queued→persisted 12h forecast delivery**, failed/retried message recovery without duplication, real Alembic head, bounded per-principal **IndexedDB** expiry/logout/revocation cleanup, paused DB messaging, signed-out/expired/revoked token, disjoint assigned Plants and no private-source leak. No public message-command endpoint. Validate backup/reseed procedure against disposable copy, rollback drill where safe/authorized, source/digest/version tracking and alert/log access without credentials exposed. Request owner acceptance of PDF sample, map and public presentation; do not assert uptime guarantees.
 
 
 
@@ -24,11 +24,11 @@ Allowed create/edit paths: `docs/deployment/**`, `docs/design/UI_UX_PARITY_MATRI
 - `E2E-M17-PUBLIC`: anonymous sees exactly approved synthetic subset and no private IDs; list/map/history/chart/exports work.
 - `E2E-M17-AUTH`: invite operator restricted to assigned Plants through direct crafted API/CSV/PDF requests; expired/revoked tokens fail.
 - `UI-M17-LIVE`: actual 390px and desktop map/PDF/PNG/axis/keyboard parity; visible attribution and fail states.
-- `OPS-M17-RECOVER`: documented reproducible seed and authorized backup/rollback drill with exact SHAs, no blind destructive DB reset.
+- `OPS-M17-RECOVER`: documented reproducible seed, real **NATS/worker recovery and idempotent queued-event replay** plus authorized DB backup/rollback drill with exact SHAs; no blind destructive DB reset.
 - `OPS-M17-COST`: verified free tier/usage alerts and no unexpected paid service, with owner decision for any exception.
 
 ## Local verification, gates and stopping condition
-Run bounded actual live browser tests, API smoke, provider logs/health and release-local unit regression; record exact deployment URL/time/SHA and distinguish local from remote evidence. No unattended status claim if owner/ChatGPT review unavailable.
+Run bounded actual live browser tests (including safe IndexedDB isolation), API/worker/broker/JetStream smoke, confirmed Alembic head, provider logs/health and release-local unit regression; record exact deployment URL/time/SHA and distinguish local from remote evidence. No unattended status claim if owner/ChatGPT review unavailable.
 
 If hosted privacy leak/security defect discovered, stop public traffic only through authorized host controls and escalate to owner; do not independently make destructive changes.
 
