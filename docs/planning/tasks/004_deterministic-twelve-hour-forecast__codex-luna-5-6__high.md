@@ -1,6 +1,6 @@
 # T-004 — twelve-hour deterministic influent-flow baseline
 
-**Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
+**Status:** OMP Issue #18 attempted after T-003 merge and reported **LOCAL FAST TEST FAILURE** at 2026-11-17 18:48 UTC (`omp:failed`); no task 004 PR was observed. **Reconcile the actual Mac log, test command, branch/worktree and source state before a safe retry**—do not replay an uncertain write or treat this as accepted forecasting. **Repository:** `darizae/flowstead`, private `main`; OMP must resolve the fresh base at deliberate dispatch.
 
 ## Preconditions and order
 003 API and 002 readings are locally verified. Forecast evaluation uses only fixed synthetic data; it cannot demonstrate field accuracy. Do not wire a scheduled cloud job.
@@ -19,6 +19,10 @@ Algorithm: seasonal-naive uses the valid flow at `target_time - 24h` if observed
 Use Python standard library + existing numeric/Python backend dependencies only unless an explicitly justified package needs authorization and owning `backend/pyproject.toml` + `backend/uv.lock` changes are included. Do not require NumPy, sklearn, task queue or GPU.
 
 Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/migrations/**`, `backend/pyproject.toml`, `backend/uv.lock` only for justified install, `justfile`, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+
+## Reference-derived code structure and test-first responsibility
+
+Extend the **existing** `backend/src/flowstead_api/` FastAPI modules instead of copying the multi-package `analysis_b.zip` compute/NATS architecture. Keep HTTP routes thin, strict typed forecast response models aligned to OpenAPI, a small deterministic forecast computation function with pure UTC/quality semantics, and parameterized `database.py` queries that enforce the same Plant authorization as current history/latest. Persist one issuance with twelve rows in an explicit transaction, no message broker, scheduler, queue or separate service. Apply the tested separation-of-concerns ideas from `toolkit.zip` and isolated real-SQL test fixtures from `integration_tests.zip` as summarized in `IMPLEMENTATION_SPEC.md` **without** importing reference code. Write `UT-M4-*` RED cases before forecast behavior when practical; verify `IT-M4-*` with disposable real PostgreSQL and report actual commands/outcomes. Do not assume a previously green API suite proves this forecast. The currently reported local fast-test failure must be diagnosed on the Mac; this planning edit does not repair or relaunch it.
 
 ## Test-first acceptance
 - `UT-M4-HORIZON`: exactly 12 ordered hour-aligned UTC targets with no duplicate and correct units/version.
