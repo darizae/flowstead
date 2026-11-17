@@ -1,6 +1,6 @@
 # T-002 — local PostgreSQL schema, reproducible M1 importer
 
-**Status:** WAITING — M1 receipt and local preflight; M1 release gate open (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — M1 receipt and local preflight; M1 release gate open (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 M1 `darizae/flowstead-sim` task 003 must be independently reviewed, merged and local generator/schema contract recorded by immutable full SHA plus manifest checksum; **no tag/public package is presumed**. This is an explicitly proposed source-at-SHA/local-data integration method, not an app package dependency. Owner must approve local M2 scope; Docker/Compose must pass on the Mac. Check `flowstead-sim` M0 tests have not regressed. Never execute against Supabase here.
@@ -37,4 +37,4 @@ Completion requires real local PostgreSQL tests, exact M1 source SHA/digest rece
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP owns independent PR review and acceptance synchronization as a control-plane follow-up; do not delay this task's implementation waiting for that upgrade. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
