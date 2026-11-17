@@ -48,6 +48,12 @@ User-facing terms: **Plants, Plant list, Florida map, All plants, Measurement hi
 | Data missing/invalid | Missing cell `—` and `Missing`/`Invalid` quality when useful | Change period/metric; exports preserve flags |
 | Forecast unavailable | `Forecast unavailable` | View history; no phantom predictions |
 
+## D-045 — IndexedDB and asynchronous message-state UX
+
+The approved eight-part plan explicitly requires a **bounded per-user IndexedDB cache**; later memory-only language was an erroneous loss, now corrected. Implement typed IndexedDB in `frontend/src/lib/cache/` with schema version, anonymous/public and current-principal partitions, last Plant/channel/history range, bounded sanitized authorized history/forecast cache, TTL and maximum size/entries. Never store tokens or render a private cached response without the **current** FastAPI principal/Plant authorization. Wipe private namespaces on logout/expiry/principal switch/revocation and test actual browser IndexedDB reload/offline/quota/corrupt-state behavior under `IDB-M7-PREF`, `IDB-M9-ISOLATE`, `IDB-M9-BOUNDS`. Keep the v2 visuals; this is implementation behavior, not a new visual theme.
+
+The required NATS/JetStream forecast pipeline may be **queued**, **processing**, **completed**, **failed** or **unavailable**. Preserve the prototype's distinct 12h forecast panel. Show a succinct useful loading/queued/failed state without invented prediction values, permit refresh/poll with bounded backoff, and render only the actual persisted API forecast after completion; do not expose internal broker commands or identifiers in consumer-facing UI. All public access remains read-only. Test actual queued→completed transition with real backend/NATS and Playwright; see `docs/testing/INDEXED_TEST_PLAN.md`.
+
 ## H-10 proof and deviations
 
 The preceding session-state storyboard is **approved as design direction**. During tasks 007–012, OMP must produce and check an actual browser run with Florida tiles/markers, an openable/downloadable PDF and desktop/mobile screenshots. Record deviations and fixes against the approved v2 design. Unverified visual parity blocks **final UI acceptance**, not starting implementation. Later UI tasks must update [`UI_UX_PARITY_MATRIX.md`](UI_UX_PARITY_MATRIX.md) with real browser evidence, not just selector tests.
