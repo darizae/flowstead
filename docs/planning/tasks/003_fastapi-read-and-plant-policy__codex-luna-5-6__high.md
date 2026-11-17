@@ -1,6 +1,6 @@
 # T-003 — FastAPI read contracts and Plant authorization
 
-**Status:** DRAFT — proposed approval (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — prerequisite preflight (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 002 accepted, migration+import receipt exact and schema as built. No live Supabase required. Local deterministic principal fixture can be used only in local test/development, with production default deny. Owner approved all five fictional M1 Plants as the anonymous public **read-only** synthetic dataset on 2026-11-17. Derive public IDs exclusively from the five validated/imported manifest Plants; keep default deny on unverified/extra IDs and keep actual public deployment gated.
@@ -18,7 +18,7 @@ Return consistent typed JSON with stable `plant_id`, name, fictional location, I
 ## Dependencies and allowed file closure
 Add `fastapi>=0.115,<1`, `uvicorn>=0.30,<1`, `httpx>=0.27,<1` (test), dependency and tests with `uv add --project backend` and locked `backend/uv.lock`. Do not assume these exist from 002. Keep SQLAlchemy/Pydantic versions as resolved by 002, avoid adding an auth provider yet.
 
-Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/README.md` if present, `justfile`, `README.md`, `.env.example`. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/README.md` if present, `justfile`, `README.md`, `.env.example`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `UT-M3-CONTRACT`: OpenAPI models validate canonical four channels/units and preserve flagged NULL/invalid.
@@ -35,4 +35,4 @@ Public five-Plant visibility is decided; **public deployment remains separately 
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
