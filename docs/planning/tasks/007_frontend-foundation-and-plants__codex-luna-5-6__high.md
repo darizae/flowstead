@@ -1,6 +1,6 @@
 # T-007 — React frontend foundation and Plants navigation
 
-**Status:** WAITING — backend predecessors 002–006 (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — backend predecessors 002–006 (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 002–006 backend contract accepted; the **v2 UI baseline and auth-state storyboard are already approved**. OMP builds actual browser/map, visual snapshots and PDF evidence as local task deliverables; missing screenshots are not a reason to prevent implementation. Node latest stable non-prerelease `26.13.1` verified 2026-11-17; recheck dispatch and Vite/host package compatibility. Owner decision D-041 already approves anonymous read-only visibility for **all five** manifest-verified fictional M1 Plants; database defaults remain deny until verified M1 import. This does not authorize public hosting or arbitrary Plant IDs.
@@ -34,4 +34,4 @@ If baseline image files are unavailable on Mac, use the approved text/storyboard
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP owns independent review and status reconciliation as an ongoing control-plane follow-up; local UI coding may proceed using the current review handoff. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP owns review/status automation as a follow-up; local UI coding may proceed through the existing queue. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
