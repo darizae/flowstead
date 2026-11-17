@@ -134,6 +134,37 @@ class HistoryResponse(BaseModel):
         return _utc_iso(value)
 
 
+class ForecastHour(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    hour_number: int = Field(ge=1, le=12)
+    target_time_utc: datetime
+    predicted_flow_gal_h: float
+    units: Literal["gal/h"] = "gal/h"
+    source: Literal["seasonal_naive_24h", "persistence_6h", "stored"]
+
+    @field_serializer("target_time_utc")
+    def serialize_target(self, value: datetime) -> str:
+        return _utc_iso(value)
+
+
+class ForecastResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plant: PlantSummary
+    status: Literal["available", "unavailable"]
+    issued_at_utc: datetime | None
+    model_version: str
+    source_revision: str | None
+    physical_bound_rule: str
+    forecasts: list[ForecastHour] = Field(default_factory=list)
+    unavailable_reason: str | None = None
+
+    @field_serializer("issued_at_utc")
+    def serialize_issued_at(self, value: datetime | None) -> str | None:
+        return None if value is None else _utc_iso(value)
+
+
 class PlantListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

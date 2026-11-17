@@ -14,6 +14,17 @@ migrate-local:
 import-m1-local manifest source_sha data:
     uv run --project backend python -m backend.importer --manifest "{{manifest}}" --data "{{data}}" --source-sha "{{source_sha}}"
 
+
+forecast-local:
+    uv run --project backend python -m flowstead_api.forecast
+
+test-forecast-unit:
+    uv run --project backend pytest -q backend/tests/unit/test_forecast.py
+
+test-forecast-integration:
+    docker compose up -d db
+    uv run --project backend pytest -q backend/tests/integration/test_forecast.py
+
 check-backend:
     uv run --project backend python -m compileall -q backend
 
