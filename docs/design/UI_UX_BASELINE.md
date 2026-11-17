@@ -14,6 +14,25 @@ Working design: calm white and pale mint surfaces; deep green typography, clear 
 
 User-facing terms: **Plants, Plant list, Florida map, All plants, Measurement history, Influent flow forecast, Download CSV, Download PNG, Download PDF**. Four exact axis labels: `Influent flow (gal/h)`, `Rainfall (in/h)`, `Dissolved oxygen (mg/L)`, `Effluent pH` with x-axis `Plant-local time` and unambiguous Eastern/Central daylight/standard hours. Real MapLibre/OpenFreeMap tiles with accessible markers and attribution; list remains usable when tile provider unavailable. Forecast clearly separates observed vs 12 projected hours, and unavailable means unavailable, never zero.
 
+## Canonical v2 prototype anatomy and fidelity rules
+
+**Visual source:** the actual owner-approved private `darizae/software-planner-kit/projects/wastewater-saas-exploration/prototypes/flowstead_ui_v2.html`, read-only through authorized owner GitHub access. This is more specific than a generic dashboard theme; do not improvise or replace it with a template. The HTML is a **three-Plant illustrative prototype**, so do not copy its in-page fake `plants` array, sample readings, time anchor, `Preview states` selector or browser-only synthetic generation into production. Actual lists, latest/history, forecasts, coordinates and auth state come from the **five-Plant M1-backed authorized API**.
+
+| Prototype region | Implementation invariant / responsive transformation |
+| --- | --- |
+| `topbar`, `brand`, `topnav` | Approx. 72px white header, brand mark, clear active Plants navigation; accessible focus and signed-out/sign-in state, without creating unapproved navigation |
+| `shell`, `pagehead` | Approx. 1340px maximum centered content, calm pale background, descriptive title and restrained metadata; proper 390px wrapping |
+| `overviewGrid`, `listPanel`, `mapPanel` | Two side-by-side cards on desktop: Plant list and Florida map; stacked on phone. API list and map must agree on which Plant IDs are visible |
+| `realMap`, `mapFallback` | True MapLibre/OpenFreeMap tiles, interactive accessible markers and attribution; on offline/WebGL error keep Plant list and its navigation usable |
+| `detail`, `backBtn`, `plantPicker` | Back to All plants, selected Plant name/city/timezone and authorized Plant switcher; state and deep-link validity preserved |
+| `metrics` | Four discrete latest tiles, exactly four canonical channels, unit/quality and explicit missing/invalid status; two columns or single flow on narrow screens as warranted |
+| `detailGrid`, `historyView`, `channels`, `rangePicker` | History and forecast as adjacent desktop panels, stacked mobile; 24/72/168-hour selections and four measurement toggles; accurate DST-local axes, no misleading interpolation |
+| `forecastView`, `historyPng`, `historyCsv`, `forecastPng`, `forecastCsv`, `downloadReport` | 12 separate future hourly targets, observed/predicted distinction, visible downloadable PNG/CSV/PDF actions, disabled on unauthorized/unavailable data; inspect genuine file contents |
+
+**Implementation tokens:** preserve source v2 `--ink:#183734`, `--ink2:#526a67`, `--teal:#087968`, `--teal-dark:#07584c`, `--mint:#def0e8`, `--line:#dce7e2`, `--paper:#f5f8f6`, plus typography/spacing/line-heights/radii/shadow relationships. Prefer one centrally defined `frontend/src/styles/` or Tailwind 4 theme token source rather than independent magic colors in components. The old prototype's exact pixels are **reference geometry**; retain accessibility, legibility and responsive behavior instead of forcing clipping to match a screenshot.
+
+**Code and test anchors:** `docs/planning/IMPLEMENTATION_SPEC.md` defines the required modular React/FastAPI patterns distilled from the user's `analysis_b.zip`, `toolkit.zip`, `integration_tests.zip`. At task 007 create the real local Playwright setup; in tasks 007–012 run both 1330px and 390px journeys with browser/HTTP assertions, screenshot comparison and matrix updates. Compare screens and states **against the actual prototype where accessible**, otherwise against this detailed extracted baseline and mark private-source screenshot comparison UNVERIFIED until it can be reviewed. Never call a DOM-only unit test or existence of a screenshot visual acceptance. Use synthetic no-secret evidence under `docs/design/evidence/`; keep real test credentials and uploaded reference files out of the repo.
+
 ## Owner-approved session-state storyboard (2026-11-17)
 
 | State | Meaningful visible content | Allowed next action |
