@@ -1,6 +1,0 @@
-alembic<2,>=1
-fastapi<1,>=0.115
-psycopg[binary]<4,>=3
-pydantic<3,>=2
-sqlalchemy<3,>=2
-uvicorn<1,>=0.30
