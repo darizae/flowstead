@@ -2,11 +2,10 @@
 
 **Repository:** `darizae/flowstead`  
 **Base:** `main`  
-**Selection metadata:** OMP GLM 5.3 Flash, default effort; model choice is operator-controlled and this file is model-neutral.
 
 ## Authorization and scope
 
-Owner authorization D-033/H-11 permits exactly this private application scaffold, default `main`, and its first secret-free push. Preflight must confirm the exact remote is absent; do not reuse, rename, overwrite, force-push, or create another repository.
+Owner authorization the accepted repository initialization/the repository initialization gate permits exactly this private application scaffold, default `main`, and its first secret-free push. Preflight must confirm the exact remote is absent; do not reuse, rename, overwrite, force-push, or create another repository.
 
 ## Read set
 

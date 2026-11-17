@@ -11,16 +11,16 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 Owning context: `AGENTS.md`, `docs/planning/IMPLEMENTATION_SPEC.md`, sequence and completed tasks; root `justfile`, README, generated API spec and actual backend source/tests only to verify command paths.
 
 ## Observable result and scope
-Create/update concise `docs/agent/ROUTING.md` mapping actual **Alembic migrations**, import/forecast, NATS publisher/consumer/outbox, API/auth, indexed test plan/data guide and runnable just recipes to owning source. Correct dead relative links, stale cloud/AWS instructions, misnamed recipes, inaccurate README feature claims and completed statuses. Validate M1 immutable commit and actual API paths. No new product decision or feature.
+Create/update concise `AGENTS.md` mapping actual **Alembic migrations**, import/forecast, NATS publisher/consumer/outbox, API/auth, indexed test plan/data guide and runnable just recipes to owning source. Correct dead relative links, stale cloud/AWS instructions, misnamed recipes, inaccurate README feature claims and completed statuses. Validate M1 immutable commit and actual API paths. No new product decision or feature.
 
 
 
 ## Dependencies and allowed file closure
 No new runtime dependency required; link checker may use existing Python stdlib script inside `scripts/` only if needed, scoped and documented.
 
-Allowed create/edit paths: `docs/agent/ROUTING.md`, `docs/planning/**` docs only, `AGENTS.md`, `README.md`, `justfile` only to fix stale recipe reference, `scripts/docs_check.py` if needed. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `AGENTS.md`, `docs/planning/**` docs only, `AGENTS.md`, `README.md`, `justfile` only to fix stale recipe reference, `scripts/docs_check.py` if needed. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
-Confirm `docs/testing/INDEXED_TEST_PLAN.md` contains every actual case ID and evidence remains truthful; do not mark test case coverage from its name alone. Correct stale `no NATS`/`custom SQL migration as final`/`no IndexedDB` statements in docs without rewriting historical task receipts.
+Confirm `docs/testing/INDEXED_TEST_PLAN.md` contains every actual case ID and evidence remains truthful; do not mark test case coverage from its name alone. Verify docs consistently describe Alembic, JetStream and per-principal IndexedDB without altering verified completion records.
 
 ## Test-first acceptance
 - `DOC-M2-LINKS`: active Markdown links to files/skills/routes resolve; tracked docs do not point to missing files.

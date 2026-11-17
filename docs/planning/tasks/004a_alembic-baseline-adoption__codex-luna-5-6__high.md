@@ -1,6 +1,6 @@
 # T-004a — Adopt Alembic without resetting existing PostgreSQL
 
-**Status:** NEXT LOCAL IMPLEMENTATION, owner-approved D-045; dispatch only in the existing bounded OMP queue after reconciling the current Mac branch/worktree and owner pause. Tasks 002–004 are MERGED; **never rerun or replace their source history**. Repository: private darizae/flowstead main, resolve actual HEAD at execution.
+**Status:** NEXT LOCAL IMPLEMENTATION, owner-approved the current message/migration/cache architecture; dispatch only in the existing bounded OMP queue after reconciling the current Mac branch/worktree and owner pause. Tasks 002–004 are MERGED; **never rerun or replace their source history**. Repository: private darizae/flowstead main, resolve actual HEAD at execution.
 
 ## Read and respect
 Read AGENTS.md, docs/planning/HANDOFF_SEQUENCE.md, this file, docs/planning/IMPLEMENTATION_SPEC.md, docs/testing/INDEXED_TEST_PLAN.md and docs/testing/TEST_DATA_GUIDE.md, backend/migrate.py, existing SQL migrations and exact nearby migration/importer/forecast tests; root justfile and existing engineering-quality skill. No private owner files or ZIPs are required.

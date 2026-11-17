@@ -1,9 +1,9 @@
 # T-004b — NATS/JetStream asynchronous messaging
 
-**Status:** NEXT after T-004a locally merged and reconciled; explicitly approved by owner D-045, not a new permission gate. Repository: private darizae/flowstead. Existing T-002–T-004 behavior, M1 manifest and Plant authorization are immutable contracts.
+**Status:** NEXT after T-004a locally merged and reconciled; explicitly approved by owner the current message/migration/cache architecture, not a new permission gate. Repository: private darizae/flowstead. Existing T-002–T-004 behavior, M1 manifest and Plant authorization are immutable contracts.
 
 ## Read and respect
-Read AGENTS.md, docs/planning/HANDOFF_SEQUENCE.md, this file, docs/planning/IMPLEMENTATION_SPEC.md, docs/testing/INDEXED_TEST_PLAN.md, docs/testing/TEST_DATA_GUIDE.md, existing backend API/forecast/importer, migration code, compose.yml and nearest real integration tests. The owner-uploaded toolkit.zip and integration_tests.zip **informed** this contract; do not vendor their NATS packages or read private files at implementation time.
+Read AGENTS.md, docs/planning/HANDOFF_SEQUENCE.md, this file, docs/planning/IMPLEMENTATION_SPEC.md, docs/testing/INDEXED_TEST_PLAN.md, docs/testing/TEST_DATA_GUIDE.md, existing backend API/forecast/importer, migration code, compose.yml and nearest real integration tests. the approved implementation contract and the documented engineering patterns **informed** this contract; do not vendor their NATS packages or read private files at implementation time.
 
 ## Observable event-driven behavior
 Use a pinned compatible NATS 2 Docker service **with JetStream enabled**, loopback-only port and health/readiness checks alongside existing PostgreSQL (no cloud broker). Add audited nats-py in backend lock. Keep FastAPI HTTP reads on parameterized PostgreSQL projections with current Plant-scoped auth; GET endpoints must not mutate or wait for a broker. Keep one reusable deterministic forecast calculation; adapt current local forecast CLI as a maintenance/backfill path.
