@@ -48,6 +48,22 @@ local requests use `X-Flowstead-Subject`; set `FLOWSTEAD_AUTH_MODE=deny` for
 production default-deny behavior. API checks are `just test-api-unit` and
 `just test-api-integration`.
 
+Forecasts are built locally for the latest complete observed UTC bucket:
+
+```text
+just forecast-local
+just test-forecast-unit
+just test-forecast-integration
+```
+
+The deterministic `seasonal_naive_24h_v1` baseline prefers valid flow from
+24 hours earlier and falls back to the latest valid value in the preceding six
+hour buckets. It stores exactly twelve hourly targets atomically; missing or
+invalid source flow produces an explicit unavailable result. The local command
+also prints chronological holdout MAE and eligible counts against a persistence
+reference. Synthetic backtests do not validate real-world performance.
+
+
 Integration tests require `DATABASE_URL`, `FLOWSTEAD_M1_MANIFEST`, and
 `FLOWSTEAD_M1_DATA` for the immutable M1 source when running the full import
 receipt. No command in this task contacts Supabase, AWS, S3, or another cloud.

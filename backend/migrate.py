@@ -9,32 +9,51 @@ from pathlib import Path
 import psycopg
 
 ROOT = Path(__file__).resolve().parent.parent
-MIGRATION = ROOT / "migrations" / "001_initial.sql"
-ROLLBACK = ROOT / "migrations" / "001_initial_down.sql"
-VERSION = "001_initial"
+MIGRATIONS = (
+    (
+        "001_initial",
+        ROOT / "migrations" / "001_initial.sql",
+        ROOT / "migrations" / "001_initial_down.sql",
+    ),
+    (
+        "002_forecast_metadata",
+        Path(__file__).resolve().parent / "migrations" / "002_forecast_metadata.sql",
+        Path(__file__).resolve().parent / "migrations" / "002_forecast_metadata_down.sql",
+    ),
+)
 
 
 def migrate(database_url: str, rollback: bool = False) -> None:
-    script = ROLLBACK if rollback else MIGRATION
     with psycopg.connect(database_url) as connection:
         with connection.transaction():
             with connection.cursor() as cursor:
-                if rollback:
-                    cursor.execute(script.read_text(encoding="utf-8"))
-                    cursor.execute(
-                        "CREATE TABLE IF NOT EXISTS public.schema_migrations "
-                        "(version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
-                    )
-                    cursor.execute("DELETE FROM public.schema_migrations WHERE version = %s", (VERSION,))
-                    return
                 cursor.execute(
                     "CREATE TABLE IF NOT EXISTS public.schema_migrations "
                     "(version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
                 )
-                cursor.execute("SELECT 1 FROM public.schema_migrations WHERE version = %s", (VERSION,))
-                if cursor.fetchone() is None:
-                    cursor.execute(script.read_text(encoding="utf-8"))
-                    cursor.execute("INSERT INTO public.schema_migrations (version) VALUES (%s)", (VERSION,))
+                if rollback:
+                    applied = cursor.execute(
+                        "SELECT version FROM public.schema_migrations ORDER BY version DESC"
+                    ).fetchall()
+                    for (version,) in applied:
+                        migration = next(item for item in MIGRATIONS if item[0] == version)
+                        cursor.execute(migration[2].read_text(encoding="utf-8"))
+                        cursor.execute(
+                            "DELETE FROM public.schema_migrations WHERE version = %s",
+                            (version,),
+                        )
+                    return
+                for version, script, _rollback in MIGRATIONS:
+                    cursor.execute(
+                        "SELECT 1 FROM public.schema_migrations WHERE version = %s",
+                        (version,),
+                    )
+                    if cursor.fetchone() is None:
+                        cursor.execute(script.read_text(encoding="utf-8"))
+                        cursor.execute(
+                            "INSERT INTO public.schema_migrations (version) VALUES (%s)",
+                            (version,),
+                        )
 
 
 def main() -> int:

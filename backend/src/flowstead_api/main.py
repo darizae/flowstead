@@ -9,11 +9,13 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Query
 
 from .auth import get_current_subject
-from .database import Database, PlantRow, ReadingRow
+from .database import Database, ForecastRead, PlantRow, ReadingRow
 from .models import (
     DissolvedOxygenMeasurement,
     EffluentPhMeasurement,
     FlowMeasurement,
+    ForecastHour,
+    ForecastResponse,
     HealthResponse,
     HistoryReading,
     HistoryResponse,
@@ -62,6 +64,17 @@ def create_app(database_url: str | None = None) -> FastAPI:
             raise _not_found()
         plant, readings = result
         return _history_response(plant, readings, from_utc, to_utc, public=True)
+    @app.get(
+        "/api/v1/public/plants/{plant_id}/forecast",
+        response_model=ForecastResponse,
+        tags=["public"],
+    )
+    def public_forecast(plant_id: str) -> ForecastResponse:
+        result = app.state.database.forecast(plant_id, subject_id=None, public=True)
+        if result is None:
+            raise _not_found()
+        return _forecast_response(result, public=True)
+
 
     @app.get("/api/v1/plants", response_model=PlantListResponse, tags=["private"])
     def private_plants(subject_id: Annotated[str, Depends(get_current_subject)]) -> PlantListResponse:
@@ -92,6 +105,20 @@ def create_app(database_url: str | None = None) -> FastAPI:
             raise _not_found()
         plant, readings = result
         return _history_response(plant, readings, from_utc, to_utc, public=False)
+    @app.get(
+        "/api/v1/plants/{plant_id}/forecast",
+        response_model=ForecastResponse,
+        tags=["private"],
+    )
+    def private_forecast(
+        plant_id: str,
+        subject_id: Annotated[str, Depends(get_current_subject)],
+    ) -> ForecastResponse:
+        result = app.state.database.forecast(plant_id, subject_id=subject_id, public=False)
+        if result is None:
+            raise _not_found()
+        return _forecast_response(result, public=False)
+
 
     return app
 
@@ -180,6 +207,33 @@ def _history_response(
     if len(payload.encode("utf-8")) > MAX_RESPONSE_BYTES:
         raise HTTPException(status_code=422, detail={"code": "response_too_large", "message": "response cap exceeded"})
     return result
+
+
+def _forecast_response(result: ForecastRead, *, public: bool) -> ForecastResponse:
+    build = result.build
+    response = ForecastResponse(
+        plant=_summary(result.plant, public=public),
+        status="available" if build.available else "unavailable",
+        issued_at_utc=build.issued_at_utc,
+        model_version=build.model_version,
+        source_revision=build.source_revision,
+        physical_bound_rule=build.physical_bound_rule,
+        forecasts=[
+            ForecastHour(
+                hour_number=point.hour_number,
+                target_time_utc=point.target_time_utc,
+                predicted_flow_gal_h=float(point.predicted_flow_gal_h),
+                units="gal/h",
+                source=point.source,
+            )
+            for point in build.points
+        ],
+        unavailable_reason=build.unavailable_reason,
+    )
+    payload = json.dumps(response.model_dump(mode="json"), separators=(",", ":"))
+    if len(payload.encode("utf-8")) > MAX_RESPONSE_BYTES:
+        raise HTTPException(status_code=422, detail={"code": "response_too_large", "message": "response cap exceeded"})
+    return response
 
 
 def _measurements(reading: ReadingRow) -> Measurements:
