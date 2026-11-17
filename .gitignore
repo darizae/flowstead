@@ -1,0 +1,7 @@
+priv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
