@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flowstead — wastewater operations UI prototype</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
+<style>
+:root{--ink:#183734;--ink2:#526a67;--teal:#087968;--teal-dark:#07584c;--mint:#def0e8;--line:#dce7e2;--paper:#f5f8f6;--white:#fff;--amber:#98651b;--navy:#183c43;--shadow:0 12px 36px rgba(23,56,51,.055);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper)}*{box-sizing:border-box}body{margin:0;min-height:100vh}button,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #148e80;outline-offset:3px}.topbar{background:#fff;border-bottom:1px solid var(--line);height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 max(28px,calc((100vw - 1340px)/2));gap:20px}.brand{display:flex;align-items:center;gap:11px;font-weight:760;letter-spacing:-.035em;font-size:21px}.mark{width:34px;height:34px;background:var(--teal);border-radius:12px;display:grid;place-items:center;color:white;font-weight:900;font-size:17px;transform:rotate(-4deg)}.topnav{display:flex;align-items:center;gap:14px}.navbutton{border:0;background:transparent;color:var(--ink2);padding:10px 15px;border-radius:10px;font-weight:600}.navbutton[aria-current="page"]{background:var(--mint);color:var(--teal-dark)}.topMeta{font-size:12px;color:var(--ink2);border-left:1px solid var(--line);padding-left:18px}.shell{max-width:1340px;margin:auto;padding:34px 28px 72px}.eyebrow{color:var(--teal);font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.105em;margin:0 0 11px}.pagehead{display:flex;align-items:end;justify-content:space-between;gap:25px;margin-bottom:28px}h1{font-size:clamp(31px,3vw,43px);line-height:1.16;letter-spacing:-.055em;margin:0 0 10px;font-weight:750}.lede{margin:0;color:var(--ink2);line-height:1.55;max-width:650px}.subtle{color:var(--ink2)}.date{color:var(--ink2);font-size:13px;white-space:nowrap}h2{font-size:21px;letter-spacing:-.035em;margin:0}h3{font-size:16px;letter-spacing:-.02em;margin:0}.surface{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}.overviewGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,1.02fr);gap:24px}.listPanel,.mapPanel{padding:25px}.panelHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.smallMuted{font-size:12px;color:var(--ink2)}.site{width:100%;display:flex;text-align:left;justify-content:space-between;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);padding:17px 17px;margin-top:11px;border-radius:12px}.site:hover,.site:focus-visible{border-color:#82bdb0;background:#f5fcf9}.siteTitle{display:block;font-weight:720;font-size:16px;margin-bottom:5px}.siteSubtitle{display:block;color:var(--ink2);font-size:13px}.siteStats{text-align:right;white-space:nowrap}.siteFlow{display:block;font-weight:760;font-variant-numeric:tabular-nums;font-size:15px}.siteDetail{display:block;color:var(--ink2);font-size:12px;margin-top:5px}.circleArrow{font-size:20px;color:var(--teal);margin-left:9px}.mapbox{height:365px;background:linear-gradient(145deg,#e8f4f0,#f2f7f4);border-radius:13px;position:relative;overflow:hidden;border:1px solid #dae9e1}.florida{position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px)}.mapcity{position:absolute;z-index:2;display:flex;gap:9px;align-items:center;border:1px solid #c4dbd3;border-radius:999px;background:#fff;box-shadow:0 4px 12px #1b62551d;padding:9px 12px;font-size:12px;font-weight:650;color:var(--ink)}.mapcity:hover{border-color:#07836d;transform:translateY(-1px)}.mapcity span{height:9px;width:9px;border-radius:50%;background:var(--teal);display:inline-block}.city1{top:34%;left:11%}.city2{top:61%;left:55%}.city3{top:43%;left:53%}.mapFoot{font-size:12px;color:var(--ink2);margin-top:12px;line-height:1.5}.asideNote{margin-top:25px;padding:18px 22px;background:#eaf4ef;border:1px solid #d5e7dc;border-radius:12px;display:flex;gap:13px;align-items:flex-start}.asideNote strong{font-size:13px}.asideNote p{color:var(--ink2);font-size:13px;margin:4px 0 0;line-height:1.5}.back{padding:0;background:transparent;border:0;color:var(--teal-dark);font-size:13px;font-weight:700;display:flex;gap:7px;align-items:center;margin-bottom:22px}.headingRight{display:flex;gap:10px;align-items:center}.select{background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 35px 10px 12px;color:var(--ink);font-size:13px}.stateStamp{border:1px solid #cee5db;background:#e9f6ef;border-radius:999px;color:#16765b;padding:8px 11px;font-size:12px;font-weight:650}.stateStamp.warning{color:#89601e;border-color:#ecd9b8;background:#fff5e5}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:24px 0}.metric{padding:20px 21px;min-height:137px}.metricLabel{font-size:13px;color:var(--ink2);font-weight:620;margin-bottom:18px}.metricVal{font-size:clamp(22px,2vw,31px);letter-spacing:-.04em;font-weight:755;font-variant-numeric:tabular-nums}.unit{font-size:13px;font-weight:600;color:var(--ink2);margin-left:5px;letter-spacing:0}.metricFoot{color:var(--ink2);font-size:12px;margin-top:9px}.detailGrid{display:grid;grid-template-columns:minmax(0,1.48fr) minmax(320px,1fr);gap:22px}.chartPanel,.forecastPanel{padding:24px;min-width:0}.sectionSub{font-size:13px;color:var(--ink2);margin-top:6px}.channels{display:flex;flex-wrap:wrap;gap:5px;margin:21px 0 5px}.channel{border:0;background:transparent;border-bottom:2px solid transparent;padding:10px 11px;font-size:12px;color:var(--ink2);font-weight:650}.channel[aria-pressed="true"]{color:var(--teal-dark);border-color:var(--teal);background:#f2faf6}.legend{font-size:12px;color:var(--ink2);display:flex;gap:14px;align-items:center}.dot{display:inline-block;height:9px;width:9px;background:var(--teal);border-radius:50%;margin-right:6px}.dot.forecast{background:#a06c25}.chartWrap{height:270px;margin-top:18px;position:relative}.svgChart{display:block;width:100%;height:100%;overflow:visible}.svgChart text{font:11px Inter,-apple-system,sans-serif;fill:#718783}.svgChart .axisTitle{font-size:13px;font-weight:650;fill:#36514c}.axesGrid{stroke:#e8efeb;stroke-width:1}.chartLine{stroke:var(--teal);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}.chartArea{fill:#def3e9}.forecastLine{stroke:#a46b24;stroke-width:3;stroke-dasharray:6 6;fill:none;stroke-linecap:round;stroke-linejoin:round}.forecastArea{fill:#fff3de}.chartFoot{margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;color:var(--ink2);font-size:12px}.forecastNarrative{margin:16px 0 15px;line-height:1.5;color:var(--ink2);font-size:13px}.callout{border-top:1px solid var(--line);padding-top:18px;margin-top:16px;font-size:13px;color:var(--ink2);line-height:1.5}.forecastSummary{display:flex;gap:12px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}.forecastSummary strong{font-size:26px;color:var(--ink);letter-spacing:-.045em}.forecastSummary small{color:var(--ink2);font-size:12px}.forecastPeak{display:flex;flex-direction:column;gap:3px}.forecastPeak .unit{vertical-align:middle}.forecastPeak small{display:block}.spinner{width:28px;height:28px;border:3px solid #d8e9e1;border-top-color:#0a866f;border-radius:50%;animation:spin .8s linear infinite;margin:64px auto 16px}@keyframes spin{to{transform:rotate(360deg)}}.empty{height:235px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:10px;color:var(--ink2)}.empty strong{color:var(--ink);font-size:16px}.empty button{margin-top:9px;border:1px solid #b6d8cb;background:#fff;color:var(--teal-dark);border-radius:8px;font-weight:700;padding:10px 15px}.error{background:#fff7ed;border:1px solid #edd8b9;color:#805b23;border-radius:10px;padding:17px;font-size:13px;line-height:1.55}.hidden{display:none!important}.demoControls{position:static;margin:-58px max(28px,calc((100vw - 1340px)/2)) 20px auto;width:max-content;z-index:2;background:#173b37;color:#fff;box-shadow:0 8px 32px #173b3750;border-radius:12px;display:flex;gap:10px;align-items:center;padding:11px 13px;font-size:12px}.demoControls select{background:#fff;border:0;border-radius:7px;padding:8px;max-width:165px;color:#183734;font-size:12px}.demoControls label{font-size:12px;font-weight:650}.foot{padding:32px 0 60px;color:#6d8380;font-size:12px}.iconDrop{width:24px;height:24px;flex-shrink:0;color:#158570}.screens{display:none}.screens.active{display:block}@media (max-width:900px){.overviewGrid,.detailGrid{grid-template-columns:1fr}.mapbox{height:315px}.metric{padding:17px}.metrics{grid-template-columns:repeat(2,1fr)}.topMeta{display:none}}@media(max-width:600px){.topbar{padding:0 17px;height:65px}.topnav{gap:4px}.navbutton{padding:8px}.brand{font-size:18px}.shell{padding:25px 15px 130px}.pagehead{align-items:start;flex-direction:column;gap:12px}.headingRight{width:100%;justify-content:space-between}.metrics{gap:9px}.metric{padding:15px;min-height:122px}.metricVal{font-size:23px}.listPanel,.mapPanel,.chartPanel,.forecastPanel{padding:17px}.channels{gap:0}.channel{padding:10px 7px;font-size:11px}.demoControls{margin:0 15px 20px;width:auto;justify-content:space-between}.site{padding:13px}.siteFlow{font-size:13px}}
+
+.mapbox{height:365px;background:#e6efe9;overflow:hidden;position:relative;border:1px solid var(--line)}
+.mapUnavailable{position:absolute;inset:0;z-index:10;display:grid;place-content:center;text-align:center;padding:24px;background:#eef5f0;color:#43615a;font-size:14px}
+.plantMarker{background:#fff;color:#164c42;border:2px solid #087968;border-radius:99px;padding:8px 12px;font-size:12px;font-weight:740;box-shadow:0 4px 12px #173b3730;white-space:nowrap}
+.plantMarker:hover,.plantMarker:focus-visible{background:#e6f5ee;outline:3px solid #178e7f;outline-offset:2px}
+.downloadActions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.exportButton{border:1px solid #b6d5c9;border-radius:9px;background:#fff;color:#0a6f60;padding:8px 11px;font-size:12px;font-weight:700;white-space:nowrap}
+.exportButton:hover:not(:disabled){background:#ecf7f2;border-color:#589f8b}
+.exportButton:disabled{opacity:.45;cursor:not-allowed}
+.reportButton{background:#0c7866;color:#fff;border-color:#0c7866;padding:10px 12px}
+.reportButton:hover:not(:disabled){background:#086a5a}
+.demoControls{margin:-58px max(28px,calc((100vw - 1340px)/2)) 20px auto;align-items:baseline}
+.demoControls details{display:flex;gap:10px;align-items:center}
+.demoControls summary{cursor:pointer;font-weight:600}
+.demoControls details select{display:block;margin-top:8px}
+@media(max-width:600px){.headingRight{flex-wrap:wrap}.reportButton{order:2;width:100%}.downloadActions{justify-content:flex-start}.panelHead{flex-wrap:wrap}.demoControls{margin:0 15px 20px;width:max-content;max-width:calc(100% - 30px)}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand"><span class="mark" aria-hidden="true">≈</span><span>Flowstead</span></div><nav class="topnav" aria-label="Main navigation"><button id="overviewNav" class="navbutton" aria-current="page">Plants</button><button id="detailNav" class="navbutton">Plant view</button></nav><div class="topMeta">Simulated data · Florida</div></header>
+<main class="shell">
+<section id="overview" class="screens active" aria-labelledby="over-title">
+<div class="pagehead"><div><h1 id="over-title">Your plants</h1></div><div class="date">3 plants</div></div>
+<div class="overviewGrid"><section class="surface listPanel" aria-label="Plant list"><div class="panelHead"><h2>Plant list</h2></div><div id="siteList"></div></section>
+<section class="surface mapPanel" aria-label="Plant map"><div class="panelHead"><h2>Florida map</h2></div><div id="realMap" class="mapbox" role="region" aria-label="Interactive map of plants in Florida">
+<div id="mapFallback" class="mapUnavailable hidden">Map unavailable. Select a plant from the list.</div>
+</div></section></div>
+
+</section>
+<section id="detail" class="screens" aria-labelledby="plant-title">
+<button class="back" id="backBtn">← All plants</button>
+<div class="pagehead"><div><h1 id="plant-title">Bay Meadow</h1><p class="lede" id="plant-place">Tampa · Eastern Time · Small domestic wastewater plant</p></div><div class="headingRight"><span id="reading-status" class="stateStamp">Readings current</span><button type="button" class="exportButton reportButton" id="downloadReport">Download PDF report</button><select class="select" id="plantPicker" aria-label="Choose plant"></select></div></div>
+<div class="metrics" id="metrics"></div>
+<div class="detailGrid"><section class="surface chartPanel" aria-labelledby="history-title"><div class="panelHead"><div><h2 id="history-title">Measurement history</h2></div><select class="select" id="rangePicker" aria-label="History period"><option value="24">Past 24 hours</option><option value="72">Past 3 days</option><option value="168">Past 7 days</option></select></div><div class="channels" id="channels" role="group" aria-label="Select measurement"><button class="channel" data-channel="influent_flow" aria-pressed="true">Influent flow</button><button class="channel" data-channel="rainfall" aria-pressed="false">Rainfall</button><button class="channel" data-channel="dissolved_oxygen" aria-pressed="false">Dissolved oxygen</button><button class="channel" data-channel="effluent_ph" aria-pressed="false">Effluent pH</button></div><div id="historyView"></div><div class="chartFoot"><span id="chartUnit">US gal/h</span><div class="downloadActions"><button type="button" id="historyPng" class="exportButton">Download plot</button><button type="button" id="historyCsv" class="exportButton">Download CSV</button></div></div></section>
+<section class="surface forecastPanel" aria-labelledby="forecast-title"><div class="panelHead"><div><h2 id="forecast-title">Influent flow forecast</h2><div class="sectionSub">Next 12 hours · US gal/h</div></div><div class="downloadActions"><button type="button" id="forecastPng" class="exportButton">Download plot</button><button type="button" id="forecastCsv" class="exportButton">Download CSV</button></div></div><div id="forecastView"></div></section></div>
+
+</section>
+</main>
+<aside class="demoControls" aria-label="Prototype state controls"><details><summary>Preview states</summary><label class="hidden" for="scenario">Preview state</label><select id="scenario"><option value="normal">Current readings</option><option value="loading">Loading</option><option value="missing">Missing readings</option><option value="unavailable">Forecast unavailable</option><option value="error">Connection error</option></select></details></aside>
+<script>
+const plants=[{id:0,name:'Bay Meadow',city:'Tampa',zone:'America/New_York',zoneLabel:'Eastern Time',lon:-82.45,lat:27.97,flow:2240,rain:.08,do:2.8,ph:7.2,capacity:52000,seed:2},{id:1,name:'Cypress Creek',city:'Gainesville',zone:'America/New_York',zoneLabel:'Eastern Time',lon:-82.32,lat:29.65,flow:1490,rain:0,do:3.1,ph:7.4,capacity:35000,seed:5},{id:2,name:'Pine Harbor',city:'Pensacola',zone:'America/Chicago',zoneLabel:'Central Time',lon:-87.22,lat:30.42,flow:3150,rain:.14,do:2.5,ph:7.1,capacity:76000,seed:9}];
+const field={influent_flow:{title:'Influent flow',unit:'gal/h',foot:'',min:300,max:6000,dp:0},rainfall:{title:'Rainfall',unit:'in/h',foot:'',min:0,max:.7,dp:2},dissolved_oxygen:{title:'Dissolved oxygen',unit:'mg/L',foot:'',min:.7,max:5.2,dp:1},effluent_ph:{title:'Effluent pH',unit:'',foot:'',min:6,max:8.7,dp:1}};
+let selected=0,channel='influent_flow',scenario='normal',period=24,screen='overview';let mapInstance=null;const SAMPLE_ISSUED_AT='2026-11-16T12:00:00Z';const MODEL_VERSION='seasonal-naive-demo-v0';
+const el=id=>document.getElementById(id);
+const number=(v,dp=0)=>v.toLocaleString('en-US',{maximumFractionDigits:dp,minimumFractionDigits:dp});
+const localTime=(plant)=>new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',timeZone:plant.zone,timeZoneName:'short'}).format(new Date('2026-11-16T12:00:00Z'));
+function reading(p,key){return key==='influent_flow'?p.flow:key==='rainfall'?p.rain:key==='dissolved_oxygen'?p.do:p.ph;}
+
+function initializeMap(maplibre){
+  if(mapInstance) return;
+  try{
+    mapInstance=new maplibre.Map({
+      container:'realMap',
+      style:'https://tiles.openfreemap.org/styles/liberty',
+      center:[-84.15,28.7],zoom:5.35,minZoom:4.1,maxZoom:16,
+      attributionControl:true,
+      cooperativeGestures:true
+    });
+    mapInstance.addControl(new maplibre.NavigationControl({showCompass:false}),'top-right');
+    plants.forEach(p=>{
+      const marker=document.createElement('button');
+      marker.className='plantMarker';marker.type='button';
+      marker.textContent=p.name;
+      marker.setAttribute('aria-label',`Open plant ${p.name}`);
+      marker.addEventListener('click',()=>openSite(p.id));
+      new maplibre.Marker({element:marker,anchor:'bottom'}).setLngLat([p.lon,p.lat]).addTo(mapInstance);
+    });
+    mapInstance.on('error',()=>{if(!mapInstance.loaded())el('mapFallback').classList.remove('hidden')});
+    mapInstance.on('load',()=>{el('mapFallback').classList.add('hidden')});
+  }catch(e){el('mapFallback').classList.remove('hidden');console.error('Map initialization failed:',e)}
+}
+
+function show(which){screen=which;el('overview').classList.toggle('active',which==='overview');el('detail').classList.toggle('active',which==='detail');el('overviewNav').setAttribute('aria-current',which==='overview'?'page':'false');el('detailNav').setAttribute('aria-current',which==='detail'?'page':'false');window.scrollTo(0,0);if(which==='detail')renderDetail();else if(mapInstance)setTimeout(()=>mapInstance.resize(),40);}
+function openSite(id){selected=Number(id);show('detail');}
+function renderList(){el('siteList').innerHTML=plants.map(p=>`<button class="site" data-site="${p.id}"><span><span class="siteTitle">${p.name}</span><span class="siteSubtitle">${p.city} · ${p.zoneLabel}</span></span><span class="siteStats"><span class="siteFlow">${number(p.flow)} gal/h <span class="circleArrow">↗</span></span><span class="siteDetail">DO ${number(p.do,1)} mg/L · pH ${number(p.ph,1)}</span></span></button>`).join('');document.querySelectorAll('[data-site]').forEach(node=>node.onclick=()=>openSite(node.dataset.site));}
+function series(p,key,n,forward=false){const values=[];for(let k=0;k<n;k++){const t=forward?k+1:k-n+1;let daily=Math.sin((t+p.seed+4)/24*2*Math.PI);let sub=Math.sin((t+p.seed)/11*2*Math.PI);let v=reading(p,key);if(key==='influent_flow')v=p.flow*(1+.16*daily+.07*sub+(forward?.03*k/12:0));if(key==='rainfall')v=Math.max(0,p.rain+.09*Math.sin((t+p.seed)/17*2*Math.PI)-.07);if(key==='dissolved_oxygen')v=p.do+.35*daily+.13*sub;if(key==='effluent_ph')v=p.ph+.18*daily+.07*sub;values.push(Math.max(0,v));}return values;}
+function plantHourLabel(plant,offset){
+  const when=new Date(Date.parse(SAMPLE_ISSUED_AT)+offset*3600000);
+  return new Intl.DateTimeFormat('en-US',{
+    timeZone:plant.zone,month:'short',day:'numeric',hour:'numeric',
+    hour12:false,timeZoneName:'short'
+  }).format(when).replace(',', '');
+}
+function graph(values,opt={}){
+  const W=660,H=270,l=86,r=18,t=20,b=66;
+  let mn=Math.min(...values)*.89,mx=Math.max(...values)*1.08;
+  if(mn===mx){mn-=1;mx+=1}
+  if(opt.minZero)mn=0;
+  const px=i=>l+(W-l-r)*(i/(values.length-1));
+  const py=v=>t+(H-t-b)*(1-(v-mn)/(mx-mn));
+  const boundary=opt.boundary??values.length;
+  const pts=values.map((v,i)=>[px(i),py(v)]);
+  const makePath=arr=>arr.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const shade=opt.boundary?`<rect x="${px(boundary-1)}" y="${t}" width="${px(values.length-1)-px(boundary-1)}" height="${H-t-b}" fill="#fff9ed"/><line x1="${px(boundary-1)}" x2="${px(boundary-1)}" y1="${t}" y2="${H-b}" stroke="#bd8b48" stroke-dasharray="4 5"/>`:'';
+  const grid=[0,.25,.5,.75,1].map(u=>{
+    const y=t+(H-t-b)*u,value=mx-(mx-mn)*u;
+    return `<line class="axesGrid" x1="${l}" x2="${W-r}" y1="${y}" y2="${y}"/><text x="${l-12}" y="${y+4}" text-anchor="end">${number(value,opt.decimals??0)}</text>`;
+  }).join('');
+  const timeTicks=[0,1/3,2/3,1].map(ratio=>{
+    const i=Math.round(ratio*(values.length-1));
+    const offset=opt.boundary?i-(boundary-1):i-(values.length-1);
+    const anchor=ratio===0?'start':ratio===1?'end':'middle';
+    return `<text text-anchor="${anchor}" x="${px(i)}" y="${H-42}">${plantHourLabel(opt.plant,offset)}</text>`;
+  }).join('');
+  const observed=makePath(pts.slice(0,boundary));
+  const predicted=opt.boundary?makePath(pts.slice(boundary-1)):'';
+  const area=observed+` L ${px(boundary-1)} ${H-b} L ${px(0)} ${H-b} Z`;
+  const yLabel=opt.yLabel||'Value';
+  return `<svg class="svgChart" role="img" aria-label="${opt.aria||'Hourly chart'}; horizontal axis plant-local time; vertical axis ${yLabel}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${shade}${grid}<path class="chartArea" d="${area}"/><path class="chartLine" d="${observed}"/>${predicted?`<path class="forecastLine" d="${predicted}"/>`:''}${timeTicks}<text class="axisTitle" text-anchor="middle" x="${(l+W-r)/2}" y="${H-12}">Time (plant local)</text><text class="axisTitle" text-anchor="middle" transform="translate(19 ${(t+H-b)/2}) rotate(-90)">${yLabel}</text></svg>`;
+}
+
+function renderDetail(){const p=plants[selected];el('plant-title').textContent=p.name;el('plant-place').textContent=`${p.city} · ${p.zoneLabel} · Small domestic wastewater plant`;el('plantPicker').value=String(selected);el('reading-status').textContent=scenario==='normal'||scenario==='unavailable'?`Last hourly reading · ${localTime(p)}`:scenario==='loading'?'Loading':scenario==='missing'?'Readings incomplete':'Connection issue';el('reading-status').classList.toggle('warning',!['normal','unavailable'].includes(scenario));el('metrics').innerHTML=Object.keys(field).map(key=>{const f=field[key];let missing=scenario==='missing'&&(key==='rainfall'||key==='effluent_ph');let val=scenario==='error'||scenario==='loading'||missing?'—':number(reading(p,key),f.dp);let foot=missing?'No reading received':scenario==='error'?'Last update unavailable':scenario==='loading'?'Retrieving measurement':f.foot;return `<article class="surface metric"><div class="metricLabel">${f.title}</div><div class="metricVal">${val}${val==='—'?'':`<span class="unit">${f.unit}</span>`}</div>${foot?`<div class="metricFoot">${foot}</div>`:""}</article>`;}).join('');document.querySelectorAll('.channel').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.channel===channel)));renderHistory();renderForecast();updateExportState();}
+function renderHistory(){let p=plants[selected],f=field[channel];el('chartUnit').textContent=f.unit;let v=series(p,channel,period);if(scenario==='loading'){el('historyView').innerHTML='<div class="empty"><div class="spinner" aria-hidden="true"></div><strong>Loading measurement history</strong></div>';return}if(scenario==='error'){el('historyView').innerHTML='<div class="empty"><strong>History could not be loaded</strong><button onclick="restore()">Try again</button></div>';return}if(scenario==='missing'&&(channel==='rainfall'||channel==='effluent_ph')){el('historyView').innerHTML='<div class="empty"><strong>No readings for this period</strong></div>';return}el('historyView').innerHTML=`<div class="chartWrap" id="historyPlot">${graph(v,{aria:`${f.title} for ${p.name}, past ${period} hours`,decimals:f.dp,minZero:channel==='rainfall',yLabel:f.title+(f.unit?' ('+f.unit+')':''),plant:p})}</div>`;}
+function renderForecast(){let p=plants[selected];if(scenario==='loading'){el('forecastView').innerHTML='<div class="empty"><div class="spinner" aria-hidden="true"></div><strong>Loading forecast</strong></div>';return}if(scenario==='unavailable'||scenario==='error'){el('forecastView').innerHTML=`<div class="empty"><strong>${scenario==='error'?'Forecast could not be loaded':'Forecast currently unavailable'}</strong><button onclick="restore()">Try again</button></div>`;return}const y=[...series(p,'influent_flow',12),...series(p,'influent_flow',13,true).slice(1)];el('forecastView').innerHTML=`<div class="forecastSummary"><div class="forecastPeak"><strong>${number(Math.max(...y.slice(12)))} <span class="unit">gal/h</span></strong><small>Predicted peak</small></div><small>Next 12 hours</small></div><div class="chartWrap" id="forecastPlot">${graph(y,{boundary:12,aria:'Measured influent flow followed by 12 hourly forecast values',plant:p,yLabel:'Influent flow (gal/h)'})}</div><div class="legend"><span><i class="dot"></i>Measured</span><span><i class="dot forecast"></i>Predicted</span></div>`;}
+
+function fileSafe(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+function saveBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function csvEscape(x){const s=String(x??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s}
+function csvFile(rows,name){saveBlob(new Blob([rows.map(r=>r.map(csvEscape).join(',')).join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'}),name)}
+function historyCanExport(){return scenario!=='loading'&&scenario!=='error'&&!(scenario==='missing'&&(channel==='rainfall'||channel==='effluent_ph'))}
+function forecastCanExport(){return !['loading','error','unavailable'].includes(scenario)}
+function updateExportState(){
+ el('historyPng').disabled=el('historyCsv').disabled=!historyCanExport();
+ el('forecastPng').disabled=el('forecastCsv').disabled=!forecastCanExport();
+ el('downloadReport').disabled=scenario==='loading'||scenario==='error';
+}
+function hoursFromAnchor(offset){return new Date(Date.parse(SAMPLE_ISSUED_AT)+offset*3600000).toISOString()}
+function historyRows(){
+ const p=plants[selected],f=field[channel],vals=series(p,channel,period);
+ return [['timestamp_utc','plant','measurement','unit','value','quality'],...vals.map((v,i)=>[
+ hoursFromAnchor(i-period+1),p.name,channel,f.unit,v.toFixed(f.dp),'valid'])];
+}
+function forecastRows(){
+ const p=plants[selected];
+ const vals=series(p,'influent_flow',13,true).slice(1);
+ return [['issued_at','target_time','plant','predicted_flow_gal_h','model_version'], ...vals.map((v,i)=>[
+ SAMPLE_ISSUED_AT,hoursFromAnchor(i+1),p.name,v.toFixed(0),MODEL_VERSION])];
+}
+function downloadHistoryCsv(){if(historyCanExport())csvFile(historyRows(),`${fileSafe(plants[selected].name)}-${channel}-${period}h.csv`)}
+function downloadForecastCsv(){if(forecastCanExport())csvFile(forecastRows(),`${fileSafe(plants[selected].name)}-forecast-12h.csv`)}
+async function plotPng(chartId,filename){
+ const source=el(chartId)?.querySelector('svg');if(!source)return;
+ const copy=source.cloneNode(true);copy.setAttribute('xmlns','http://www.w3.org/2000/svg');
+ copy.setAttribute('width','1320');copy.setAttribute('height','540');
+ copy.setAttribute('preserveAspectRatio','xMidYMid meet');
+ const css=document.createElementNS('http://www.w3.org/2000/svg','style');
+ css.textContent=`text{font:12px Arial,sans-serif;fill:#526a67}.axesGrid{stroke:#e4ebe8;stroke-width:1}.chartArea{fill:#def3e9}.chartLine{fill:none;stroke:#087968;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.forecastLine{stroke:#98651b;stroke-width:3;stroke-dasharray:6 6;fill:none}.axisTitle{font:600 13px Arial,sans-serif;fill:#36514c}`;
+ copy.insertBefore(css,copy.firstChild);
+ const xml=new XMLSerializer().serializeToString(copy);
+ const blob=new Blob([xml],{type:'image/svg+xml'});
+ const temp=URL.createObjectURL(blob);
+ try{
+  const image=new Image();image.src=temp;await image.decode();
+  const canvas=document.createElement('canvas');canvas.width=1320;canvas.height=540;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,1320,540);ctx.drawImage(image,0,0,1320,540);
+  const png=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  if(!png)throw new Error('PNG output unavailable');
+  saveBlob(png,filename);
+ }catch(err){console.error('Plot export:',err);alert('Plot could not be downloaded. Please try again.')}
+ finally{URL.revokeObjectURL(temp)}
+}
+function downloadHistoryPng(){if(historyCanExport())plotPng('historyPlot',`${fileSafe(plants[selected].name)}-${channel}-${period}h.png`)}
+function downloadForecastPng(){if(forecastCanExport())plotPng('forecastPlot',`${fileSafe(plants[selected].name)}-forecast-12h.png`)}
+function downloadReport(){
+ if(scenario==='loading'||scenario==='error')return;
+ const ctor=window.jspdf?.jsPDF;
+ if(!ctor){alert('PDF export is unavailable. Check your internet connection and try again.');return}
+ const p=plants[selected]; const pdf=new ctor({unit:'mm',format:'a4'});
+ const left=19;let y=24;
+ pdf.setTextColor(24,55,52);pdf.setFont('helvetica','bold');pdf.setFontSize(19);pdf.text(p.name,left,y);
+ y+=8;pdf.setFont('helvetica','normal');pdf.setFontSize(10);
+ pdf.setTextColor(82,106,103);pdf.text(`${p.city}, Florida  |  ${p.zoneLabel}  |  Simulated`,left,y);
+ y+=8;pdf.setDrawColor(215,230,223);pdf.line(left,y,190,y);y+=11;
+ pdf.setTextColor(24,55,52);pdf.setFont('helvetica','bold');pdf.setFontSize(12);pdf.text('Latest hourly readings',left,y);y+=9;
+ pdf.setFont('helvetica','normal');pdf.setFontSize(10);
+ const unavailable=k=>scenario==='missing'&&(k==='rainfall'||k==='effluent_ph');
+ for(const [key,name] of Object.entries({influent_flow:'Influent flow',rainfall:'Rainfall',dissolved_oxygen:'Dissolved oxygen',effluent_ph:'Effluent pH'})){
+  const f=field[key],v=unavailable(key)?'Not available':[number(reading(p,key),f.dp),f.unit].filter(Boolean).join(' ');
+  pdf.text(name,left,y);pdf.text(v,180,y,{align:'right'});y+=8;
+ }
+ y+=6;pdf.setDrawColor(215,230,223);pdf.line(left,y,190,y);y+=12;
+ pdf.setFont('helvetica','bold');pdf.setFontSize(12);pdf.text('Influent flow forecast - next 12 hours',left,y);y+=8;
+ pdf.setFont('helvetica','normal');pdf.setFontSize(9);
+ if(!forecastCanExport()){pdf.text('Forecast unavailable',left,y);}
+ else{
+  const vals=forecastRows().slice(1);pdf.text('Issued (UTC): '+SAMPLE_ISSUED_AT,left,y);y+=7;
+  pdf.text('Target hour (UTC)',left,y);pdf.text('Predicted gal/h',130,y);y+=5;
+  vals.forEach(row=>{pdf.text(row[1].replace('T',' ').replace('.000Z',' UTC'),left,y);pdf.text(number(+row[3]),130,y);y+=6;});
+ }
+ pdf.setFontSize(8);pdf.setTextColor(82,106,103);
+ pdf.text('Measurement time (UTC): '+SAMPLE_ISSUED_AT,left,278);
+ pdf.save(`${fileSafe(p.name)}-plant-report.pdf`);
+}
+
+function restore(){el('scenario').value='normal';scenario='normal';renderDetail()}
+el('overviewNav').onclick=()=>show('overview');el('detailNav').onclick=()=>show('detail');el('backBtn').onclick=()=>show('overview');el('plantPicker').onchange=e=>openSite(e.target.value);el('rangePicker').onchange=e=>{period=+e.target.value;renderHistory();updateExportState()};el('channels').onclick=e=>{const b=e.target.closest('[data-channel]');if(!b)return;channel=b.dataset.channel;renderDetail()};el('scenario').onchange=e=>{scenario=e.target.value;renderDetail()};
+el('historyPng').onclick=downloadHistoryPng;el('historyCsv').onclick=downloadHistoryCsv;el('forecastPng').onclick=downloadForecastPng;el('forecastCsv').onclick=downloadForecastCsv;el('downloadReport').onclick=downloadReport;
+el('plantPicker').innerHTML=plants.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');renderList();
+</script>
+
+<script type="module">
+try {
+  const maplibre=await import('https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.mjs');
+  initializeMap(maplibre);
+} catch(error){
+  document.getElementById('mapFallback').classList.remove('hidden');
+  console.error('Map library could not be loaded:',error);
+}
+</script>
+</body>
+</html>

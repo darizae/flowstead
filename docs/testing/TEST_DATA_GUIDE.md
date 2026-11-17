@@ -1,6 +1,6 @@
 # Flowstead — indexed integration / UI test data guide
 
-This is the **test-data companion** to [INDEXED_TEST_PLAN.md](INDEXED_TEST_PLAN.md). It adapts the owner-uploaded integration_tests.zip/docs/test_data_classes.md and SKILL.md methodology to Flowstead. Each indexed case chooses the **minimum dimensions that expose the intended distinction**, not a giant generic fixture. No private reference ZIPs are required by Mac implementation workers.
+This is the **test-data companion** to [INDEXED_TEST_PLAN.md](INDEXED_TEST_PLAN.md). Choose the **minimum dimensions that expose the intended distinction**, not a giant generic fixture. The test cases and data classes here are self-contained.
 
 ## Real local stack and ownership
 
