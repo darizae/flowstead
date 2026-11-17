@@ -30,5 +30,15 @@ audit-backend:
 docs-check:
     uv run --project backend python -m backend.docs_check
 
+api-dev:
+    uv run --project backend uvicorn flowstead_api.main:app --app-dir backend/src --host 127.0.0.1 --port 8000
+
+test-api-unit:
+    uv run --project backend pytest -q backend/tests/unit/test_api_contract.py
+
+test-api-integration:
+    docker compose up -d db
+    uv run --project backend pytest -q backend/tests/integration/test_api.py
+
 default:
     @just --list
