@@ -1,6 +1,6 @@
 # T-009 — 12h forecast charts and invite/session UX
 
-**Status:** DRAFT — auth storyboard approved; blocked by H-10 real map/PDF/visual review and 005/008 (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — 005/008; approved auth storyboard (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 005 JWT/API integration and 008 chart/UI acceptance; H-10 owner approval includes signed-out, invite/sign-in, forbidden Plant, no assigned Plants, session expiry and logout storyboards. Live Supabase project may be unavailable; local browser tests must still run against deterministic test Auth provider.
@@ -34,4 +34,4 @@ Do not invite users, change Supabase Auth settings or create hosted service in t
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP handles review/status follow-up as a separate control-plane improvement; no new startup gate. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
