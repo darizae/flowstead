@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
+import uuid
+from urllib.parse import unquote, urlsplit
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -184,6 +187,84 @@ def _table_columns(
     return {row[0]: (row[1], row[2], row[3], row[4], row[5]) for row in rows}
 
 
+def _schema_catalog(
+    connection: psycopg.Connection[Any], schema: str
+) -> dict[str, tuple[tuple[Any, ...], ...]]:
+    """Compare PostgreSQL-parsed definitions, not user-controlled object names alone."""
+    queries = {
+        "columns": """
+            SELECT t.relname, a.attname, a.attidentity, a.attgenerated,
+                   pg_get_expr(d.adbin, d.adrelid), a.attcollation::oid
+            FROM pg_class AS t
+            JOIN pg_namespace AS n ON n.oid = t.relnamespace
+            JOIN pg_attribute AS a ON a.attrelid = t.oid
+            LEFT JOIN pg_attrdef AS d ON d.adrelid = t.oid AND d.adnum = a.attnum
+            WHERE n.nspname = %s AND t.relkind IN ('r', 'p')
+              AND a.attnum > 0 AND NOT a.attisdropped
+        """,
+        "constraints": """
+            SELECT t.relname, c.conname, c.contype, c.convalidated,
+                   c.condeferrable, c.condeferred, pg_get_constraintdef(c.oid)
+            FROM pg_constraint AS c
+            JOIN pg_class AS t ON t.oid = c.conrelid
+            JOIN pg_namespace AS n ON n.oid = t.relnamespace
+            WHERE n.nspname = %s
+        """,
+        "indexes": """
+            SELECT t.relname, i.relname, pg_get_indexdef(i.oid)
+            FROM pg_index AS x
+            JOIN pg_class AS i ON i.oid = x.indexrelid
+            JOIN pg_class AS t ON t.oid = x.indrelid
+            JOIN pg_namespace AS n ON n.oid = t.relnamespace
+            WHERE n.nspname = %s
+        """,
+    }
+    result: dict[str, tuple[tuple[Any, ...], ...]] = {}
+    for kind, query in queries.items():
+        rows = connection.execute(query, (schema,)).fetchall()
+        # The reference is compiled on the same PostgreSQL instance; only
+        # schema qualification differs between the two catalog snapshots.
+        normalized = [
+            tuple(value.replace(schema + ".", "app.") if isinstance(value, str) else value
+                  for value in row)
+            for row in rows
+        ]
+        result[kind] = tuple(sorted(normalized))
+    return result
+
+
+def _reference_catalog(
+    connection: psycopg.Connection[Any], *, include_forecast_metadata: bool
+) -> dict[str, tuple[tuple[Any, ...], ...]]:
+    """Build the immutable SQL baseline inside a rolled-back savepoint.
+
+    Never stamp based on an unchecked, same-named or weakened definition.
+    The comparison DDL is rolled back even if validation raises.
+    """
+    scratch = "flowstead_probe_" + uuid.uuid4().hex
+    initial_sql = (BACKEND_ROOT.parent / "migrations" / "001_initial.sql").read_text(
+        encoding="utf-8"
+    )
+    metadata_sql = (BACKEND_ROOT / "migrations" / "002_forecast_metadata.sql").read_text(
+        encoding="utf-8"
+    )
+    if "CREATE SCHEMA IF NOT EXISTS app;" not in initial_sql:
+        raise MigrationStateError("historical baseline SQL has an unexpected schema header")
+    initial_sql = initial_sql.replace(
+        "CREATE SCHEMA IF NOT EXISTS app;", f"CREATE SCHEMA {scratch};", 1
+    ).replace("app.", scratch + ".")
+    metadata_sql = metadata_sql.replace("app.", scratch + ".")
+    connection.execute("SAVEPOINT flowstead_schema_probe")
+    try:
+        connection.execute(initial_sql)
+        if include_forecast_metadata:
+            connection.execute(metadata_sql)
+        return _schema_catalog(connection, scratch)
+    finally:
+        connection.execute("ROLLBACK TO SAVEPOINT flowstead_schema_probe")
+        connection.execute("RELEASE SAVEPOINT flowstead_schema_probe")
+
+
 def _validate_schema(
     connection: psycopg.Connection[Any], *, include_forecast_metadata: bool
 ) -> None:
@@ -196,37 +277,19 @@ def _validate_schema(
         expected_columns["forecast_issuances"].pop("physical_bound_rule")
 
     for table, expected in expected_columns.items():
-        actual = _table_columns(connection, "app", table)
-        if actual != expected:
+        if _table_columns(connection, "app", table) != expected:
             raise MigrationStateError(f"app.{table} columns do not match the approved baseline")
 
-    indexes = {
-        row[0]
-        for row in connection.execute(
-            "SELECT indexname FROM pg_indexes WHERE schemaname = 'app'"
-        ).fetchall()
-    }
-    missing_indexes = REQUIRED_INDEXES - indexes
-    if missing_indexes:
-        raise MigrationStateError(
-            f"approved baseline indexes are missing: {', '.join(sorted(missing_indexes))}"
-        )
+    actual_catalog = _schema_catalog(connection, "app")
+    reference_catalog = _reference_catalog(
+        connection, include_forecast_metadata=include_forecast_metadata
+    )
+    for kind, reference in reference_catalog.items():
+        if actual_catalog[kind] != reference:
+            raise MigrationStateError(
+                f"approved baseline {kind} definitions differ; refusing Alembic stamp"
+            )
 
-    constraints = {
-        row[0]
-        for row in connection.execute(
-            """
-            SELECT conname
-            FROM pg_constraint
-            WHERE connamespace = 'app'::regnamespace
-            """
-        ).fetchall()
-    }
-    missing_constraints = REQUIRED_CONSTRAINTS - constraints
-    if missing_constraints:
-        raise MigrationStateError(
-            f"approved baseline constraints are missing: {', '.join(sorted(missing_constraints))}"
-        )
 
 def _validate_schema_migrations(connection: psycopg.Connection[Any]) -> tuple[str, ...]:
     columns = _table_columns(connection, "public", "schema_migrations")
@@ -283,6 +346,20 @@ def _inspect_state(database_url: str) -> DatabaseState:
         markers = _validate_schema_migrations(connection)
         if markers not in (("001_initial",), ("001_initial", "002_forecast_metadata")):
             raise MigrationStateError(f"unrecognized historical migration markers: {markers!r}")
+        if alembic_revision is not None:
+            script = _script_directory()
+            try:
+                known = script.get_revision(alembic_revision)
+            except Exception as exc:
+                raise MigrationStateError(
+                    f"unknown Alembic revision: {alembic_revision}"
+                ) from exc
+            if known is None or not _is_descendant(script, alembic_revision, markers[-1]):
+                raise MigrationStateError("Alembic revision disagrees with historical markers")
+            # A known descendant may legitimately add/change columns and indexes.
+            # Exact baseline comparison is only meaningful at the stamp boundary.
+            if alembic_revision != markers[-1]:
+                return DatabaseState(False, markers[-1], alembic_revision)
         _validate_schema(connection, include_forecast_metadata=len(markers) == 2)
         return DatabaseState(False, markers[-1], alembic_revision)
 
@@ -330,8 +407,26 @@ def _run(database_url: str, operation: str, revision: str = "head") -> None:
         engine.dispose()
 
 
-def migrate(database_url: str, rollback: bool = False) -> None:
-    """Upgrade to Alembic head, or downgrade to base for disposable local databases."""
+def _require_disposable_database(database_url: str, *, disposable: bool) -> None:
+    parsed = urlsplit(database_url)
+    database_name = unquote(parsed.path.lstrip("/"))
+    if not (
+        disposable
+        and parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+        and re.fullmatch(r"flowstead_test_[0-9a-f]{32}", database_name)
+    ):
+        raise MigrationStateError(
+            "destructive rollback refused: explicitly mark a loopback "
+            "flowstead_test_<32 hex> database as disposable"
+        )
+
+
+def migrate(
+    database_url: str, rollback: bool = False, *, disposable: bool = False
+) -> None:
+    """Upgrade safely; downgrade only an explicitly disposable, isolated local DB."""
+    if rollback:
+        _require_disposable_database(database_url, disposable=disposable)
     state = _inspect_state(database_url)
     if rollback:
         if state.clean:
@@ -351,6 +446,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("operation", choices=("upgrade", "current"), nargs="?", default="upgrade")
     parser.add_argument("--rollback", action="store_true")
+    parser.add_argument("--disposable", action="store_true",
+                        help="required for rollback on an isolated flowstead_test_<uuid> DB")
     parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL"))
     args = parser.parse_args()
     if not args.database_url:
@@ -360,7 +457,7 @@ def main() -> int:
     if args.operation == "current":
         _run(args.database_url, "current")
     else:
-        migrate(args.database_url, rollback=args.rollback)
+        migrate(args.database_url, rollback=args.rollback, disposable=args.disposable)
     return 0
 
 

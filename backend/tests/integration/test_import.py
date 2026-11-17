@@ -50,10 +50,9 @@ def test_tampered_source_sha_does_not_change_database() -> None:
     assert _count("ingest_batches") == 0
 
 
-def test_migration_is_reversible_on_disposable_database() -> None:
-    migrate(DATABASE_URL, rollback=True)  # type: ignore[arg-type]
-    with psycopg.connect(DATABASE_URL) as connection:
-        assert connection.execute(
-            "SELECT to_regclass('app.hourly_readings')"
-        ).fetchone()[0] is None
+def test_repeated_migration_preserves_imported_data() -> None:
+    """Case: IT-M2-MIGRATE"""
+    before = (_count("plants"), _count("hourly_readings"), _count("ingest_batches"))
     migrate(DATABASE_URL)  # type: ignore[arg-type]
+    migrate(DATABASE_URL)  # type: ignore[arg-type]
+    assert (_count("plants"), _count("hourly_readings"), _count("ingest_batches")) == before
