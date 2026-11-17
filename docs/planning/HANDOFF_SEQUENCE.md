@@ -38,3 +38,13 @@
 ## Completion rules
 
 An existing bounded **local** task is eligible when its actual predecessor is accepted. **OMP owns** the ordinary checkout/tool/test setup and remediation inside that task; do not send it back to the owner for predictable implementation work. Dispatch the next eligible local task through the existing queue with its exact file path and current base commit. A static task filename/status or a free-form Issue is not evidence of completion. Keep review, exact-final-SHA tests, merge and approved status reconciliation as distinct gates. For hosted, public, secret, cost or architecture-changing tasks, obtain the separate explicit owner approval named above. Milestone Markdown/routing hygiene remains required (006, 013, 018). No shadow planning queue; this sequence and [`IMPLEMENTATION_SPEC.md`](IMPLEMENTATION_SPEC.md) remain authoritative.
+
+## Accepted Flowstead Sim source receipt
+
+<!-- flowstead-status-sync source-ad5c94d1f46e79312a99cb9721f38700f24fdf6b -->
+- Source commit: `ad5c94d1f46e79312a99cb9721f38700f24fdf6b`
+- Schema: `m1.v1`
+- Seed: `20250101`
+- Manifest file checksums: `{"telemetry.csv":"e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e"}`
+- Reproduction: `PYTHONPATH=src python3 -m flowstead_sim --profile m1 --seed 20250101 --output-dir generated-m1-12`
+- Provenance: bounded local synthetic data; no cloud, AWS/S3 or observed-facility source.
