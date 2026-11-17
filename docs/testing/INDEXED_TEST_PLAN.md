@@ -182,6 +182,11 @@
 | `DB-M4A-STAMP` | Previously SQL-migrated populated database validates/stamps without replaying old DDL or changing M1+forecast records | UNVERIFIED until tested |
 | `DB-M4A-MISMATCH` | Unknown/partially migrated schema safely fails without destructive repair | UNVERIFIED until tested |
 | `DB-M4A-REPEAT` | Repeated upgrade is no-op; new local revision safely up/down without data loss | UNVERIFIED until tested |
+
+### T-004b — [JetStream messaging](../planning/tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md)
+
+| ID | Intended observable assertion | Evidence status |
+|---|---|---|
 | `MSG-M4B-PUBLISH` | Outbox transaction and real JetStream publication retain exact typed event identity; rollback produces no event | UNVERIFIED until tested |
 | `MSG-M4B-FLOW` | Real worker persists exactly 12 forecast targets and completion event before acknowledging | UNVERIFIED until tested |
 | `MSG-M4B-DUP` | Replay/redelivery/reordering/crash restart do not duplicate issuance or side effects | UNVERIFIED until tested |
@@ -189,13 +194,24 @@
 | `MSG-M4B-PAUSE` | Controlled worker pause proves queued distinct from completed and bounded resumption | UNVERIFIED until tested |
 | `MSG-M4B-POISON` | Invalid version, Plant or payload dead-lettered/failed safely with no business mutation | UNVERIFIED until tested |
 | `MSG-M4B-AUTH` | Private cross-Plant command denied; public read-only cannot queue arbitrary Plant work | UNVERIFIED until tested |
+
+### T-007 — [IndexedDB foundation](../planning/tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md)
+
+| ID | Intended observable assertion | Evidence status |
+|---|---|---|
 | `IDB-M7-PREF` | Anonymous/public and per-principal selection preferences survive reload without permission leakage | UNVERIFIED until tested |
+
+### T-009 — [IndexedDB principal isolation](../planning/tasks/009_forecast-and-session-ux__codex-luna-5-6__high.md)
+
+| ID | Intended observable assertion | Evidence status |
+|---|---|---|
 | `IDB-M9-ISOLATE` | IndexedDB private namespaces clear on signout, expiry, switch and revocation; other principal cannot render stale data | UNVERIFIED until tested |
 | `IDB-M9-BOUNDS` | TTL/quota/schema-corruption/eviction and offline behavior are bounded, deterministic and fail safely | UNVERIFIED until tested |
+
+### T-012 — [Indexed test visibility](../planning/tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md)
+
+| ID | Intended observable assertion | Evidence status |
+|---|---|---|
 | `E2E-M12-INDEX` | Local Playwright HTML report and indexed Markdown/JSON catalog match exact UI test IDs and real browser outcomes | UNVERIFIED until tested |
-
-### T-004b — [JetStream messaging](../planning/tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md)
-
-The `MSG-M4B-*` rows above are owned by T-004b; `DB-M4A-*` are owned by T-004a. IndexedDB `IDB-M7-*` is owned by T-007, `IDB-M9-*` by T-009, and `E2E-M12-INDEX` by T-012. The owning task's explicit assertions take precedence if the short summary here omits a corner case.
 
 **Inventory:** 91 distinct indexed cases. Initial evidence status is intentionally **UNVERIFIED**: no Mac case-by-case test scan was run in this document-authoring step. Any claimed pass must be substantiated in the actual test implementation and execution report.
