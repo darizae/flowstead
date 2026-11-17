@@ -35,6 +35,7 @@ def _count(table: str) -> int:
 
 
 def test_migration_and_full_import_are_idempotent() -> None:
+    """Cases: DB-M4A-FRESH, IT-M2-MIGRATE"""
     migrate(DATABASE_URL)  # type: ignore[arg-type]
     assert import_m1(DATABASE_URL, Path(MANIFEST), Path(DATA), SOURCE_SHA)  # type: ignore[arg-type]
     first = (_count("plants"), _count("hourly_readings"), _count("ingest_batches"))

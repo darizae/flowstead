@@ -2,7 +2,7 @@
 
 Flowstead is a wastewater-plant operations demonstration for five fictional small Florida treatment Plants. It provides a bounded synthetic-data API and is being developed into an interactive Plants map, monitoring history, twelve-hour influent-flow forecasts, and authorized CSV/PNG/PDF exports. It does not connect to operational equipment.
 
-**Current implementation:** local PostgreSQL schema/importer, FastAPI read endpoints and deterministic forecast baseline exist. Alembic migration adoption, NATS/JetStream asynchronous processing, React frontend and hosted deployment remain planned; do not treat the planned UI or hosted demo as available.
+**Current implementation:** local PostgreSQL Alembic migrations, schema/importer, FastAPI read endpoints and deterministic forecast baseline exist. NATS/JetStream asynchronous processing, React frontend and hosted deployment remain planned; do not treat the planned UI or hosted demo as available.
 
 ## Start with the active contracts
 
@@ -19,7 +19,8 @@ Prerequisites: Python 3.11–3.13, uv, Docker Compose and [just](https://just.sy
 ~~~sh
 just --list
 just db-up
-just migrate-local
+just db-upgrade
+just db-current
 just test-backend-unit
 just test-db-integration
 just test-api-integration

@@ -8,9 +8,13 @@ db-up:
 db-down:
     docker compose down
 
-migrate-local:
-    uv run --project backend python -m backend.migrate
+db-upgrade:
+    uv run --project backend python -m backend.migrate upgrade
 
+db-current:
+    uv run --project backend python -m backend.migrate current
+
+migrate-local: db-upgrade
 import-m1-local manifest source_sha data:
     uv run --project backend python -m backend.importer --manifest "{{manifest}}" --data "{{data}}" --source-sha "{{source_sha}}"
 
