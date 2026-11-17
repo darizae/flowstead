@@ -20,6 +20,8 @@ No new runtime deps. If a docs checker is needed, use existing Python stdlib or 
 
 Allowed create/edit paths: `README.md`, `AGENTS.md`, `docs/planning/**` status/routes only, `docs/agent/ROUTING.md`, `docs/design/**` evidence links only, `justfile`, `scripts/docs_check.py` if it exists or is needed. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
+Reconcile exact acceptance IDs from `docs/testing/INDEXED_TEST_PLAN.md` against asserting pytest/Vitest/Playwright tests, real NATS/PG/browser receipts, IndexedDB cache checks and the generated local Playwright HTML report. Mark absent cases UNVERIFIED, not PASS. Document genuine Alembic current/head, Compose NATS/JetStream and message recovery commands.
+
 ## Test-first acceptance
 - `DOC-M13-ACTIVE`: relative links, skill read-set paths, current task links, no historical active instructions.
 - `DOC-M13-CLAIMS`: README reports actual implemented stages and tested commands, no invented public deployment.
@@ -34,4 +36,4 @@ Material source contract conflicts stop for ChatGPT; not quietly solved in a doc
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP owns independent PR review and acceptance synchronization as a control-plane follow-up; do not delay this task's implementation waiting for that upgrade. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP must invoke ordinary Loop OMP **ChatGPT** independent review through the owner-approved Brave browser relay; OMP/SAIA review alone is not future acceptance. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
