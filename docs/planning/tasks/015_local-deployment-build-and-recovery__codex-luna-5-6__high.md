@@ -1,6 +1,6 @@
 # T-015 — local production build, host-neutral deployment config and recovery
 
-**Status:** DRAFT — local-only (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Status:** WAITING — local-only (bounded local task may run when ordered prerequisites and OMP readiness are verified; external operations remain separately gated). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
 
 ## Preconditions and order
 012–013 accepted, and current backend/frontend runtime/tooling verified. Can run independently of 014 hosted Auth actions. No actual Vercel/Render/Supabase service creation or DNS writes.
@@ -18,7 +18,7 @@ Prepare a reproducible production-grade FastAPI container/build (non-root, no se
 ## Dependencies and allowed file closure
 Prefer standard Python container and existing `uv.lock`/frontend npm lock, no new app service. Add smallest required Dockerfile, `.dockerignore`, host-config templates; choose digest-pinned base image only after checking current supported security release at task time. Dependency audits re-run if build artifacts add packages.
 
-Allowed create/edit paths: `backend/Dockerfile`, `backend/.dockerignore`, `frontend/**` build/env templates, `compose.yml` staging profile if needed, `docs/deployment/LOCAL_AND_RECOVERY.md`, `justfile`, `.env.example`, `README.md`, current Docker configuration. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/Dockerfile`, `backend/.dockerignore`, `frontend/**` build/env templates, `compose.yml` staging profile if needed, `docs/deployment/LOCAL_AND_RECOVERY.md`, `justfile`, `.env.example`, `README.md`, current Docker configuration. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `OPS-M15-BUILD`: production image and static frontend build locally from locks, no secret in image or bundle.
@@ -34,4 +34,4 @@ Missing hosting provider approval is **not** a blocker to this local task, only 
 
 
 ## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. Independent distinct-agent review at exact PR head is required; until OMP unattended-review acceptance passes, leave `review_ready` blocked. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
