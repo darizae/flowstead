@@ -275,7 +275,7 @@ def test_unknown_alembic_revision_is_rejected_without_mutation(isolated_url: str
     _historical_upgrade(isolated_url)
     with psycopg.connect(isolated_url) as connection:
         connection.execute(
-            "CREATE TABLE public.alembic_version (version_num varchar(64) NOT NULL)"
+            "CREATE TABLE public.alembic_version (version_num varchar(32) PRIMARY KEY)"
         )
         connection.execute(
             "INSERT INTO public.alembic_version VALUES ('unrecognized_change')"
