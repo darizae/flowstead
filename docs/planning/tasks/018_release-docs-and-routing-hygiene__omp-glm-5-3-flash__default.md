@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: README, routes, app/spec/sequence, **real Alembic revisions and NATS/JetStream operations**, release/deploy notes, UI parity matrix, `docs/testing/INDEXED_TEST_PLAN.md`, `docs/testing/TEST_DATA_GUIDE.md`, case coverage reports, checked browser/SQL/broker receipts/real host URLs and exact generator source SHA.
 
+## Marisma frontend documentation (binding)
+
+Flowstead consumes the published `@darizae/marisma` npm UI library as a mandatory frontend dependency beginning with T-007a. Keep install instructions, frontend package/lockfile references, theme setup and UI claims aligned with actual source and browser results. Do not describe Marisma as optional, prescribe replacement generic controls, or modify the separate Marisma repository.
+
 ## Observable result and scope
 Update truthful README product/demo link (only if actually live), dev install/test quickstart, **actual Alembic upgrade and NATS stream/consumer/worker/restart recipes, IndexedDB cache rules, indexed case coverage/Playwright HTML report instructions**, API/UI routes, current host/rollback instructions, active task statuses and tested release refs. Delete stale AWS/S3 or provisional external-gate claims that are no longer accurate, but preserve historical decisions upstream privately. Verify no private planner/job/model comparison or DHI research data appeared in published output.
 

@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: Actual frontend Vite build, FastAPI requirements/lock, Docker Compose and database migration files, existing Vercel team/domain read-only facts from approved shared contract.
 
+## Required Marisma frontend usage (binding)
+
+Keep `@darizae/marisma@0.2.0` as the installed component library and theme for Flowstead's reusable frontend controls, as established in T-007a. If this task changes frontend code, reuse Marisma's public exports rather than introducing duplicate substitutes. During relevant frontend build/browser checks, confirm that the actual app still renders Marisma controls and follows the approved Flowstead design; do not alter the separate Marisma repository or expand this task into a UI redesign.
+
 ## Observable result and scope
 Prepare reproducible production-grade **FastAPI and bounded NATS forecast worker/dispatcher** container/builds (non-root, no secrets baked in, separate liveness/readiness, graceful SIGTERM), frontend static build configured for an explicit HTTPS API URL, safe environment variable templates, default-deny CORS/auth, local staging-like container test with **real PostgreSQL, NATS/JetStream, Alembic upgrade-to-head, outbox replay and worker restart**. Document infrastructure interface `DATABASE_URL` server-only, Supabase issuer/JWKS URLs, browser-only publishable key, frontend/backend host separation, exact rollback to previous image/commit, synthetic seed/backup/reseed and cold-start/unavailability messaging. Public DNS aliases proposed `flowstead.darizae.dev` frontend and `api.flowstead.darizae.dev` API, not assigned. No external host is required for this local build task. Prohibit automatic deploy from a PR and paid upgrades.
 

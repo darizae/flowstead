@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: actual 007 route/feature components, typed API and UI state, `docs/design/UI_UX_BASELINE.md` (exact v2 `overviewGrid`, `mapPanel`, `detailGrid` layout), matrix rows, and history API tests. Review the original approved v2 HTML read-only if owner-authorized access exists, never copy sample data/source. Official MapLibre docs and current provider terms.
 
+## Required Marisma UI library (binding)
+
+Use the existing `@darizae/marisma@0.2.0` integration from T-007a for reusable React/Tailwind controls and application surfaces added or changed in this task. Import Marisma's public components and theme; do not introduce duplicate bespoke Tailwind/Radix buttons, cards, fields, dialogs or shell primitives where Marisma provides them. Preserve Flowstead's approved v2 layout, colors and interaction behavior; keep MapLibre, scientific charts and domain-specific UI logic within Flowstead. Exercise affected rendered UI and update `docs/design/UI_UX_PARITY_MATRIX.md`; do not vendor Marisma or edit its repository.
+
 ## Observable result and scope
 Add real interactive MapLibre GL JS map using `https://tiles.openfreemap.org/styles/liberty` (subject to current provider availability/terms), visible attribution, fabricated lat/lon markers for only visible Plants, keyboard-accessible marker activation, navigation to selected Plant, fit bounds, safe offline/no-WebGL fallback back to list. On Plant detail show latest four values with quality and a history chart switcher for all four channels, 24h/72h/7d windows, proper x-axis `Plant-local time` incl DST EDT/EST/CDT/CST ambiguity, and correct y-axis titles/units. No misleading interpolation of missing/invalid values.
 

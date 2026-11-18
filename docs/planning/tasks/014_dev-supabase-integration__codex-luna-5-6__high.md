@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: the actual app **Alembic** revision chain, immutable importer, NATS job schema and Auth verifier, owner-approved local smoke checks and `docs/setup/DEPLOYMENT_ARCHITECTURE.md`; current Supabase published Auth/database security docs. Never read private passwords from repo.
 
+## Required Marisma frontend usage (binding)
+
+Keep `@darizae/marisma@0.2.0` as the installed component library and theme for Flowstead's reusable frontend controls, as established in T-007a. If this task changes frontend code, reuse Marisma's public exports rather than introducing duplicate substitutes. During relevant frontend build/browser checks, confirm that the actual app still renders Marisma controls and follows the approved Flowstead design; do not alter the separate Marisma repository or expand this task into a UI redesign.
+
 ## Observable result and scope
 Run reviewed **Alembic upgrade-to-head** migrations against the **existing** project after verifying the named project and non-destructive schema scope, confirm dedicated non-exposed `app` schema/limited roles/RLS on any exposed tables, import at most approved M1 synthetic records with exact digest, configure Auth for invite-only in reviewed settings and validate one or two owner-provided demo identities restricted to disjoint Plant IDs (when concrete invitation recipients are configured). Smoke JWT signature/issuer/audience/JWKS or verified fallback, login/expiry and SQL 401/404, public endpoint only if allowed. Use environment-specific connection choice (IPv6 direct vs IPv4 session pooler), server-side secret storage, connection caps/timeouts and cleanup/backup/reseed. No destructive reset of existing unrelated schemas or other data.
 

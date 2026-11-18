@@ -16,7 +16,8 @@
 | 004b | [NATS/JetStream messaging](tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md) | NATS implementation committed to `main` at `388a5ad`; remaining test/review evidence is informational |
 | 005 | [Local JWT/Auth verifier](tasks/005_supabase-auth-verifier-local__codex-luna-5-6__high.md) | Implemented on `main` at `e5482fdd3306dd83ed9c74b5b8d702bcdf2badf6`; tests were not rerun for this documentation update |
 | 006 | [Backend docs hygiene](tasks/006_backend-contract-docs-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
-| 007 | [Frontend foundation and Plants](tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 007 | [Frontend foundation and Plants](tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md) | Owner reports completed locally; frontend not present on remote `main` as of 2026-11-18; preserve local work |
+| 007a | [Integrate mandatory Marisma UI library](tasks/007a_marisma-ui-integration__codex-luna-5-6__high.md) | Start directly on the locally completed T-007 frontend; install and actually use `@darizae/marisma@0.2.0` before continuing frontend work |
 | 008 | [Map and history](tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 009 | [Forecast and session UX](tasks/009_forecast-and-session-ux__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 010 | [CSV/PNG exports](tasks/010_bounded-csv-and-png-exports__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
@@ -31,6 +32,7 @@
 
 ## Execution conventions
 
+- **Frontend library:** `@darizae/marisma` is required in Flowstead, not optional. T-007a integrates it into the completed local T-007 frontend; T-008 onward reuse it for shared UI controls and app surfaces. No new approval/readiness checkpoint is needed to carry out the assigned work.
 - Work on exactly the task the owner assigns. Earlier tasks explain source ownership and interfaces; examine current code instead of treating their documentation status as authoritative.
 - T-005's local Supabase-compatible verifier is implemented at `e5482fd`; hosted Supabase behavior remains explicitly unverified until its owning cloud task. T-006 and later assigned tasks start without a review or status gate.
 - Preserve the pinned M1 synthetic source commit `ad5c94d1f46e79312a99cb9721f38700f24fdf6b`, manifest `m1.v1`, seed `20250101` and telemetry digest `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`.

@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: `docs/deployment/LOCAL_AND_RECOVERY.md`, live deployment config (FastAPI, **NATS/JetStream + worker**, real Alembic head, PostgreSQL), app API contracts, [indexed test catalog](../../testing/INDEXED_TEST_PLAN.md), [data guide](../../testing/TEST_DATA_GUIDE.md), UI parity matrix, configured demo Auth test identities handled securely out-of-band and current deployed URLs.
 
+## Required Marisma frontend usage (binding)
+
+Keep `@darizae/marisma@0.2.0` as the installed component library and theme for Flowstead's reusable frontend controls, as established in T-007a. If this task changes frontend code, reuse Marisma's public exports rather than introducing duplicate substitutes. During relevant frontend build/browser checks, confirm that the actual app still renders Marisma controls and follows the approved Flowstead design; do not alter the separate Marisma repository or expand this task into a UI redesign.
+
 ## Observable result and scope
 Test hosted public and invited-operator journeys in actual browsers through TLS against the separate `flowstead-demo` data, including all five fixed fictional public Plants, map tiles, history, forecast, exports and owner account restrictions. Verify free-tier cold start, **broker/consumer restart and queued→persisted 12h forecast delivery**, failed/retried message recovery without duplication, real Alembic head, bounded per-principal **IndexedDB** expiry/logout/revocation cleanup, paused DB messaging, signed-out/expired/revoked token, disjoint assigned Plants and no private-source leak. No public message-command endpoint. Validate backup/reseed procedure against disposable copy, rollback drill where safe/authorized, source/digest/version tracking and alert/log access without credentials exposed. Request owner acceptance of PDF sample, map and public presentation; do not assert uptime guarantees.
 
