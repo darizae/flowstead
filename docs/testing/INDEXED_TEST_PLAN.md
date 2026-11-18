@@ -45,14 +45,16 @@
 
 ### T-004a — [Alembic baseline task](../planning/tasks/004a_alembic-baseline-adoption__codex-luna-5-6__high.md)
 
+**Reconciled 2026-11-18:** [local T-004a acceptance receipt](evidence/T004A_ACCEPTANCE_2026-11-18.md), on top of merged [PR #7](https://github.com/darizae/flowstead/pull/7) (`78b109c598a7e2a8441ee6cc5ced1ca1525068cb`) and post-merge acceptance commit `3b40ce5f368033dd73f4efc3012923e4a25c99d4`. Outcomes below are reported local results, not tests rerun for this documentation edit. The dependency security audit remains **UNVERIFIED**.
+
 | ID | Intended observable assertion (from approved task) | Evidence status |
 |---|---|---|
-| `DB-M4A-FRESH` | Disposable PostgreSQL Alembic head has exact historical columns, defaults, identities, parsed index/FK/CHECK definitions and both markers; importer/API regressions run against the real database. | UNVERIFIED — exact-head Mac receipt required |
-| `DB-M4A-STAMP` | Historical SQL-migrated populated database is stamped without rerunning DDL; full immutable M1 rows and forecast receipt hashes, including markers, unchanged. | UNVERIFIED — full M1 fixture and exact-head Mac receipt required |
-| `DB-M4A-MISMATCH` | Partial schema, unknown Alembic version, malformed legacy CHECK/index, and a recognized descendant with missing historical table/column or altered same-named constraint/index are rejected without further data or revision changes. | UNVERIFIED — descendant regression and exact-final-head Mac receipt required |
-| `DB-M4A-REPEAT` | Repeat upgrade no-op; temporary disposable-only new Alembic descendant upgrades, repeats, downgrades and preserves existing data. | UNVERIFIED — exact-head Mac receipt required |
-| `IT-M2-MIGRATE` | Existing migration/import invariant remains; rollback is allowed only against an isolated explicitly disposable local database. | UNVERIFIED — exact-head Mac receipt required |
-| `UT-M4A-DB-LIFECYCLE` | PostgreSQL preflight requires exact configured Compose project/service and canonical checkout/config paths; owned healthy is reused, stopped started, unhealthy restarted once, and foreign/lookalike project/checkouts/ports rejected without mutation. | UNVERIFIED — deterministic unit tests and exact-final-head Mac receipt required |
+| `DB-M4A-FRESH` | Disposable PostgreSQL Alembic head has exact historical columns, defaults, identities, parsed index/FK/CHECK definitions and both markers; importer/API regressions run against the real database. | PASS — recorded local acceptance receipt |
+| `DB-M4A-STAMP` | Historical SQL-migrated populated database is stamped without rerunning DDL; full immutable M1 rows and forecast receipt hashes, including markers, unchanged. | PASS — recorded local full-M1/forecast preservation |
+| `DB-M4A-MISMATCH` | Partial schema, unknown Alembic version, malformed legacy CHECK/index, and a recognized descendant with missing historical table/column or altered same-named constraint/index are rejected without further data or revision changes. | PASS — recorded local acceptance receipt |
+| `DB-M4A-REPEAT` | Repeat upgrade no-op; temporary disposable-only new Alembic descendant upgrades, repeats, downgrades and preserves existing data. | PASS — recorded local acceptance receipt |
+| `IT-M2-MIGRATE` | Existing migration/import invariant remains; rollback is allowed only against an isolated explicitly disposable local database. | PASS — recorded local acceptance receipt |
+| `UT-M4A-DB-LIFECYCLE` | PostgreSQL preflight requires exact configured Compose project/service and canonical checkout/config paths; owned healthy is reused, stopped started, unhealthy restarted once, and foreign/lookalike project/checkouts/ports rejected without mutation. | PASS (suite-level) — asserting unit tests present; unit suite reported passing, not individually enumerated |
 
 ### T-005 — [task source](../planning/tasks/005_supabase-auth-verifier-local__codex-luna-5-6__high.md)
 
