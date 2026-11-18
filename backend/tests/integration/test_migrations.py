@@ -245,16 +245,10 @@ def test_unknown_alembic_revision_is_rejected_without_mutation(isolated_url: str
     assert _version(isolated_url) == "unrecognized_change"
 
 
-def test_repeat_and_local_descendant_upgrade_revert(
-    isolated_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def _install_local_descendant(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Case: DB-M4A-REPEAT"""
-    _historical_upgrade(isolated_url)
-    migrate(isolated_url)
-    before = _snapshot(isolated_url)
-    migrate(isolated_url)
-    assert _snapshot(isolated_url) == before
-
+    """Create a disposable 003 revision for repeat and drift checks."""
     local_script = tmp_path / "alembic"
     shutil.copytree(migrations.ALEMBIC_INI.parent / "alembic", local_script)
     (local_script / "versions" / "003_local_roundtrip.py").write_text(
@@ -277,6 +271,19 @@ def test_repeat_and_local_descendant_upgrade_revert(
         encoding="utf-8",
     )
     monkeypatch.setattr(migrations, "ALEMBIC_INI", local_ini)
+
+
+def test_repeat_and_local_descendant_upgrade_revert(
+    isolated_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Case: DB-M4A-REPEAT"""
+    _historical_upgrade(isolated_url)
+    migrate(isolated_url)
+    before = _snapshot(isolated_url)
+    migrate(isolated_url)
+    assert _snapshot(isolated_url) == before
+
+    _install_local_descendant(tmp_path, monkeypatch)
     migrate(isolated_url)
     assert _version(isolated_url) == "003_local_roundtrip"
     migrate(isolated_url)  # recognized descendant may have an extra column
@@ -286,6 +293,51 @@ def test_repeat_and_local_descendant_upgrade_revert(
     assert _snapshot(isolated_url) == before
     migrate(isolated_url)
     assert _version(isolated_url) == "003_local_roundtrip"
+
+
+@pytest.mark.parametrize("malformed", ("table", "column", "constraint", "index"))
+def test_recognized_descendant_rejects_baseline_drift(
+    isolated_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    malformed: str,
+) -> None:
+    """Case: DB-M4A-MISMATCH"""
+    _historical_upgrade(isolated_url)
+    migrate(isolated_url)
+    _install_local_descendant(tmp_path, monkeypatch)
+    migrate(isolated_url)
+    assert _version(isolated_url) == "003_local_roundtrip"
+
+    with psycopg.connect(isolated_url) as connection:
+        if malformed == "table":
+            connection.execute("DROP TABLE app.operator_plant_access")
+        elif malformed == "column":
+            connection.execute("ALTER TABLE app.plants DROP COLUMN city")
+        elif malformed == "constraint":
+            connection.execute(
+                "ALTER TABLE app.plants DROP CONSTRAINT plants_state_code_check"
+            )
+            connection.execute(
+                "ALTER TABLE app.plants ADD CONSTRAINT plants_state_code_check "
+                "CHECK (state_code IN ('FL', 'TX'))"
+            )
+        else:
+            connection.execute("DROP INDEX app.hourly_readings_timestamp_idx")
+            connection.execute(
+                "CREATE INDEX hourly_readings_timestamp_idx "
+                "ON app.hourly_readings (plant_id)"
+            )
+
+    before = None if malformed == "table" else _snapshot(isolated_url)
+    with pytest.raises(MigrationStateError, match="approved baseline"):
+        migrate(isolated_url)
+    assert _version(isolated_url) == "003_local_roundtrip"
+    if before is not None:
+        assert _snapshot(isolated_url) == before
+    else:
+        with psycopg.connect(isolated_url) as connection:
+            assert connection.execute(
+                "SELECT to_regclass('app.operator_plant_access')"
+            ).fetchone() == (None,)
 
 
 def test_historical_migrations_are_reversible_only_on_disposable_db(isolated_url: str) -> None:

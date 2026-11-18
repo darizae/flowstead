@@ -266,8 +266,14 @@ def _reference_catalog(
 
 
 def _validate_schema(
-    connection: psycopg.Connection[Any], *, include_forecast_metadata: bool
+    connection: psycopg.Connection[Any], *, include_forecast_metadata: bool,
+    allow_extensions: bool = False,
 ) -> None:
+    """Require historical objects, permitting only additive descendant DDL.
+
+    Legacy stamping still requires exact equivalence. A recognized descendant
+    may add objects, but must retain all original schema invariants.
+    """
     if connection.execute("SELECT to_regnamespace('app')").fetchone()[0] is None:
         raise MigrationStateError("app schema is missing")
 
@@ -277,7 +283,12 @@ def _validate_schema(
         expected_columns["forecast_issuances"].pop("physical_bound_rule")
 
     for table, expected in expected_columns.items():
-        if _table_columns(connection, "app", table) != expected:
+        actual = _table_columns(connection, "app", table)
+        matches = (
+            all(actual.get(name) == definition for name, definition in expected.items())
+            if allow_extensions else actual == expected
+        )
+        if not matches:
             raise MigrationStateError(f"app.{table} columns do not match the approved baseline")
 
     actual_catalog = _schema_catalog(connection, "app")
@@ -285,9 +296,18 @@ def _validate_schema(
         connection, include_forecast_metadata=include_forecast_metadata
     )
     for kind, reference in reference_catalog.items():
-        if actual_catalog[kind] != reference:
+        if allow_extensions:
+            # Preserve the full PostgreSQL-parsed definition of every
+            # historical (table, column/constraint/index name).
+            actual_by_key = {(row[0], row[1]): row for row in actual_catalog[kind]}
+            matches = all(
+                actual_by_key.get((row[0], row[1])) == row for row in reference
+            )
+        else:
+            matches = actual_catalog[kind] == reference
+        if not matches:
             raise MigrationStateError(
-                f"approved baseline {kind} definitions differ; refusing Alembic stamp"
+                f"approved baseline {kind} definitions differ; refusing Alembic migration"
             )
 
 
@@ -356,9 +376,13 @@ def _inspect_state(database_url: str) -> DatabaseState:
                 ) from exc
             if known is None or not _is_descendant(script, alembic_revision, markers[-1]):
                 raise MigrationStateError("Alembic revision disagrees with historical markers")
-            # A known descendant may legitimately add/change columns and indexes.
-            # Exact baseline comparison is only meaningful at the stamp boundary.
+            # Version markers alone do not prove descendant schema integrity.
+            # Additive local revisions are allowed; dropped/weakened historical
+            # columns, constraints or indexes are not.
             if alembic_revision != markers[-1]:
+                _validate_schema(
+                    connection, include_forecast_metadata=True, allow_extensions=True
+                )
                 return DatabaseState(False, markers[-1], alembic_revision)
         _validate_schema(connection, include_forecast_metadata=len(markers) == 2)
         return DatabaseState(False, markers[-1], alembic_revision)
