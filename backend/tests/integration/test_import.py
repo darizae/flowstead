@@ -30,11 +30,12 @@ pytestmark = pytest.mark.skipif(
 def isolated_url() -> Iterator[str]:
     """Never TRUNCATE or recreate the database named by DATABASE_URL."""
     assert DATABASE_URL is not None
+    admin_url = DATABASE_URL  # pin the validated endpoint through teardown
     # Validate before opening the admin connection: URI query parameters such
     # as hostaddr/host/dbname can override the visually checked destination.
-    parsed = _require_local_database_url(DATABASE_URL)
+    parsed = _require_local_database_url(admin_url)
     name = "flowstead_test_" + uuid.uuid4().hex
-    with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
+    with psycopg.connect(admin_url, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
     target = urlunsplit(parsed._replace(path="/" + name, query="", fragment=""))
     try:
@@ -42,7 +43,7 @@ def isolated_url() -> Iterator[str]:
         yield target
     finally:
         # Only the uniquely generated test database is eligible for teardown.
-        with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
+        with psycopg.connect(admin_url, autocommit=True) as admin:
             admin.execute(
                 "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
                 "WHERE datname = %s AND pid <> pg_backend_pid()", (name,)
