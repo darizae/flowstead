@@ -269,7 +269,7 @@ def test_drifted_historical_marker_table_is_never_stamped(
                 "ALTER COLUMN applied_at DROP DEFAULT"
             )
     before = _snapshot(isolated_url)
-    with pytest.raises(MigrationStateError, match=r"public\\.schema_migrations"):
+    with pytest.raises(MigrationStateError, match=r"public[.]schema_migrations"):
         migrate(isolated_url)
     assert _snapshot(isolated_url) == before
     assert _version(isolated_url) is None
