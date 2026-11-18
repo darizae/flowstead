@@ -1,6 +1,6 @@
 # T-004b — NATS/JetStream asynchronous messaging
 
-**Status:** NEXT / NOT DISPATCHED. T-004a is merged and locally accepted. The owner lifted the prior worker pause on 2026-11-18; review-relay and dependency/tooling preflight still apply before dispatch. Approved message/migration/cache architecture stands; no new authorization loop.
+**Status:** **APPROVED / READY FOR IMMEDIATE LOCAL IMPLEMENTATION** (owner authorization 2026-11-18). T-004a is merged and locally accepted. No repeat owner approval, worker-pause gate or pre-dispatch reviewer-relay certification is required. The worker handles the approved NATS dependency installation, local services, task tests and evidence within this specification. Ordinary independent code review and exact-head Mac verification are completion/merge checks, not blockers to starting. Approved message/migration/cache architecture stands.
 
 ## Read and respect
 Read AGENTS.md, docs/planning/HANDOFF_SEQUENCE.md, this file, docs/planning/IMPLEMENTATION_SPEC.md, docs/testing/INDEXED_TEST_PLAN.md, docs/testing/TEST_DATA_GUIDE.md, existing backend API/forecast/importer, migration code, compose.yml and nearest real integration tests. the approved implementation contract and the documented engineering patterns **informed** this contract; do not vendor their NATS packages or read private files at implementation time.
@@ -28,4 +28,4 @@ compose.yml; backend/src/flowstead_api/**; backend/importer.py (only small emiss
 Run real local PostgreSQL + NATS/JetStream stack, real HTTP, real publisher/consumer, focused unit cases and controlled broker pause/restart. Follow indexed test skill philosophy: exact IDs in asserting tests, owner-isolated data, public behavior-first assertions, no sleep-only proof; link evidence to the Markdown index. Root just recipes should cover broker start, message-unit, message-integration and backend regression.
 
 ## Review and safety
-OMP implements and coordinates independent **ordinary ChatGPT Loop OMP** browser-relay PR review. OMP/SAIA review is advisory. Final exact SHA passes Mac gates before policy-authorized merge. The owner pause is lifted; this documentation reconciliation does not launch 004b or create a human repeat-approval loop.
+Begin T-004b implementation immediately when assigned, without a further owner-approval or reviewer-relay preflight gate. At review/merge, coordinate independent **ordinary ChatGPT Loop OMP** code review (OMP/SAIA review is advisory) and pass exact-final-SHA Mac checks before a policy-authorized merge. Do not introduce repeat-approval loops.
