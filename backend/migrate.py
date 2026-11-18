@@ -375,6 +375,49 @@ def _validate_schema_migrations(connection: psycopg.Connection[Any]) -> tuple[st
 def _alembic_revision(connection: psycopg.Connection[Any]) -> str | None:
     if connection.execute("SELECT to_regclass('public.alembic_version')").fetchone()[0] is None:
         return None
+
+    # A recognized revision value is insufficient evidence of valid Alembic
+    # history. Reject a fabricated or drifted version table before stamping or
+    # upgrading a pre-existing database.
+    table_kind = connection.execute(
+        """
+        SELECT c.relkind FROM pg_class AS c
+        JOIN pg_namespace AS n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'alembic_version'
+        """
+    ).fetchone()
+    expected_columns = {
+        "version_num": ("character varying", 32, None, None, "NO")
+    }
+    if table_kind != ("r",) or _table_columns(connection, "public", "alembic_version") != expected_columns:
+        raise MigrationStateError("public.alembic_version table shape is not the Alembic baseline")
+
+    metadata = connection.execute(
+        """
+        SELECT pg_get_expr(d.adbin, d.adrelid), a.attidentity, a.attgenerated
+        FROM pg_attribute AS a
+        JOIN pg_class AS t ON t.oid = a.attrelid
+        JOIN pg_namespace AS n ON n.oid = t.relnamespace
+        LEFT JOIN pg_attrdef AS d ON d.adrelid = t.oid AND d.adnum = a.attnum
+        WHERE n.nspname = 'public' AND t.relname = 'alembic_version'
+          AND a.attname = 'version_num' AND NOT a.attisdropped
+        """
+    ).fetchall()
+    constraints = connection.execute(
+        """
+        SELECT c.contype, c.convalidated, c.condeferrable,
+               c.condeferred, pg_get_constraintdef(c.oid)
+        FROM pg_constraint AS c
+        JOIN pg_class AS t ON t.oid = c.conrelid
+        JOIN pg_namespace AS n ON n.oid = t.relnamespace
+        WHERE n.nspname = 'public' AND t.relname = 'alembic_version'
+        """
+    ).fetchall()
+    if metadata != [(None, "", "")] or constraints != [
+        ("p", True, False, False, "PRIMARY KEY (version_num)")
+    ]:
+        raise MigrationStateError("public.alembic_version integrity constraints differ from Alembic")
+
     rows = connection.execute("SELECT version_num FROM public.alembic_version").fetchall()
     if len(rows) > 1:
         raise MigrationStateError("public.alembic_version contains multiple revisions")
