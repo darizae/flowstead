@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: actual backend history/forecast OpenAPI responses, feature-owned SVG chart renderer, typed API/formatter utilities, v2 `historyPng`/`historyCsv`/`forecastPng`/`forecastCsv` positions and `docs/design/UI_UX_PARITY_MATRIX.md`. Use central reference-guided structure from `IMPLEMENTATION_SPEC.md`, not a standalone export framework.
 
+## Required Marisma UI library (binding)
+
+Use the existing `@darizae/marisma@0.2.0` integration from T-007a for reusable React/Tailwind controls and application surfaces added or changed in this task. Import Marisma's public components and theme; do not introduce duplicate bespoke Tailwind/Radix buttons, cards, fields, dialogs or shell primitives where Marisma provides them. Preserve Flowstead's approved v2 layout, colors and interaction behavior; keep MapLibre, scientific charts and domain-specific UI logic within Flowstead. Exercise affected rendered UI and update `docs/design/UI_UX_PARITY_MATRIX.md`; do not vendor Marisma or edit its repository.
+
 ## Observable result and scope
 Add Download CSV and Download PNG actions for **each** history and forecast chart. CSV derived from the currently authorized API data only, with exact UTC timestamps, Plant names/IDs as permitted, measurement field, unit, numeric value or empty, quality flag; forecast CSV includes issue time, 12 target UTCs, model version and units. Proper quoting, Content-Disposition/file naming, no spreadsheet formula injection (escape formula-leading values). PNG rasterization of the visible SVG chart must preserve readable **both axes** and labels, source Plant/current selected range/units/timezone, width at least 1320px, and no invisible truncation. Disabled export for unavailable/loading/forbidden state, with no stale private data after logout.
 

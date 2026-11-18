@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: Root docs, `AGENTS.md`, `docs/design/UI_UX_PARITY_MATRIX.md`, task sequence, actual scripts/lockfiles/current README and local test receipts.
 
+## Marisma frontend documentation (binding)
+
+Flowstead consumes the published `@darizae/marisma` npm UI library as a mandatory frontend dependency beginning with T-007a. Keep install instructions, frontend package/lockfile references, theme setup and UI claims aligned with actual source and browser results. Do not describe Marisma as optional, prescribe replacement generic controls, or modify the separate Marisma repository.
+
 ## Observable result and scope
 Correct stale routing, dead links, incorrect status/recipe/version claims and leftover AWS requirements. Keep README accurate for operator and developer: real running workflows first, present implementation status, actionable setup with real commands. Do not expose internal planner/job/model reasoning. Verify UI matrix evidence refers to actual screens and screenshots, and the current generator pinned SHA. Do not claim future live Supabase or public demo.
 

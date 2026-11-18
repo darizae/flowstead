@@ -83,6 +83,14 @@
 | `UI-M7-PARITY` | documented v2 hierarchy/colors/type, 390px + desktop no overflow; keyboard/focus/accessible navigation checked in real browser. | UNVERIFIED until asserting test+run checked |
 | `SEC-M7-CLIENT` | server-only keys not in bundle; API URL config is explicit; isolated principal transitions clear in-memory cache. | UNVERIFIED until asserting test+run checked |
 
+### T-007a — [Marisma frontend integration](../planning/tasks/007a_marisma-ui-integration__codex-luna-5-6__high.md)
+
+| ID | Intended observable assertion (from task) | Evidence status |
+|---|---|---|
+| `UT-M7A-MARISMA` | npm-installed Marisma artifact and compatible peers are present in the frontend dependency graph; real frontend code imports published components, not a vendored copy. | UNVERIFIED until local source/lockfile and command results checked |
+| `UI-M7A-RENDER` | Real browser renders the Marisma theme and components in Plant list/detail, including accessible focus/disabled/loading controls and navigation. | UNVERIFIED until real Chromium run checked |
+| `UI-M7A-PARITY` | 1330×900 and 390×844 browser views preserve approved Flowstead v2 layout with working Marisma UI controls and captured parity evidence. | UNVERIFIED until inspected browser actions and screenshots checked |
+
 ### T-008 — [task source](../planning/tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md)
 
 | ID | Intended observable assertion (from task) | Evidence status |

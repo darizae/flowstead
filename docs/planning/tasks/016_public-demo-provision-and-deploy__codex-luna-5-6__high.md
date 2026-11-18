@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: `docs/deployment/LOCAL_AND_RECOVERY.md`, container/build, reviewed migration, env templates, live provider docs/limits and explicit owner-signed external action envelope; read-only current Vercel team/domain and Supabase project inventory first.
 
+## Required Marisma frontend usage (binding)
+
+Keep `@darizae/marisma@0.2.0` as the installed component library and theme for Flowstead's reusable frontend controls, as established in T-007a. If this task changes frontend code, reuse Marisma's public exports rather than introducing duplicate substitutes. During relevant frontend build/browser checks, confirm that the actual app still renders Marisma controls and follows the approved Flowstead design; do not alter the separate Marisma repository or expand this task into a UI redesign.
+
 ## Observable result and scope
 With a verified concrete no-charge target project/organization/region and usable credentials, create `flowstead-demo`; migrate/reseed synthetic-only 5-Plant data from pinned checksum; configure invite-only Auth and assigned Plant grants; deploy React static to a **new** Vercel project under the configured existing team, deploy FastAPI **plus a compatible NATS/JetStream broker and bounded forecast worker** to verified compatible no-charge hosting (Render Free is an API-host candidate only; durable broker/worker suitability is separately verified), ensure API uses hosted Supabase PostgreSQL direct/pooler based on host IP support, deploy secret values only through host secret manager, safe CORS/redirect allowlists and TLS. Enable bounded anonymous read-only visibility for exactly all five manifest-verified fictional M1 Plants as approved by owner; rate limits, export caps, read-only behavior. Attach only explicitly specified `flowstead.darizae.dev`/`api.flowstead.darizae.dev` DNS records; never modify personal website/root domain. Prepare rollback and no-charge pause/teardown procedure. No paid upgrades, AWS, buckets or automatic service cloning.
 

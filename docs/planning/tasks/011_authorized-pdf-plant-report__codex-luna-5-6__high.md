@@ -10,6 +10,10 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 
 Owning context: **existing** backend Plant/latest/forecast typed models and parameterized SQL, actual `flowstead_api` service boundaries, v2 `downloadReport` button/detail hierarchy, `docs/design/UI_UX_BASELINE.md` and matrix. Do not use reference prototype sample values as real output or copy private reference PDF code.
 
+## Required Marisma UI library (binding)
+
+Use the existing `@darizae/marisma@0.2.0` integration from T-007a for reusable React/Tailwind controls and application surfaces added or changed in this task. Import Marisma's public components and theme; do not introduce duplicate bespoke Tailwind/Radix buttons, cards, fields, dialogs or shell primitives where Marisma provides them. Preserve Flowstead's approved v2 layout, colors and interaction behavior; keep MapLibre, scientific charts and domain-specific UI logic within Flowstead. Exercise affected rendered UI and update `docs/design/UI_UX_PARITY_MATRIX.md`; do not vendor Marisma or edit its repository.
+
 ## Observable result and scope
 Add permission-bound on-demand endpoint `GET /api/v1/plants/{id}/report.pdf` (plus a bounded public-report equivalent for the same five validated fictional Plants, without account-specific content), short single-Plant PDF containing Plant identity, generated UTC/local date, four latest readings with value+quality+units, 12h forecast grid/summarized high when available, issuance/model labels, synthetic source identification once, sensible no-forecast/no-data handling. No permit/compliance/guarantee text. Content-Disposition safe, PDF output in memory capped, one authorized Plant per request; no disk/bucket persistence. One concise, polished layout with readable hierarchy and long-name/wrapping/wrong-character tests.
 
