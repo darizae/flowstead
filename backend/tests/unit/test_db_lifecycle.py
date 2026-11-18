@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -201,3 +202,95 @@ def test_preflight_allows_plain_configured_loopback(
         "DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead"
     )
     _check_url(54329, "flowstead", required=True)
+
+
+class PriorVerifyDocker(FakeDocker):
+    """A real prior verify-N Compose provenance shape on the controller port."""
+
+    def __init__(
+        self, state_root: Path, *, project: str = "verify-33",
+        working_dir: Path | None = None, config_file: Path | None = None,
+        state: str = "healthy", host_ip: str = "127.0.0.1",
+    ) -> None:
+        super().__init__(state=state, host_ip=host_ip)
+        self.verify_project = project
+        self.verify_working_dir = (
+            working_dir if working_dir is not None
+            else state_root / "worktrees" / project
+        )
+        self.verify_config = (
+            config_file if config_file is not None
+            else self.verify_working_dir / "compose.yml"
+        )
+
+    def _container(self) -> dict:
+        container = super()._container()
+        labels = container["Config"]["Labels"]
+        labels["com.docker.compose.project"] = self.verify_project
+        labels["com.docker.compose.project.working_dir"] = str(self.verify_working_dir)
+        labels["com.docker.compose.project.config_files"] = str(self.verify_config)
+        container["Name"] = "/" + self.verify_project + "-db-1"
+        return container
+
+
+def test_healthy_prior_verify_database_is_reused_without_mutation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    state_root = tmp_path / "omp-control-plane-e2e"
+    monkeypatch.setenv("OMP_STATE_DIR", str(state_root))
+    fake = PriorVerifyDocker(state_root)
+    assert ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None) == "reused"
+    assert not any(cmd[1] in {"start", "restart", "compose"} for cmd in fake.commands)
+
+
+@pytest.mark.parametrize(
+    "lookalike",
+    ("foreign_root", "wrong_workdir", "wrong_config", "wrong_project"),
+)
+def test_prior_verify_lookalikes_still_fail_closed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, lookalike: str,
+) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    state_root = tmp_path / "omp-control-plane-e2e"
+    monkeypatch.setenv("OMP_STATE_DIR", str(state_root))
+    options: dict = {}
+    if lookalike == "foreign_root":
+        options["working_dir"] = tmp_path / "unrelated" / "worktrees" / "verify-33"
+        options["config_file"] = options["working_dir"] / "compose.yml"
+    elif lookalike == "wrong_workdir":
+        options["working_dir"] = state_root / "worktrees" / "verify-34"
+    elif lookalike == "wrong_config":
+        options["config_file"] = state_root / "worktrees" / "verify-33" / "other.yml"
+    else:
+        options["project"] = "verify-33-extra"
+    fake = PriorVerifyDocker(state_root, **options)
+    with pytest.raises(DatabaseLifecycleError, match="foreign Docker container"):
+        ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None)
+    assert not any(cmd[1] in {"start", "restart", "compose"} for cmd in fake.commands)
+
+
+@pytest.mark.parametrize("state", ("unhealthy", "starting"))
+def test_prior_verify_database_is_never_restarted_by_another_run(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, state: str,
+) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    state_root = tmp_path / "omp-control-plane-e2e"
+    monkeypatch.setenv("OMP_STATE_DIR", str(state_root))
+    fake = PriorVerifyDocker(state_root, state=state)
+    with pytest.raises(DatabaseLifecycleError, match="foreign Docker container"):
+        ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None)
+    assert not any(cmd[1] in {"start", "restart", "compose"} for cmd in fake.commands)
+
+
+@pytest.mark.parametrize("host_ip", ("0.0.0.0", "::", ""))
+def test_prior_verify_wildcard_bindings_are_still_foreign(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, host_ip: str,
+) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    state_root = tmp_path / "omp-control-plane-e2e"
+    monkeypatch.setenv("OMP_STATE_DIR", str(state_root))
+    fake = PriorVerifyDocker(state_root, host_ip=host_ip)
+    with pytest.raises(DatabaseLifecycleError, match="foreign Docker container"):
+        ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None)
+    assert not any(cmd[1] in {"start", "restart", "compose"} for cmd in fake.commands)
