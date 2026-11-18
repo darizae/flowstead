@@ -20,7 +20,7 @@ Define in non-exposed `app` schema: `plants` (`plant_id` text PK, name, city/sta
 ## Dependencies and allowed file closure
 Introduce `backend/pyproject.toml` and `backend/uv.lock` with supported patched FastAPI-ready Python baseline (Python `>=3.11,<3.14` unless demonstrated compatible with newer), `SQLAlchemy>=2,<3`, `alembic>=1,<2`, `psycopg[binary]>=3,<4`, `pydantic>=2,<3`, `pytest>=8,<10`, `ruff>=0.14,<1`, plus required build/test tools, using `uv add --project backend` / `uv lock --project backend`. Keep schema migration and import logic application-owned; no DHI, AWS, object storage, network services or new Git repositories. Do a real registry-backed local dependency audit via available supported `uv audit` (check CLI version) or `pip-audit` on exported locked deps; missing registry means UNVERIFIED.
 
-Allowed create/edit paths: `backend/**`, `migrations/**` (if used instead of backend migrations), `tests/**` local DB tests, `compose.yml`, `justfile`, `README.md`, `.env.example`, `.gitignore`, and **only** the task-specific route/docs if required by changed commands. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/**`, `migrations/**` (if used instead of backend migrations), `tests/**` local DB tests, `compose.yml`, `justfile`, `README.md`, `.env.example`, `.gitignore`, and **only** the task-specific route/docs if required by changed commands. Relevant task dependencies and their owning manifests/lockfiles were part of the original technical scope; do not require an additional planning-status permission check. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `IT-M2-MIGRATE`: migrate up on empty local PG, verify tables/indexes/FKs, rollback or reversible rebuild only in disposable local DB; migrations repeat safely.
@@ -29,12 +29,13 @@ Allowed create/edit paths: `backend/**`, `migrations/**` (if used instead of bac
 - `IT-M2-IDEMP`: second identical import creates zero duplicates; conflicting same timestamp rejected, not overwritten.
 - `UT-M2-QUALITY`: NULL versus finite flagged invalid survives SQL roundtrip; DST conversion does not alter stored UTC key.
 
-## Local verification, gates and stopping condition
+## Local verification and actual historical evidence
 Implement `just db-up`, `just db-down` (only local compose), `just migrate-local`, `just import-m1-local` (explicit input and SHA; never a default), `just check-backend`, `just test-backend-unit`, `just test-db-integration`, `just audit-backend` and `just docs-check` only when each underlying command exists. Fast loop: `uv run --project backend pytest -q backend/tests/unit`; integration: `docker compose up -d db && uv run --project backend pytest -q backend/tests/integration`; audit: `uv audit --project backend` after checking supported syntax. No cloud requests from `just check`.
 
 **Observed completion evidence:** local PostgreSQL unit/integration tests and exact M1 source SHA/digest were reported; PR #4 merged. **Outstanding assurance:** registry-backed dependency audit was UNVERIFIED, and independent ordinary ChatGPT review has not been evidenced. Do not recast OMP/SAIA PASS as ChatGPT acceptance or infer TDD RED→GREEN chronology solely from green suites. A bounded post-merge ChatGPT code/security audit may establish current correctness, but cannot retroactively establish pre-merge review.
 
 
 
-## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP orchestrates the existing Loop OMP ordinary **ChatGPT normal-chat** reviewer through the owner's tested browser workflow; **ChatGPT**, not OMP/SAIA, is the sole independent reviewer and bounded direct GitHub correction agent. The merged PR #4 has OMP/SAIA receipts, not evidenced ChatGPT review. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+## Historical Git and verification record
+
+The implementation and recorded merge already happened. Preserve the historical commit/test evidence as factual context. Independent ChatGPT review receipts, old approval decisions and task statuses do not constrain the start or local merge of subsequent tasks. Do not reimplement this historical task or infer test results that were not observed.

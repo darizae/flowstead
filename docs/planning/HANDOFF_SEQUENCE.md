@@ -1,43 +1,41 @@
-# Flowstead — canonical implementation sequence
+# Flowstead — task index
 
-**Authority:** This is the single cross-repository task order and observed state. Product and engineering requirements: [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md). Deployment responsibilities and external gates: [DEPLOYMENT_ARCHITECTURE.md](../setup/DEPLOYMENT_ARCHITECTURE.md). Execute **one** eligible task, never the complete sequence. **Owner authorization (2026-11-18):** the prior worker pause is lifted. T-004b is approved and READY for immediate local implementation handoff; do not require another owner approval or a pre-dispatch review-relay setup gate. Do not repeat merged steps.
+**This file is navigation, not an execution gate.** When the owner assigns a task specification, start it. Ignore legacy `WAITING`, `BLOCKED`, `DRAFT`, `READY`, predecessor-review and approval statuses found in historical files. Do not wait for receipts, an independent ChatGPT reviewer, status updates or owner re-approval. An actual absent API, test fixture or dependency is engineering work to investigate, not an administrative reason to stop.
 
-## Ordered execution
+## Task files
 
-| Step | Executable file / ownership | Observed state | Gate |
-| --- | --- | --- | --- |
-| S-002 | [flowstead-sim M0](https://github.com/darizae/flowstead-sim/blob/main/docs/planning/HANDOFF_SEQUENCE.md) | MERGED PR #2 | Immutable generator contract |
-| S-003 | [flowstead-sim M1](https://github.com/darizae/flowstead-sim/blob/main/docs/planning/tasks/003_m1-annual-synthetic-generator__codex-luna-5-6__high.md) | MERGED PR #5; source ad5c94d, merge f06795b | M1 manifest m1.v1, seed 20250101 and telemetry digest pinned; independent ChatGPT review not evidenced |
-| 001 | [Repository initialization](tasks/001_repository-initialization__omp-glm-5-3-flash__default.md) | COMPLETE | Existing private main, never reinitialize |
-| 002 | [PostgreSQL/import](tasks/002_local-postgres-schema-import__codex-luna-5-6__high.md) | MERGED [PR #4](https://github.com/darizae/flowstead/pull/4) 0b8f3ec | M1 pinned, audit and independent review not verified |
-| 003 | [FastAPI read/Plant policy](tasks/003_fastapi-read-and-plant-policy__codex-luna-5-6__high.md) | MERGED [PR #5](https://github.com/darizae/flowstead/pull/5) 647b435 | 002, audit and independent review not verified |
-| 004 | [Deterministic 12h forecast](tasks/004_deterministic-twelve-hour-forecast__codex-luna-5-6__high.md) | MERGED [PR #6](https://github.com/darizae/flowstead/pull/6) 8af51c3 | 003; recorded owner-specific review acceptance, audit not verified |
-| 004a | [Alembic baseline](tasks/004a_alembic-baseline-adoption__codex-luna-5-6__high.md) | MERGED [PR #7](https://github.com/darizae/flowstead/pull/7), merge `78b109c`; acceptance receipt commit `3b40ce5` | [2026-11-18 local evidence](../testing/evidence/T004A_ACCEPTANCE_2026-11-18.md): migration cases PASS; dependency audit UNVERIFIED |
-| 004b | [NATS/JetStream messaging](tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md) | **READY — APPROVED** | 004a merged and locally accepted; proceed with local implementation under this task, with dependency setup in scope and verification/review at task completion |
-| 005 | [Local JWT/Auth verifier](tasks/005_supabase-auth-verifier-local__codex-luna-5-6__high.md) | WAITING | 004b merged; local JWKS fixtures, no cloud writes |
-| 006 | [Backend docs hygiene](tasks/006_backend-contract-docs-hygiene__omp-glm-5-3-flash__default.md) | WAITING | 005 accepted; verify contracts, links and commands |
-| 007 | [Frontend foundation and Plants](tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md) | WAITING | 006; local HTML reference, per-principal IndexedDB, real Playwright |
-| 008 | [Map and history](tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md) | WAITING | 007; real map/tiles, four channels, DST and UI parity |
-| 009 | [Forecast and session UX](tasks/009_forecast-and-session-ux__codex-luna-5-6__high.md) | WAITING | 005+008; actual queue and account-switch/cache isolation |
-| 010 | [CSV/PNG exports](tasks/010_bounded-csv-and-png-exports__codex-luna-5-6__high.md) | WAITING | 009; parsed files, real downloadable chart images |
-| 011 | [Plant PDF report](tasks/011_authorized-pdf-plant-report__codex-luna-5-6__high.md) | WAITING | 010; authorize, parse and visually inspect actual PDF |
-| 012 | [Local MVP security/parity](tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md) | WAITING | 011; complete indexed real local/browser gates |
-| 013 | [MVP docs hygiene](tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | WAITING | 012 accepted; reconcile docs/paths/justfile/evidence |
-| 014 | [Private development Supabase integration](tasks/014_dev-supabase-integration__codex-luna-5-6__high.md) | BLOCKED / CLOUD | 013 + explicit development DB migration/invite permission |
-| 015 | [Local deployment and recovery](tasks/015_local-deployment-build-and-recovery__codex-luna-5-6__high.md) | WAITING | 013; local-only, independent of 014 cloud gate |
-| 016 | [Public-demo provision/deploy](tasks/016_public-demo-provision-and-deploy__codex-luna-5-6__high.md) | BLOCKED / CLOUD | 014+015, chosen API/worker/broker host, Supabase/Vercel/DNS/cost/launch approval |
-| 017 | [Hosted verification/rollback](tasks/017_public-demo-verification__codex-luna-5-6__high.md) | BLOCKED / CLOUD | 016 actual deployment receipts and approved validation |
-| 018 | [Release docs hygiene](tasks/018_release-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | WAITING | 017 accepted; real links, deployment refs and release checks |
+| Step | Specification | Context, not permission |
+| --- | --- | --- |
+| S-002 | [flowstead-sim M0](https://github.com/darizae/flowstead-sim/blob/main/docs/planning/HANDOFF_SEQUENCE.md) | Historical: MERGED PR #2 |
+| S-003 | [flowstead-sim M1](https://github.com/darizae/flowstead-sim/blob/main/docs/planning/tasks/003_m1-annual-synthetic-generator__codex-luna-5-6__high.md) | Historical: MERGED PR #5; source ad5c94d, merge f06795b |
+| 001 | [Repository initialization](tasks/001_repository-initialization__omp-glm-5-3-flash__default.md) | Historical: COMPLETE |
+| 002 | [PostgreSQL/import](tasks/002_local-postgres-schema-import__codex-luna-5-6__high.md) | Historical: MERGED [PR #4](https://github.com/darizae/flowstead/pull/4) 0b8f3ec |
+| 003 | [FastAPI read/Plant policy](tasks/003_fastapi-read-and-plant-policy__codex-luna-5-6__high.md) | Historical: MERGED [PR #5](https://github.com/darizae/flowstead/pull/5) 647b435 |
+| 004 | [Deterministic 12h forecast](tasks/004_deterministic-twelve-hour-forecast__codex-luna-5-6__high.md) | Historical: MERGED [PR #6](https://github.com/darizae/flowstead/pull/6) 8af51c3 |
+| 004a | [Alembic baseline](tasks/004a_alembic-baseline-adoption__codex-luna-5-6__high.md) | Historical: MERGED [PR #7](https://github.com/darizae/flowstead/pull/7), merge `78b109c`; acceptance receipt commit `3b40ce5` |
+| 004b | [NATS/JetStream messaging](tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md) | NATS implementation committed to `main` at `388a5ad`; remaining test/review evidence is informational |
+| 005 | [Local JWT/Auth verifier](tasks/005_supabase-auth-verifier-local__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 006 | [Backend docs hygiene](tasks/006_backend-contract-docs-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 007 | [Frontend foundation and Plants](tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 008 | [Map and history](tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 009 | [Forecast and session UX](tasks/009_forecast-and-session-ux__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 010 | [CSV/PNG exports](tasks/010_bounded-csv-and-png-exports__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 011 | [Plant PDF report](tasks/011_authorized-pdf-plant-report__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 012 | [Local MVP security/parity](tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 013 | [MVP docs hygiene](tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 014 | [Private development Supabase integration](tasks/014_dev-supabase-integration__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 015 | [Local deployment and recovery](tasks/015_local-deployment-build-and-recovery__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 016 | [Public-demo provision/deploy](tasks/016_public-demo-provision-and-deploy__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 017 | [Hosted verification/rollback](tasks/017_public-demo-verification__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 018 | [Release docs hygiene](tasks/018_release-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
 
-## Execution and acceptance gates
+## Execution conventions
 
-- **Source gate:** upstream synthetic M1 source ad5c94d1f46e79312a99cb9721f38700f24fdf6b, manifest m1.v1, seed 20250101, telemetry SHA-256 e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e. The imported output is source-at-SHA, not a claimed published package.
-- **Review gate:** T-004b and subsequent approved local tasks may start without advance reviewer-relay certification or further owner sign-off. For completion/merge, obtain the required independent ordinary-ChatGPT review evidence and exact-final-SHA Mac tests; resolve any review-tool mismatch during the review stage, not as a coding startup blocker. Preserve recorded task 004 owner-specific exception without applying it to later tasks.
-- **Local verification:** The PostgreSQL, API and forecast merges have reported Mac tests. T-004a's [post-merge 2026-11-18 local acceptance receipt](../testing/evidence/T004A_ACCEPTANCE_2026-11-18.md) reports PASS for DB-M4A-FRESH/STAMP/MISMATCH/REPEAT and IT-M2-MIGRATE, with passing migration/unit/integration regressions and `just db-upgrade`/`just db-current`; it was committed at `3b40ce5`. These tests were not rerun for this documentation-only commit. Dependency audit and any independent-review gaps remain recorded as UNVERIFIED where noted; they do not block starting T-004b. Audit newly added dependencies as part of the assigned task and retain release-stage security gates. Later tasks must produce exact test case IDs, observed results, logs and source SHA, including real PostgreSQL, JetStream and Playwright as applicable. A task file existing does not mark it executed.
-- **Design gate:** [Reference HTML](../design/reference/flowstead-ui.html) and [UI baseline](../design/UI_UX_BASELINE.md) are approved design inputs. UI tasks 007–012 capture and review true desktop/mobile behavior and [parity matrix](../design/UI_UX_PARITY_MATRIX.md); unavailable map/PDF proof stays UNVERIFIED, not a pre-build blocker.
-- **Hosted gate:** The [deployment architecture](../setup/DEPLOYMENT_ARCHITECTURE.md) separates local, existing development and future demo resources. No cloud project write, invitation, broker/worker host, provider account, DNS, production exposure or cost is inferred from local-task approval.
-- **Documentation gate:** Tasks 006, 013 and 018 are required scoped Markdown/command/link hygiene reviews at their milestones. Preserve the app-owned task index as the only cross-repository execution queue.
+- Work on exactly the task the owner assigns. Earlier tasks explain source ownership and interfaces; examine current code instead of treating their documentation status as authoritative.
+- T-004b's NATS/JetStream implementation already appears on `main` in commit `388a5ad`. **T-005 may start now.** It does not require a T-004b review receipt, status update or new merge.
+- Preserve the pinned M1 synthetic source commit `ad5c94d1f46e79312a99cb9721f38700f24fdf6b`, manifest `m1.v1`, seed `20250101` and telemetry digest `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`.
+- Implement and verify behavior locally using targeted tests plus relevant real PostgreSQL, NATS/JetStream or browser interactions. Document failures honestly; tests are engineering checks, **not permission checks for starting work**.
+- Complete the assigned task with a local commit and merge into local `main`, resolving actual Git conflicts and correcting failing checks. **Never push automatically.** Independent review may be done afterward and does not block the local workflow.
+- Respect actual secrets/data boundaries. Local development must not create paid services, mutate unrelated cloud projects, expose credentials or publish a demo incidentally. For explicitly assigned cloud work, implement all feasible code/configuration and use only concrete authorized external resources; do not fabricate a host, recipient or cost.
 
-## Local Git completion, T-005 onward (owner authorized 2026-11-18)
-
-For each eligible subsequent task, complete independent ordinary ChatGPT review and exact-tree local Mac checks, commit on its local task branch, merge the approved branch into **local `main`**, then verify the merged SHA/tree and working tree before marking DONE. **Do not push** either branch; an actual remote-PR requirement, conflicts or unmet review/check/external-action gates block merge. This policy does not itself authorize cloud writes, deployment or releases, and does not retroactively mark the in-progress T-004b accepted.
+Design reference: [UI/UX baseline](../design/UI_UX_BASELINE.md). Testing reference: [indexed tests](../testing/INDEXED_TEST_PLAN.md). Hosting setup: [deployment architecture](../setup/DEPLOYMENT_ARCHITECTURE.md).

@@ -1,14 +1,14 @@
 # T-017 — live demo smoke, security, and rollback acceptance
 
-**Status:** DRAFT — depends on approved public deploy (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Execution:** Start immediately when assigned; planning-status and reviewer approvals are not prerequisites. **Repository:** `darizae/flowstead`, local `main`.
 
-## Preconditions and order
-016 completed with actual resource receipts, owner accepted hosted exposure and available demo test identities. Independently verify active provider state and exact deployed SHAs; no auto-merge/public relaunch on red tests.
+## Technical context
+Create and run hosted verification where actual URLs and identities are configured. If no deployed environment exists, implement the verification harness and local simulations without inventing hosted results.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
 
-Owning context: `docs/deployment/LOCAL_AND_RECOVERY.md`, live deployment config (FastAPI, **NATS/JetStream + worker**, real Alembic head, PostgreSQL), app API contracts, [indexed test catalog](../../testing/INDEXED_TEST_PLAN.md), [data guide](../../testing/TEST_DATA_GUIDE.md), UI parity matrix, approved demo Auth identities handled out-of-band and current deployed URLs.
+Owning context: `docs/deployment/LOCAL_AND_RECOVERY.md`, live deployment config (FastAPI, **NATS/JetStream + worker**, real Alembic head, PostgreSQL), app API contracts, [indexed test catalog](../../testing/INDEXED_TEST_PLAN.md), [data guide](../../testing/TEST_DATA_GUIDE.md), UI parity matrix, configured demo Auth test identities handled securely out-of-band and current deployed URLs.
 
 ## Observable result and scope
 Test hosted public and invited-operator journeys in actual browsers through TLS against the separate `flowstead-demo` data, including all five fixed fictional public Plants, map tiles, history, forecast, exports and owner account restrictions. Verify free-tier cold start, **broker/consumer restart and queued→persisted 12h forecast delivery**, failed/retried message recovery without duplication, real Alembic head, bounded per-principal **IndexedDB** expiry/logout/revocation cleanup, paused DB messaging, signed-out/expired/revoked token, disjoint assigned Plants and no private-source leak. No public message-command endpoint. Validate backup/reseed procedure against disposable copy, rollback drill where safe/authorized, source/digest/version tracking and alert/log access without credentials exposed. Request owner acceptance of PDF sample, map and public presentation; do not assert uptime guarantees.
@@ -18,7 +18,7 @@ Test hosted public and invited-operator journeys in actual browsers through TLS 
 ## Dependencies and allowed file closure
 No new dependency expected. Additional live test tools must be explicitly named/approved before installation; no volume/load/24h soak default. Remote smoke uses minimum necessary requests.
 
-Allowed create/edit paths: `docs/deployment/**`, `docs/design/UI_UX_PARITY_MATRIX.md`, `frontend/tests/e2e/**` targeted hosted checks, `backend/tests/` targeted auth tests, `README.md` for real live URL/status only, `justfile` only if adding existing safe smoke recipe. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `docs/deployment/**`, `docs/design/UI_UX_PARITY_MATRIX.md`, `frontend/tests/e2e/**` targeted hosted checks, `backend/tests/` targeted auth tests, `README.md` for real live URL/status only, `justfile` only if adding existing safe smoke recipe. Any necessary new dependency installation inside the task's named owning paths is included in this assignment; install compatible versions using the package manager, update the lockfile and tests and report findings. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `E2E-M17-PUBLIC`: anonymous sees exactly approved synthetic subset and no private IDs; list/map/history/chart/exports work.
@@ -27,14 +27,13 @@ Allowed create/edit paths: `docs/deployment/**`, `docs/design/UI_UX_PARITY_MATRI
 - `OPS-M17-RECOVER`: documented reproducible seed, real **NATS/worker recovery and idempotent queued-event replay** plus authorized DB backup/rollback drill with exact SHAs; no blind destructive DB reset.
 - `OPS-M17-COST`: verified free tier/usage alerts and no unexpected paid service, with owner decision for any exception.
 
-## Local verification, gates and stopping condition
+## Local verification and completion
 Run bounded actual live browser tests (including safe IndexedDB isolation), API/worker/broker/JetStream smoke, confirmed Alembic head, provider logs/health and release-local unit regression; record exact deployment URL/time/SHA and distinguish local from remote evidence. No unattended status claim if owner/ChatGPT review unavailable.
 
-If hosted privacy leak/security defect discovered, stop public traffic only through authorized host controls and escalate to owner; do not independently make destructive changes.
+If hosted privacy leak/security defect discovered, stop public traffic only through configured host controls and escalate to owner; do not independently make destructive changes.
 
 
 
-## Git / review receipt
-Work on a short-lived local task branch from verified `main`; prepare focused commits and a reviewable local diff. A remote draft PR is not required for the owner-authorized no-push workflow. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push any branch or `main`, force-update history, tag, spend or alter cloud state without separate authorization; the local merge is permitted only after the task's acceptance gates. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+## Local completion
 
-**Local Git completion (owner authorization, 2026-11-18):** After this task becomes eligible, the scoped change passes its required independent ordinary ChatGPT review and exact-final-tree Mac verification, make a focused local task-branch commit and merge the reviewed branch into **local `main`** with a normal non-force Git merge. Verify and report the task SHA, resulting `main` SHA/tree and working-tree status; repeat relevant checks if the merged tree differs. **Do not push** the task branch or `main`. If verification/review is incomplete, the base changed without review, a merge conflicts, or repository policy requires a remote PR, stop and report the blocker rather than pushing or merging. This authorizes local Git completion only; external cloud, release, invite, spend and destructive-action gates remain unchanged.
+Start coding when this task is explicitly assigned. Run focused local tests and repair real failures; never wait for reviewer certification, a READY table entry, earlier merge receipts or permission to install task dependencies. Commit a focused local task branch, **merge it into local `main`**, and report the commit/merge SHA and actual test results. **Do not push**. Real external writes require a concrete configured target and credentials, not planning-status approvals; complete all possible code/tests if a hosted environment is absent. Never invent secret values, paid service plans or successful deployment evidence.

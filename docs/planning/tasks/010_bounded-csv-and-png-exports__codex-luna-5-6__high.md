@@ -1,9 +1,9 @@
 # T-010 — bounded authorized CSV downloads and chart PNG exports
 
-**Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
+**Execution:** Start when explicitly assigned; no WAITING/READY/approval prerequisite. **Repository:** `darizae/flowstead`, local `main` checkout.
 
-## Preconditions and order
-008/009 chart/API and principal-switch guards accepted; 005 auth enforced at FastAPI. No bucket/report persistence.
+## Existing implementation and technical context
+Use the actual current history/forecast API and chart renderer; build any missing narrow export seam as part of this task. Previous task status is informational only.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -18,7 +18,7 @@ Add Download CSV and Download PNG actions for **each** history and forecast char
 ## Dependencies and allowed file closure
 Client `Blob`/SVG/canvas can avoid new package; if a rasterizer is necessary, use an explicitly vetted compatible npm package with manifest/lockfile/security scope. Prefer bounded in-browser export; **server CSV endpoints** only if an established scenario requires them, in which case reuse the authenticated API repository policy and add real negative HTTP tests. Never add a general unbounded bulk export endpoint.
 
-Allowed create/edit paths: `frontend/src/**`, `frontend/tests/**`, `frontend/e2e/**`, `frontend/playwright.config.ts` if changed, `frontend/package.json`/`package-lock.json` if package added, `backend/src/flowstead_api/**` and `backend/tests/**` only if server CSV route is added, `justfile`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` scrubbed synthetic browser/media evidence, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `frontend/src/**`, `frontend/tests/**`, `frontend/e2e/**`, `frontend/playwright.config.ts` if changed, `frontend/package.json`/`package-lock.json` if package added, `backend/src/flowstead_api/**` and `backend/tests/**` only if server CSV route is added, `justfile`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` scrubbed synthetic browser/media evidence, `README.md`. Necessary package, manifest, lockfile, fixture, command and test updates in the named owning paths are in scope when this task is assigned. Choose supported compatible versions, generate lockfiles with the package manager, audit dependencies and verify locally. Do not request separate permission for predictable dependency setup; keep changes related to this task. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Prototype-anchored exports and verified artifacts (binding)
 
@@ -32,14 +32,13 @@ Allowed create/edit paths: `frontend/src/**`, `frontend/tests/**`, `frontend/e2e
 - `SEC-M10-EXPORT`: denied/logout/expired states disable export and no private stale data persists; if server route is added, foreign Plant returns 404.
 - `UI-M10-PARITY`: actions directly visible as approved, no filler/explanatory audit copy.
 
-## Local verification, gates and stopping condition
+## Local verification and completion
 Use unit tests for formatter and **`just test-e2e-local` against local real API/PostgreSQL** to download/inspect CSV and PNG (not filename-only), `just frontend-build`, small backend tests if routes changed. Visual check distinct from green build.
 
 No persistence of PDFs/PNGs/CSVs to cloud or Git.
 
 
 
-## Git / review receipt
-Work on a short-lived local task branch from verified `main`; prepare focused commits and a reviewable local diff. A remote draft PR is not required for the owner-authorized no-push workflow. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push any branch or `main`, force-update history, tag, spend or alter cloud state without separate authorization; the local merge is permitted only after the task's acceptance gates. OMP coordinates unattended handoff to **ordinary ChatGPT chat in the existing Loop OMP Project** using the owner's previously tested browser workflow. **ChatGPT normal chat is the only independent PR reviewer, bounded GitHub correction agent and final acceptance decision-maker**; OMP/SAIA model PASS is advisory only. OMP handles final exact-head Mac tests and the authorized local merge after independent acceptance; issue-status updates retain their separate gates. Do not invent a ChatGPT review or block unrelated approved implementation merely because review is pending. After any correction, rerun required checks on the exact final SHA on Mac. Never merge without verified independent review, required local tests and compliance with actual repository policy. No 24-hour soak.
+## Local completion
 
-**Local Git completion (owner authorization, 2026-11-18):** After this task becomes eligible, the scoped change passes its required independent ordinary ChatGPT review and exact-final-tree Mac verification, make a focused local task-branch commit and merge the reviewed branch into **local `main`** with a normal non-force Git merge. Verify and report the task SHA, resulting `main` SHA/tree and working-tree status; repeat relevant checks if the merged tree differs. **Do not push** the task branch or `main`. If verification/review is incomplete, the base changed without review, a merge conflicts, or repository policy requires a remote PR, stop and report the blocker rather than pushing or merging. This authorizes local Git completion only; external cloud, release, invite, spend and destructive-action gates remain unchanged.
+Implement immediately when this file is explicitly assigned. Run the stated targeted local tests and fix failures in task-owned source and tests; record observed checks and any environment limitations. Make a focused local task-branch commit and **merge into local `main`** after resolving code/test failures and Git conflicts. Record the resulting SHA and changes. **Do not push**. Independent ChatGPT review, PR receipts, predecessor acceptance, task index statuses and extra owner authorization are **not prerequisites** to starting, committing or locally merging this task. If a real external resource is absent, finish all feasible local work and report what could not be exercised without inventing hosted results.

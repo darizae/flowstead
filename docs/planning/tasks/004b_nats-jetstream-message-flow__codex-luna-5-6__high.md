@@ -1,9 +1,9 @@
 # T-004b — NATS/JetStream asynchronous messaging
 
-**Status:** **APPROVED / READY FOR IMMEDIATE LOCAL IMPLEMENTATION** (owner authorization 2026-11-18). T-004a is merged and locally accepted. No repeat owner approval, worker-pause gate or pre-dispatch reviewer-relay certification is required. The worker handles the approved NATS dependency installation, local services, task tests and evidence within this specification. Ordinary independent code review and exact-head Mac verification are completion/merge checks, not blockers to starting. Approved message/migration/cache architecture stands.
+**Execution:** NATS/JetStream implementation code is already committed to `main` at `388a5ad`. Its review receipt is not a prerequisite for T-005 or any explicitly assigned follow-up.
 
 ## Read and respect
-Read AGENTS.md, docs/planning/HANDOFF_SEQUENCE.md, this file, docs/planning/IMPLEMENTATION_SPEC.md, docs/testing/INDEXED_TEST_PLAN.md, docs/testing/TEST_DATA_GUIDE.md, existing backend API/forecast/importer, migration code, compose.yml and nearest real integration tests. the approved implementation contract and the documented engineering patterns **informed** this contract; do not vendor their NATS packages or read private files at implementation time.
+Read AGENTS.md, docs/planning/HANDOFF_SEQUENCE.md, this file, docs/planning/IMPLEMENTATION_SPEC.md, docs/testing/INDEXED_TEST_PLAN.md, docs/testing/TEST_DATA_GUIDE.md, existing backend API/forecast/importer, migration code, compose.yml and nearest real integration tests. the Flowstead implementation contract is authoritative; read-only engineering examples under `/Users/danie/repos/repomix-static-reconstructor/reconstructed/toolkit` and `/Users/danie/repos/repomix-static-reconstructor/reconstructed/integration_tests` may inform tests, but do not copy or execute them.
 
 ## Observable event-driven behavior
 Use a pinned compatible NATS 2 Docker service **with JetStream enabled**, loopback-only port and health/readiness checks alongside existing PostgreSQL (no cloud broker). Add audited nats-py in backend lock. Keep FastAPI HTTP reads on parameterized PostgreSQL projections with current Plant-scoped auth; GET endpoints must not mutate or wait for a broker. Keep one reusable deterministic forecast calculation; adapt current local forecast CLI as a maintenance/backfill path.
@@ -27,5 +27,6 @@ compose.yml; backend/src/flowstead_api/**; backend/importer.py (only small emiss
 
 Run real local PostgreSQL + NATS/JetStream stack, real HTTP, real publisher/consumer, focused unit cases and controlled broker pause/restart. Follow indexed test skill philosophy: exact IDs in asserting tests, owner-isolated data, public behavior-first assertions, no sleep-only proof; link evidence to the Markdown index. Root just recipes should cover broker start, message-unit, message-integration and backend regression.
 
-## Review and safety
-Begin T-004b implementation immediately when assigned, without a further owner-approval or reviewer-relay preflight gate. At review/merge, coordinate independent **ordinary ChatGPT Loop OMP** code review (OMP/SAIA review is advisory) and pass exact-final-SHA Mac checks before a policy-authorized merge. Do not introduce repeat-approval loops.
+## Local completion
+
+Use the existing NATS/JetStream implementation on `main` and run its targeted tests as needed. Task-status tables, ChatGPT reviewer availability or missing approval receipts are not prerequisites for the next explicitly assigned implementation. For any new task-owned corrections, commit and merge locally; do not push automatically. Preserve broker/data security invariants.

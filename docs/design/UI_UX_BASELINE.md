@@ -4,7 +4,7 @@
 
 ## User journeys
 
-1. Signed-out public visitor opens **Plants**, sees all five validated fictional M1 Plants through read-only synthetic public endpoints, selects via actual Florida map or list, sees latest four measurements and 24/72/168-hour history, 12-hour forecast and permitted downloads. Public deployment requires the separately approved release gate. Never display account-specific private fields or pretend to be logged in.
+1. Signed-out public visitor opens **Plants**, sees all five validated fictional M1 Plants through read-only synthetic public endpoints, selects via actual Florida map or list, sees latest four measurements and 24/72/168-hour history, 12-hour forecast and permitted downloads. Public deployment must use actual configured hosting, credentials and safe resource limits; this does not block local implementation. Never display account-specific private fields or pretend to be logged in.
 2. Invited operator signs in, sees only assigned Plants, navigates back/forward and switches Plants. Selected Plant/detail and history/forecast state recover from supported deep links if still authorized; never restore another principal's private cache.
 3. Loading, empty, map offline, missing/invalid sensor data, unavailable forecast, expired session, zero assigned Plants, forbidden direct URL and logout each have understandable actions. No public signup, administration, compliance, incident or control features.
 
@@ -56,4 +56,4 @@ The required NATS/JetStream forecast pipeline may be **queued**, **processing**,
 
 ## Screen and interaction acceptance
 
-The storyboard is the accepted design direction. During tasks 007–012, OMP must produce and check an actual browser run with Florida tiles/markers, an openable/downloadable PDF and desktop/mobile screenshots. Record deviations and fixes against the approved v2 design. Unverified visual parity blocks **final UI acceptance**, not starting implementation. Later UI tasks must update [`UI_UX_PARITY_MATRIX.md`](UI_UX_PARITY_MATRIX.md) with real browser evidence, not just selector tests.
+The storyboard is the accepted design direction. During tasks 007–012, OMP must produce and check an actual browser run with Florida tiles/markers, an openable/downloadable PDF and desktop/mobile screenshots. Record deviations and fixes against the approved v2 design. Record unverified visual parity honestly and fix it during the owning implementation; no owner sign-off is required to begin or locally merge a UI task. Later UI tasks must update [`UI_UX_PARITY_MATRIX.md`](UI_UX_PARITY_MATRIX.md) with real browser evidence, not just selector tests.

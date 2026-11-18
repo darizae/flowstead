@@ -18,7 +18,7 @@ Algorithm: seasonal-naive uses the valid flow at `target_time - 24h` if observed
 ## Dependencies and allowed file closure
 Use Python standard library + existing numeric/Python backend dependencies only unless an explicitly justified package needs authorization and owning `backend/pyproject.toml` + `backend/uv.lock` changes are included. Do not require NumPy, sklearn, task queue or GPU.
 
-Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/migrations/**`, `backend/pyproject.toml`, `backend/uv.lock` only for justified install, `justfile`, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/migrations/**`, `backend/pyproject.toml`, `backend/uv.lock` only for justified install, `justfile`, `README.md`. Relevant task dependencies and their owning manifests/lockfiles were part of the original technical scope; do not require an additional planning-status permission check. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Reference-derived code structure and test-first responsibility
 
@@ -31,12 +31,13 @@ Extend the **existing** `backend/src/flowstead_api/` FastAPI modules instead of 
 - `IT-M4-CROSSPLANT`: user assigned Plant A cannot see Plant B forecast; public absent by default.
 - `UT-M4-BACKTEST`: feature inputs always ≤ issuance, held-out observations not accessed as features; metrics count correctly, and no fabricated empirical claim.
 
-## Local verification, gates and stopping condition
+## Local verification and actual historical evidence
 Implement `just forecast-local`, `just test-forecast-unit`, `just test-forecast-integration` with existing scripts; focused `uv run --project backend pytest -q backend/tests/unit/test_forecast.py`, real DB forecast integration; later API regression. Record actual forecast unavailable behavior and held-out result, no accuracy marketing.
 
 Stop on change to measurement semantics/forecast horizon. Owner only reviews user-facing display/thresholds later.
 
 
 
-## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP coordinates unattended handoff to **ordinary ChatGPT chat in the existing Loop OMP Project** using the owner's previously tested browser workflow. **ChatGPT normal chat is the only independent PR reviewer, bounded GitHub correction agent and final acceptance decision-maker**; OMP/SAIA model PASS is advisory only. OMP handles the Mac's final exact-head tests and only separately authorized merge/issue-status reconciliation. Do not invent a ChatGPT review or block unrelated approved implementation merely because review is pending. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+## Historical Git and verification record
+
+The implementation and recorded merge already happened. Preserve the historical commit/test evidence as factual context. Independent ChatGPT review receipts, old approval decisions and task statuses do not constrain the start or local merge of subsequent tasks. Do not reimplement this historical task or infer test results that were not observed.

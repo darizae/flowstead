@@ -1,9 +1,9 @@
 # T-011 — semantically correct PDF Plant report
 
-**Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
+**Execution:** Start when explicitly assigned; no WAITING/READY/approval prerequisite. **Repository:** `darizae/flowstead`, local `main` checkout.
 
-## Preconditions and order
-003/004/005 API policy and 008/009 UI data views approved. Owner delegated routine local PDF aesthetics under the approved presentation contract: OMP **generates and opens** a real synthetic PDF, while ordinary **ChatGPT normal chat independently inspects** its visual evidence and code as part of PR acceptance. The owner can separately accept final public presentation; do not require repeated owner intervention for every local PDF iteration. No public/regulatory/compliance claim.
+## Existing implementation and technical context
+Use the existing FastAPI/SQL models and frontend export controls. Build and inspect the local PDF behavior as assigned rather than waiting for another task's merge receipt.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -18,7 +18,7 @@ Add permission-bound on-demand endpoint `GET /api/v1/plants/{id}/report.pdf` (pl
 ## Dependencies and allowed file closure
 Use `reportlab>=4,<5` (after compatibility/license/security audit) in `backend/pyproject.toml` and `backend/uv.lock` via `uv add --project backend`. If alternate PDF library is required, planner approval before installation. Expose downloadable button only for a Plant currently shown with API-authorized state; never client-render PDFs from out-of-scope cached data.
 
-Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `frontend/src/**`, `frontend/tests/**`, `frontend/e2e/**`, `frontend/playwright.config.ts` if changed, `justfile`, `README.md`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` scrubbed synthetic PDF/browser evidence. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `frontend/src/**`, `frontend/tests/**`, `frontend/e2e/**`, `frontend/playwright.config.ts` if changed, `justfile`, `README.md`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` scrubbed synthetic PDF/browser evidence. Necessary package, manifest, lockfile, fixture, command and test updates in the named owning paths are in scope when this task is assigned. Choose supported compatible versions, generate lockfiles with the package manager, audit dependencies and verify locally. Do not request separate permission for predictable dependency setup; keep changes related to this task. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Prototype and Python service-boundary fidelity (binding)
 
@@ -32,14 +32,13 @@ Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `
 - `UT-M11-LIMIT`: output cap, safe filenames, long names, no stored file and failure cleanup.
 - `UI-M11-PDF`: independent reviewer opens a generated PDF sample, checks hierarchy/readability at 100% zoom; evidence is distinct from extraction test.
 
-## Local verification, gates and stopping condition
+## Local verification and completion
 Add `just test-report` and run focused backend unit + local PG authorization tests, **`just test-e2e-local` for actual PDF request/download/open at 1330px and 390px**, `uv audit --project backend` after new dependency and final head receipt.
 
-A PDF-text test does not satisfy visual acceptance. Keep **local PDF visual review PENDING/UNVERIFIED** until an actual generated/opened sample is inspected by independent normal ChatGPT chat in the Loop OMP review, with source and image/PDF evidence. Owner final public-presentation signoff remains a separate release gate; do not block ordinary local iterations waiting for a manual owner message.
+A PDF-text test does not satisfy visual acceptance. Keep **local PDF visual review PENDING/UNVERIFIED** until an actual generated/opened sample is inspected by independent normal ChatGPT chat in the Loop OMP review, with source and image/PDF evidence. Visual inspection is part of local completion; do not wait for a separate owner message.
 
 
 
-## Git / review receipt
-Work on a short-lived local task branch from verified `main`; prepare focused commits and a reviewable local diff. A remote draft PR is not required for the owner-authorized no-push workflow. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push any branch or `main`, force-update history, tag, spend or alter cloud state without separate authorization; the local merge is permitted only after the task's acceptance gates. OMP coordinates unattended handoff to **ordinary ChatGPT chat in the existing Loop OMP Project** using the owner's previously tested browser workflow. **ChatGPT normal chat is the only independent PR reviewer, bounded GitHub correction agent and final acceptance decision-maker**; OMP/SAIA model PASS is advisory only. OMP handles final exact-head Mac tests and the authorized local merge after independent acceptance; issue-status updates retain their separate gates. Do not invent a ChatGPT review or block unrelated approved implementation merely because review is pending. After any correction, rerun required checks on the exact final SHA on Mac. Never merge without verified independent review, required local tests and compliance with actual repository policy. No 24-hour soak.
+## Local completion
 
-**Local Git completion (owner authorization, 2026-11-18):** After this task becomes eligible, the scoped change passes its required independent ordinary ChatGPT review and exact-final-tree Mac verification, make a focused local task-branch commit and merge the reviewed branch into **local `main`** with a normal non-force Git merge. Verify and report the task SHA, resulting `main` SHA/tree and working-tree status; repeat relevant checks if the merged tree differs. **Do not push** the task branch or `main`. If verification/review is incomplete, the base changed without review, a merge conflicts, or repository policy requires a remote PR, stop and report the blocker rather than pushing or merging. This authorizes local Git completion only; external cloud, release, invite, spend and destructive-action gates remain unchanged.
+Implement immediately when this file is explicitly assigned. Run the stated targeted local tests and fix failures in task-owned source and tests; record observed checks and any environment limitations. Make a focused local task-branch commit and **merge into local `main`** after resolving code/test failures and Git conflicts. Record the resulting SHA and changes. **Do not push**. Independent ChatGPT review, PR receipts, predecessor acceptance, task index statuses and extra owner authorization are **not prerequisites** to starting, committing or locally merging this task. If a real external resource is absent, finish all feasible local work and report what could not be exercised without inventing hosted results.

@@ -4,7 +4,7 @@
 
 ## How to use this plan
 
-- **Before implementation:** read the assigned task and the matching cases here plus [TEST_DATA_GUIDE.md](TEST_DATA_GUIDE.md). Search actual tests for each exact ID. Classify **COVERED** only after inspecting its asserting test and observed results; otherwise INDEXED/UNCOVERED or BLOCKED with reason. Record specific missing cases, not generic quality gates.
+- **Before implementation:** read the assigned task and the matching cases here plus [TEST_DATA_GUIDE.md](TEST_DATA_GUIDE.md). Search actual tests for each exact ID. Classify **COVERED** only after inspecting its asserting test and observed results; otherwise INDEXED/UNCOVERED/UNVERIFIED with reason. These labels never prevent starting an explicitly assigned task. Record specific missing cases, not generic quality gates.
 - **Test-first:** write the minimal assertion that fails for missing intended behavior (RED where practical), implement to GREEN, refactor and run focused regressions. Do not fabricate chronology for tasks already merged.
 - **Identity:** a pytest asserting test has an exact short docstring **Case: ID** or **Cases: ID1, ID2**; a Vitest/Playwright test has the exact ID in its test title. IDs in helper/comments/fixtures alone do not count. Group cases by shared setup/invariant; one assertion group may cover several IDs when all outcomes are actually asserted.
 - **Real boundaries:** PostgreSQL DDL/SQL, NATS JetStream events and durable consumer, FastAPI HTTP security, React browser/IndexedDB lifecycle, export/PDF decoding and visual MapLibre checks must use real local services when the case requires them. A mock-only result is not a PASS for a real integration case.
@@ -80,7 +80,7 @@
 |---|---|---|
 | `UT-M7-NAV` | list renders only API-returned Plants; click/back and inaccessible direct link handle state correctly. | UNVERIFIED until asserting test+run checked |
 | `UT-M7-FAIL` | empty/unauthorized/loading/offline/API error show useful, non-leaking copy and retry; no hardcoded demo data in shipped build. | UNVERIFIED until asserting test+run checked |
-| `UI-M7-PARITY` | owner-approved v2 hierarchy/colors/type, 390px + desktop no overflow; keyboard/focus/accessible navigation checked in real browser. | UNVERIFIED until asserting test+run checked |
+| `UI-M7-PARITY` | documented v2 hierarchy/colors/type, 390px + desktop no overflow; keyboard/focus/accessible navigation checked in real browser. | UNVERIFIED until asserting test+run checked |
 | `SEC-M7-CLIENT` | server-only keys not in bundle; API URL config is explicit; isolated principal transitions clear in-memory cache. | UNVERIFIED until asserting test+run checked |
 
 ### T-008 — [task source](../planning/tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md)
@@ -99,7 +99,7 @@
 | `UT-M9-FORECAST` | exactly 12 future points from API, visible observed/predicted boundary, local/DST axis/gal/h; outage/unavailable/empty handling. | UNVERIFIED until asserting test+run checked |
 | `UT-M9-SESSIONS` | logged-out mode, valid invite/login, expiry, logout, forbidden/zero-Plant states; no open-signup flow. | UNVERIFIED until asserting test+run checked |
 | `SEC-M9-CACHE` | auth switch clears all private rows/tokens from in-memory stores; unauthorized URL never renders stale previous Plant. | UNVERIFIED until asserting test+run checked |
-| `UI-M9-PARITY` | real browser invitation/login/expired/forbidden/logout evidence including keyboard/mobile and owner-approved copy. | UNVERIFIED until asserting test+run checked |
+| `UI-M9-PARITY` | real browser invitation/login/expired/forbidden/logout evidence including keyboard/mobile and documented copy. | UNVERIFIED until asserting test+run checked |
 
 ### T-010 — [task source](../planning/tasks/010_bounded-csv-and-png-exports__codex-luna-5-6__high.md)
 
@@ -117,7 +117,7 @@
 | `IT-M11-PDF` | signed principal A can download A report from real PostgreSQL; B gets indistinguishable 404; missing/bad auth gets 401. | UNVERIFIED until asserting test+run checked |
 | `UT-M11-CONTENT` | parse PDF text, assert correct Plant/unit/value/quality/12 forecast targets or explicit unavailability; no invented data. | UNVERIFIED until asserting test+run checked |
 | `UT-M11-LIMIT` | output cap, safe filenames, long names, no stored file and failure cleanup. | UNVERIFIED until asserting test+run checked |
-| `UI-M11-PDF` | independent reviewer opens a generated PDF sample, checks hierarchy/readability at 100% zoom; evidence is distinct from extraction test. | UNVERIFIED until asserting test+run checked |
+| `UI-M11-PDF` | local inspector opens a generated PDF sample, checks hierarchy/readability at 100% zoom; evidence is distinct from extraction test. | UNVERIFIED until asserting test+run checked |
 
 ### T-012 — [task source](../planning/tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md)
 
@@ -128,7 +128,7 @@
 | `E2E-M12-FILES` | PNG axes and PDF visual quality, CSV columns, inspected downloaded file contents. | UNVERIFIED until asserting test+run checked |
 | `SEC-M12-RATE` | bounded windows/rows/files, rate limit/timeout/cors constraints, SQL+JWT adversarial tests. | UNVERIFIED until asserting test+run checked |
 | `SEC-M12-AUDIT` | `npm audit` and Python locked dependency audit with remediations and unresolved advisory inventory. | UNVERIFIED until asserting test+run checked |
-| `UI-M12-ALL` | matrix row evidence for responsive desktop + mobile, zoom, keyboard, loading/missing/expired, intentional deviations owner-signed. | UNVERIFIED until asserting test+run checked |
+| `UI-M12-ALL` | matrix row evidence for responsive desktop + mobile, zoom, keyboard, loading/missing/expired, intentional deviations documented. | UNVERIFIED until asserting test+run checked |
 
 ### T-013 — [task source](../planning/tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md)
 
@@ -185,7 +185,7 @@
 | `DOC-M18-RELEASE` | current remote URLs, CLI commands, tested SHA/version correct and all links resolve. | UNVERIFIED until asserting test+run checked |
 | `DOC-M18-NOCLAIM` | no unsupported test/deployment/security/compliance claims; README written for actual operator/developer. | UNVERIFIED until asserting test+run checked |
 | `DOC-M18-PRIVATE` | no secret/private planner DHI material in repo/docs/output. | UNVERIFIED until asserting test+run checked |
-| `DOC-M18-GATE` | active milestone statuses match independent approvals and receipts. | UNVERIFIED until asserting test+run checked |
+| `DOC-M18-GATE` | documented feature state matches actual source and test evidence. | UNVERIFIED until asserting test+run checked |
 
 ### T-004a — [Alembic baseline](../planning/tasks/004a_alembic-baseline-adoption__codex-luna-5-6__high.md)
 
@@ -198,7 +198,7 @@
 
 ### T-004b — [JetStream messaging](../planning/tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md)
 
-**Local implementation evidence (2026-11-18, base `f9503c1` plus uncommitted T-004b worktree):** `backend/tests/integration/test_messaging.py` ran against loopback PostgreSQL 16, FastAPI HTTP and the pinned NATS 2.12.15 JetStream image with `DATABASE_URL=postgresql://flowstead:flowstead_local@127.0.0.1:54329/flowstead NATS_URL=nats://127.0.0.1:42229 FLOWSTEAD_ISOLATED_NATS_TEST=1 uv run --project backend pytest -q backend/tests/integration/test_messaging.py`: **3 passed**. The test stopped and restarted the isolated Compose broker, exercised real publication/acknowledgement, duplicate delivery, durable retries and poison termination, and polled exact PostgreSQL state. `uv run --project backend pytest -q backend/tests/unit` reported **62 passed**; the full configured integration directory reported **20 passed, 10 skipped** after this task (skips require the external full-M1 files and are not counted as messaging evidence). `backend/tests/integration/test_migrations.py` reported **16 passed, 1 skipped**, including a fresh 003 schema. `just audit-backend` used pinned `pip-audit 2.10.1` with strict collection against a hash-verified `uv export --locked` of all runtime and development packages in `backend/uv.lock` and reported **No known vulnerabilities found**, including for `nats-py 2.17.0`. Exact-final-SHA review/Mac receipts remain a merge-stage gate.
+**Local implementation evidence (2026-11-18, base `f9503c1` plus uncommitted T-004b worktree):** `backend/tests/integration/test_messaging.py` ran against loopback PostgreSQL 16, FastAPI HTTP and the pinned NATS 2.12.15 JetStream image with `DATABASE_URL=postgresql://flowstead:flowstead_local@127.0.0.1:54329/flowstead NATS_URL=nats://127.0.0.1:42229 FLOWSTEAD_ISOLATED_NATS_TEST=1 uv run --project backend pytest -q backend/tests/integration/test_messaging.py`: **3 passed**. The test stopped and restarted the isolated Compose broker, exercised real publication/acknowledgement, duplicate delivery, durable retries and poison termination, and polled exact PostgreSQL state. `uv run --project backend pytest -q backend/tests/unit` reported **62 passed**; the full configured integration directory reported **20 passed, 10 skipped** after this task (skips require the external full-M1 files and are not counted as messaging evidence). `backend/tests/integration/test_migrations.py` reported **16 passed, 1 skipped**, including a fresh 003 schema. `just audit-backend` used pinned `pip-audit 2.10.1` with strict collection against a hash-verified `uv export --locked` of all runtime and development packages in `backend/uv.lock` and reported **No known vulnerabilities found**, including for `nats-py 2.17.0`. The recorded local test outcomes are historical evidence, not prerequisites for the next task's implementation or merge.
 
 | ID | Intended observable assertion | Evidence status |
 |---|---|---|

@@ -1,9 +1,9 @@
 # T-008 — MapLibre Plants map and four monitoring charts
 
-**Status:** WAITING — 007 (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
+**Execution:** Start when explicitly assigned; no WAITING/READY/approval prerequisite. **Repository:** `darizae/flowstead`, local `main` checkout.
 
-## Preconditions and order
-007 passed app shell + parity baseline and 003 typed API contract. Map uses only authorized/API-public list. Live OpenFreeMap tile connectivity and attribution must be actually checked, not inferred from bundled assets.
+## Existing implementation and technical context
+Use the frontend from T-007 and real API schemas when present. If a required component is missing, implement the narrow needed interface inside this task; do not wait for a task-status update.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -16,9 +16,9 @@ Add real interactive MapLibre GL JS map using `https://tiles.openfreemap.org/sty
 
 
 ## Dependencies and allowed file closure
-Use `maplibre-gl` 6.x and its stylesheet; chart rendering preferably accessible SVG with existing local CSS/React—do not add a separate charting library unless task approval explicitly covers package, `frontend/package.json`, `package-lock.json`, tests and audit. If a graph package materially reduces code, return scoped choice upstream rather than install unapproved alternative. No geocoding API/key and no real facility coordinates.
+Use `maplibre-gl` 6.x and its stylesheet; chart rendering preferably accessible SVG with existing local CSS/React—prefer no separate charting library; if a compatible library materially simplifies implementation, install it in the named frontend manifest and lockfile, run audit and tests, and document the choice. No geocoding API/key and no real facility coordinates.
 
-Allowed create/edit paths: `frontend/src/**`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.ts` if needed, `frontend/tests/**`, `frontend/e2e/**`, `frontend/playwright.config.ts` if changed, `justfile`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` synthetic browser captures, `README.md`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `frontend/src/**`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.ts` if needed, `frontend/tests/**`, `frontend/e2e/**`, `frontend/playwright.config.ts` if changed, `justfile`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` synthetic browser captures, `README.md`. Necessary package, manifest, lockfile, fixture, command and test updates in the named owning paths are in scope when this task is assigned. Choose supported compatible versions, generate lockfiles with the package manager, audit dependencies and verify locally. Do not request separate permission for predictable dependency setup; keep changes related to this task. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Reference-anchored map, charts and browser proof (binding)
 
@@ -32,14 +32,13 @@ Allowed create/edit paths: `frontend/src/**`, `frontend/package.json`, `frontend
 - `UT-M8-DST`: UTC fall-back repeated hours have explicit timezone offset/abbreviation; spring-forward gap not invented; Central/Eastern chosen per Plant.
 - `UI-M8-PARITY`: desktop 1330px and mobile 390px real browser snapshots/actions, keyboard and zoom; matrix evidence PASS/FAIL/UNVERIFIED.
 
-## Local verification, gates and stopping condition
+## Local verification and completion
 Run named Vitest chart formatter tests and **`just test-e2e-local` against real local PostgreSQL/API** for browser/Playwright marker+tile and chart interactions at 1330px/390px; run `just frontend-build`, `just test-frontend-unit` and `just audit-frontend` if deps changed. A screenshot's existence is not a passing interactive check.
 
-If OpenFreeMap unavailable, implement documented map-unavailable fallback but leave live tile gate UNVERIFIED; no silent provider substitution without planner review.
+If OpenFreeMap unavailable, implement documented map-unavailable fallback but leave live tile gate UNVERIFIED; choose a safe fallback without fabricating tiles or switching providers silently.
 
 
 
-## Git / review receipt
-Work on a short-lived local task branch from verified `main`; prepare focused commits and a reviewable local diff. A remote draft PR is not required for the owner-authorized no-push workflow. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push any branch or `main`, force-update history, tag, spend or alter cloud state without separate authorization; the local merge is permitted only after the task's acceptance gates. OMP coordinates unattended handoff to **ordinary ChatGPT chat in the existing Loop OMP Project** using the owner's previously tested browser workflow. **ChatGPT normal chat is the only independent PR reviewer, bounded GitHub correction agent and final acceptance decision-maker**; OMP/SAIA model PASS is advisory only. OMP handles final exact-head Mac tests and the authorized local merge after independent acceptance; issue-status updates retain their separate gates. Do not invent a ChatGPT review or block unrelated approved implementation merely because review is pending. After any correction, rerun required checks on the exact final SHA on Mac. Never merge without verified independent review, required local tests and compliance with actual repository policy. No 24-hour soak.
+## Local completion
 
-**Local Git completion (owner authorization, 2026-11-18):** After this task becomes eligible, the scoped change passes its required independent ordinary ChatGPT review and exact-final-tree Mac verification, make a focused local task-branch commit and merge the reviewed branch into **local `main`** with a normal non-force Git merge. Verify and report the task SHA, resulting `main` SHA/tree and working-tree status; repeat relevant checks if the merged tree differs. **Do not push** the task branch or `main`. If verification/review is incomplete, the base changed without review, a merge conflicts, or repository policy requires a remote PR, stop and report the blocker rather than pushing or merging. This authorizes local Git completion only; external cloud, release, invite, spend and destructive-action gates remain unchanged.
+Implement immediately when this file is explicitly assigned. Run the stated targeted local tests and fix failures in task-owned source and tests; record observed checks and any environment limitations. Make a focused local task-branch commit and **merge into local `main`** after resolving code/test failures and Git conflicts. Record the resulting SHA and changes. **Do not push**. Independent ChatGPT review, PR receipts, predecessor acceptance, task index statuses and extra owner authorization are **not prerequisites** to starting, committing or locally merging this task. If a real external resource is absent, finish all feasible local work and report what could not be exercised without inventing hosted results.

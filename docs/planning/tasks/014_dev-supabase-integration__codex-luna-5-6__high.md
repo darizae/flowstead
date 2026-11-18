@@ -1,9 +1,9 @@
 # T-014 — private flowstead-dev Supabase migration and Auth smoke
 
-**Status:** DRAFT — explicit cloud-write and invite gates (planning-only approval; NO implementation authorization). **Repository:** `darizae/flowstead`, private `main`. **Source planning baseline checked:** `43df18c5b88aba189a9b794872a1d6f8aeb60549` on 2026-11-17; verify fresh `main` at dispatch. No task may run solely because this file exists.
+**Execution:** Start immediately when assigned; planning-status and reviewer approvals are not prerequisites. **Repository:** `darizae/flowstead`, local `main`.
 
-## Preconditions and order
-012+013 local tests pass; `flowstead-dev` is verified project ref `jryvzjwsrxctjeawnkqo`, `eu-west-1`, but its **current** health/schema/access must be read again. OWNER must authorize exact project-scoped migration/seed rows, Auth config, and any invitation recipients separately. Mac OAuth is user-reported only and requires actual scoped read-only preflight. Do not touch demo project. Local DB migration is single source of truth.
+## Technical context
+Implement the development Supabase integration when assigned. Before actual writes, verify the project ref, credentials, schema/recipient scope; missing live access does not prevent implementing and testing the local integration code.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -11,14 +11,14 @@ Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/plan
 Owning context: the actual app **Alembic** revision chain, immutable importer, NATS job schema and Auth verifier, owner-approved local smoke checks and `docs/setup/DEPLOYMENT_ARCHITECTURE.md`; current Supabase published Auth/database security docs. Never read private passwords from repo.
 
 ## Observable result and scope
-Run reviewed **Alembic upgrade-to-head** migrations against the **existing** project only after owner grants write scope, confirm dedicated non-exposed `app` schema/limited roles/RLS on any exposed tables, import at most approved M1 synthetic records with exact digest, configure Auth for invite-only in reviewed settings and validate one or two owner-provided demo identities restricted to disjoint Plant IDs (if explicit invitation approval given). Smoke JWT signature/issuer/audience/JWKS or verified fallback, login/expiry and SQL 401/404, public endpoint only if allowed. Use environment-specific connection choice (IPv6 direct vs IPv4 session pooler), server-side secret storage, connection caps/timeouts and cleanup/backup/reseed. No destructive reset of existing unrelated schemas or other data.
+Run reviewed **Alembic upgrade-to-head** migrations against the **existing** project after verifying the named project and non-destructive schema scope, confirm dedicated non-exposed `app` schema/limited roles/RLS on any exposed tables, import at most approved M1 synthetic records with exact digest, configure Auth for invite-only in reviewed settings and validate one or two owner-provided demo identities restricted to disjoint Plant IDs (when concrete invitation recipients are configured). Smoke JWT signature/issuer/audience/JWKS or verified fallback, login/expiry and SQL 401/404, public endpoint only if allowed. Use environment-specific connection choice (IPv6 direct vs IPv4 session pooler), server-side secret storage, connection caps/timeouts and cleanup/backup/reseed. No destructive reset of existing unrelated schemas or other data.
 
 
 
 ## Dependencies and allowed file closure
-No new library by default; use existing app `uv.lock`, test harness and Supabase official auth provider. Any required SQL/role changes need explicit reviewed migration files in this task scope and owner-approved write receipt. Service-role/admin secret may be used only out of band for authorized one-time Auth invitations, never in app/frontend/Git.
+No new library by default; use existing app `uv.lock`, test harness and Supabase official auth provider. Any required SQL/role changes need explicit reviewed migration files in this task scope and actual execution record. Service-role/admin secret may be used only out of band for authorized one-time Auth invitations, never in app/frontend/Git.
 
-Allowed create/edit paths: `backend/migrations/**`, `backend/src/flowstead_api/**` only for provider-specific fixes, `backend/tests/**`, `docs/setup/**`, `.env.example`, `justfile` only for explicit `dev-smoke` command, `README.md`. New dependency installation is authorized **only** when this task itself is approved, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/migrations/**`, `backend/src/flowstead_api/**` only for provider-specific fixes, `backend/tests/**`, `docs/setup/**`, `.env.example`, `justfile` only for explicit `dev-smoke` command, `README.md`. Any necessary new dependency installation inside the task's named owning paths is included in this assignment; install compatible versions using the package manager, update the lockfile and tests and report findings. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 Cloud DB test cases must confirm the real Alembic version/revisions match local source and preserve previously seeded data; local NATS operation is **not** permission to provision a hosted broker. Use indexed plan/data guide and exact Case IDs in asserting tests.
 
@@ -29,14 +29,13 @@ Cloud DB test cases must confirm the real Alembic version/revisions match local 
 - `SEC-M14-DATAAPI`: no unauthorized Supabase Data API access; grants and RLS or nonexposed schema verified.
 - `OPS-M14-RESTORE`: bounded documented re-seed/rollback/backup procedure tested on disposable local clone, not destructive remote reset.
 
-## Local verification, gates and stopping condition
+## Local verification and completion
 Before writes: read-only `list_tables` (or SQL) and project-ref check; owner signs exact migration/input/version/role plan. Then execute only approved migration; capture redacted SQL diff/audit and scoped hosted integration proof. Local `just test-db-integration` must pass first. No all-account OAuth privilege assumption.
 
-If owner has not authorized cloud writes/invitations, remain BLOCKED and do local-only tasks 015 instead; never improvise consent.
+If cloud access or invitation recipients are unavailable, complete the task's code and local tests; report live operations as not performed.
 
 
 
-## Git / review receipt
-Work on a short-lived local task branch from verified `main`; prepare focused commits and a reviewable local diff. A remote draft PR is not required for the owner-authorized no-push workflow. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push any branch or `main`, force-update history, tag, spend or alter cloud state without separate authorization; the local merge is permitted only after the task's acceptance gates. Normal-chat ChatGPT independently reviews; use `waiting_chat` if unavailable. After corrections, rerun checks on the exact final SHA on Mac. No 24-hour soak.
+## Local completion
 
-**Local Git completion (owner authorization, 2026-11-18):** After this task becomes eligible, the scoped change passes its required independent ordinary ChatGPT review and exact-final-tree Mac verification, make a focused local task-branch commit and merge the reviewed branch into **local `main`** with a normal non-force Git merge. Verify and report the task SHA, resulting `main` SHA/tree and working-tree status; repeat relevant checks if the merged tree differs. **Do not push** the task branch or `main`. If verification/review is incomplete, the base changed without review, a merge conflicts, or repository policy requires a remote PR, stop and report the blocker rather than pushing or merging. This authorizes local Git completion only; external cloud, release, invite, spend and destructive-action gates remain unchanged.
+Start coding when this task is explicitly assigned. Run focused local tests and repair real failures; never wait for reviewer certification, a READY table entry, earlier merge receipts or permission to install task dependencies. Commit a focused local task branch, **merge it into local `main`**, and report the commit/merge SHA and actual test results. **Do not push**. Real external writes require a concrete configured target and credentials, not planning-status approvals; complete all possible code/tests if a hosted environment is absent. Never invent secret values, paid service plans or successful deployment evidence.

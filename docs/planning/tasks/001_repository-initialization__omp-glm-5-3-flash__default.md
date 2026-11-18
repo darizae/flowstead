@@ -5,7 +5,7 @@
 
 ## Authorization and scope
 
-Owner authorization the accepted repository initialization/the repository initialization gate permits exactly this private application scaffold, default `main`, and its first secret-free push. Preflight must confirm the exact remote is absent; do not reuse, rename, overwrite, force-push, or create another repository.
+**Historical initialization only:** this private repository and `main` already exist; do not recreate or overwrite their remote or rerun the initial push.
 
 ## Read set
 

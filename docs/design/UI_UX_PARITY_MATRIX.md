@@ -15,7 +15,7 @@ Each task that affects a matrix row must replace its generic `evidence pending` 
 - In task 011: download and **open** the actual PDF and inspect layout, long names and units at 100% zoom; separately assert parsed text/authorization, not screenshot-only.
 - In task 012: rerun integrated public/private/denied/offline/auth/export/map journeys, check 200% zoom and 390px; close every affected matrix row with real evidence or a clearly unresolved gate.
 
-Browser runners use local FastAPI + Docker PostgreSQL seeded with the pinned M1 fixture. Test-only auth simulation is distinct from live Supabase identity verification, which remains separately gated. Do not claim an unavailable map provider, browser runner, visual source or PDF renderer passed. Owner final public-facing presentation acceptance remains a separate release condition, not a pre-007 blocker.
+Browser runners use local FastAPI + Docker PostgreSQL seeded with the pinned M1 fixture. Test-only auth simulation is distinct from live Supabase identity verification, which requires a configured live service. Do not claim an unavailable map provider, browser runner, visual source or PDF renderer passed. Local UI tasks start on assignment; record actual parity evidence, but no presentation sign-off or review receipt is needed before implementing or merging locally.
 
 | Flow / screen + state | Approved baseline and copy/hierarchy | Interaction, navigation and retained state | Size/accessibility & evidence | Status |
 | --- | --- | --- | --- | --- |

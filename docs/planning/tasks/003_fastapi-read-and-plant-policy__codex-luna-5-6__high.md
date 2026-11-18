@@ -18,7 +18,7 @@ Return consistent typed JSON with stable `plant_id`, name, fictional location, I
 ## Dependencies and allowed file closure
 Add `fastapi>=0.115,<1`, `uvicorn>=0.30,<1`, `httpx>=0.27,<1` (test), dependency and tests with `uv add --project backend` and locked `backend/uv.lock`. Do not assume these exist from 002. Keep SQLAlchemy/Pydantic versions as resolved by 002, avoid adding an auth provider yet.
 
-Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/README.md` if present, `justfile`, `README.md`, `.env.example`. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/README.md` if present, `justfile`, `README.md`, `.env.example`. Relevant task dependencies and their owning manifests/lockfiles were part of the original technical scope; do not require an additional planning-status permission check. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Test-first acceptance
 - `UT-M3-CONTRACT`: OpenAPI models validate canonical four channels/units and preserve flagged NULL/invalid.
@@ -27,12 +27,13 @@ Allowed create/edit paths: `backend/src/flowstead_api/**`, `backend/tests/**`, `
 - `IT-M3-BOUND`: SQL query count/index and payload/window caps checked; no unbounded all-Plant query.
 - `IT-M3-PUBLIC`: public list empty until enabled; public handler cannot enumerate operator-restricted Plants.
 
-## Local verification, gates and stopping condition
+## Local verification and actual historical evidence
 Create `just api-dev` (localhost only), `just test-api-unit` and `just test-api-integration` mapping to real `uv run --project backend pytest -q backend/tests/...`; run contract test, then real local Postgres HTTP integration. Verify `just --list` and `uv audit --project backend` with network or mark UNVERIFIED. API startup must not require Supabase credentials in local test mode.
 
 Public five-Plant visibility is decided; **public deployment remains separately blocked**. Do not expose the API publicly or claim auth provider verified.
 
 
 
-## Git / review receipt
-Work only on a short-lived branch from the verified current `main` HEAD and one draft PR. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push secrets, force-push protected history, merge, tag, spend or alter cloud state without specific approval. OMP orchestrates unattended review handoff to **ordinary ChatGPT chat in Loop OMP through the owner's tested browser flow**; only ChatGPT can independently review and make bounded GitHub corrections. OMP/SAIA PASS is advisory for future work; the recorded T-003 OMP reviewer does not establish ordinary ChatGPT independent review. T-003 is already genuinely merged. Preserve actual reviewer identity and exact-head receipts. Do not treat tool PR #14's OMP-review path as superseding the normal-chat contract. After any correction, rerun required checks on the exact final SHA on Mac. Never auto-merge without a verified independent review and explicit repository policy. No 24-hour soak.
+## Historical Git and verification record
+
+The implementation and recorded merge already happened. Preserve the historical commit/test evidence as factual context. Independent ChatGPT review receipts, old approval decisions and task statuses do not constrain the start or local merge of subsequent tasks. Do not reimplement this historical task or infer test results that were not observed.

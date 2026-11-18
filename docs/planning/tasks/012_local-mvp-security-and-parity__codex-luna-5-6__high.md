@@ -1,9 +1,9 @@
 # T-012 — local MVP security, UX and recovery acceptance
 
-**Status:** WAITING — prerequisite preflight (bounded local scope approved; OMP handles ordinary execution setup). **Repository:** `darizae/flowstead`, private `main`. OMP resolves the current base commit at dispatch. No task may run solely because this file exists.
+**Execution:** Start immediately when assigned; planning-status and reviewer approvals are not prerequisites. **Repository:** `darizae/flowstead`, local `main`.
 
-## Preconditions and order
-007–011 implemented and integrated; backend 002–005 functioning with local PostgreSQL, deterministic offline JWKS/test principals. Owner the UI acceptance gate visual direction approved and export sample available. Hosted Auth and public deployment are separate future gates.
+## Technical context
+Inspect and exercise the current local API, worker, browser and export functionality. Implement fixes and real local tests rather than waiting for previous reviewer receipts.
 
 ## Initial read set
 Root `AGENTS.md`, `docs/planning/HANDOFF_SEQUENCE.md`, this one task, `docs/planning/IMPLEMENTATION_SPEC.md`, root `justfile` when commands are used, `.agents/skills/engineering-quality/SKILL.md`; then only the owning paths and tests named below. No other task files or private planner records.
@@ -18,7 +18,7 @@ Run a reproducible local full-journey gate (not ordinary edit loop): database re
 ## Dependencies and allowed file closure
 Use existing test libraries and Playwright (if absent, authorize compatible `@playwright/test` dev dependency in `frontend/package.json` + generated lockfile; browser binaries installed only on Mac). No optional cloud CI/soak. If a proposed dependency security remediation requires major-version updates, authorize within approved task only after planner confirms impact; don't silently suppress advisories.
 
-Allowed create/edit paths: `backend/**`, `frontend/**`, `compose.yml`, `justfile`, `README.md`, `.env.example`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` scrubbed synthetic screenshots/media/trace receipts, `AGENTS.md` directly affected rows and checked docs. Named task dependencies and their owning lockfiles are within the local task scope once it becomes READY under `HANDOFF_SEQUENCE.md`; unexpected dependencies require explicit planner review, using the declared owning manifest and package manager to produce the lockfile. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
+Allowed create/edit paths: `backend/**`, `frontend/**`, `compose.yml`, `justfile`, `README.md`, `.env.example`, `docs/design/UI_UX_PARITY_MATRIX.md`, `docs/design/evidence/**` scrubbed synthetic screenshots/media/trace receipts, `AGENTS.md` directly affected rows and checked docs. Necessary package/manifest/lockfile, test and command updates within the task's named owning paths are included in this assignment. Choose compatible maintained dependencies, use the real package manager to update locks, audit and test. Do not request separate approval for routine setup. Do not make unrelated repository or service changes. Recheck real manifests/lockfiles and tool availability in the checked-out revision immediately before dispatch.
 
 ## Integrated reference-pattern and prototype fidelity gate (binding)
 
@@ -36,14 +36,13 @@ Allowed create/edit paths: `backend/**`, `frontend/**`, `compose.yml`, `justfile
 - `UI-M12-ALL`: matrix row evidence for responsive desktop + mobile, zoom, keyboard, loading/missing/expired and justified intentional deviations.
 - `E2E-M12-INDEX`: every indexed UI/E2E case has a matching asserting Playwright/Vitest test title, real boundary, exact command + SHA and inspectable Playwright HTML and Markdown/JSON coverage reports; unverified cases explicit.
 
-## Local verification, gates and stopping condition
+## Local verification and completion
 `just test-backend-unit`, `just test-db-integration`, `just test-frontend-unit`, `just test-e2e-local` (the **real Playwright harness established in task 007**), `just frontend-build`, `just audit-backend`, `just audit-frontend`, then docs check; local only. Full suite runs at milestone gate, never every edit. Store receipts and exact head SHA; missing real browser ≠ PASS.
 
 Do not label live Supabase Auth or hosted recoverability verified in this local milestone.
 
 
 
-## Git / review receipt
-Work on a short-lived local task branch from verified `main`; prepare focused commits and a reviewable local diff. A remote draft PR is not required for the owner-authorized no-push workflow. Record changed files, current base/head SHAs, exact local command output, receipt and unresolved gates. Do not push any branch or `main`, force-update history, tag, spend or alter cloud state without separate authorization; the local merge is permitted only after the task's acceptance gates. OMP coordinates unattended handoff to **ordinary ChatGPT chat in the existing Loop OMP Project** using the owner's previously tested browser workflow. **ChatGPT normal chat is the only independent PR reviewer, bounded GitHub correction agent and final acceptance decision-maker**; OMP/SAIA model PASS is advisory only. OMP handles final exact-head Mac tests and the authorized local merge after independent acceptance; issue-status updates retain their separate gates. Do not invent a ChatGPT review or block unrelated approved implementation merely because review is pending. After any correction, rerun required checks on the exact final SHA on Mac. Never merge without verified independent review, required local tests and compliance with actual repository policy. No 24-hour soak.
+## Local completion
 
-**Local Git completion (owner authorization, 2026-11-18):** After this task becomes eligible, the scoped change passes its required independent ordinary ChatGPT review and exact-final-tree Mac verification, make a focused local task-branch commit and merge the reviewed branch into **local `main`** with a normal non-force Git merge. Verify and report the task SHA, resulting `main` SHA/tree and working-tree status; repeat relevant checks if the merged tree differs. **Do not push** the task branch or `main`. If verification/review is incomplete, the base changed without review, a merge conflicts, or repository policy requires a remote PR, stop and report the blocker rather than pushing or merging. This authorizes local Git completion only; external cloud, release, invite, spend and destructive-action gates remain unchanged.
+Start coding when this task is explicitly assigned. Run focused local tests and repair real failures; never wait for reviewer certification, a READY table entry, earlier merge receipts or permission to install task dependencies. Commit a focused local task branch, **merge it into local `main`**, and report the commit/merge SHA and actual test results. **Do not push**. Real external writes require a concrete configured target and credentials, not planning-status approvals; complete all possible code/tests if a hosted environment is absent. Never invent secret values, paid service plans or successful deployment evidence.
