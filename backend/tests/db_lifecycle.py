@@ -85,10 +85,19 @@ def _bindings(container: dict) -> list[dict]:
     ) or []
 
 
-def _published_on_loopback(container: dict, port: int) -> bool:
+def _publishes_host_port(container: dict, port: int) -> bool:
+    """Detect any Docker-published host address, including wildcard bindings."""
     return any(
         str(item.get("HostPort", "")) == str(port)
-        and item.get("HostIp", "") in {"127.0.0.1", "0.0.0.0", "", "::"}
+        for item in _bindings(container)
+    )
+
+
+def _published_on_loopback(container: dict, port: int) -> bool:
+    """Trust only the explicitly approved IPv4 loopback binding."""
+    return any(
+        str(item.get("HostPort", "")) == str(port)
+        and item.get("HostIp") == "127.0.0.1"
         for item in _bindings(container)
     )
 
@@ -133,13 +142,13 @@ def _candidate(
 ) -> dict | None:
     occupying = [
         item for item in containers
-        if _running(item) and _published_on_loopback(item, port)
+        if _running(item) and _publishes_host_port(item, port)
     ]
     for item in occupying:
         if not _owner(item, port, db_name, db_user):
             raise DatabaseLifecycleError(
-                f"foreign Docker container {item.get('Id', '?')[:12]} owns "
-                f"127.0.0.1:{port}; refusing to start/restart a database"
+                f"foreign Docker container {item.get('Id', '?')[:12]} publishes "
+                f"PostgreSQL host port {port}; refusing to start/restart a database"
             )
     owned = [
         item for item in containers if _owner(item, port, db_name, db_user)
