@@ -13,5 +13,6 @@ backend/.venv/
 backend/.pytest_cache/
 backend/__pycache__/
 backend/tests/**/__pycache__/
+.idea/
 **/__pycache__/
 *.egg-info/
