@@ -37,3 +37,7 @@
 - **Design gate:** [Reference HTML](../design/reference/flowstead-ui.html) and [UI baseline](../design/UI_UX_BASELINE.md) are approved design inputs. UI tasks 007–012 capture and review true desktop/mobile behavior and [parity matrix](../design/UI_UX_PARITY_MATRIX.md); unavailable map/PDF proof stays UNVERIFIED, not a pre-build blocker.
 - **Hosted gate:** The [deployment architecture](../setup/DEPLOYMENT_ARCHITECTURE.md) separates local, existing development and future demo resources. No cloud project write, invitation, broker/worker host, provider account, DNS, production exposure or cost is inferred from local-task approval.
 - **Documentation gate:** Tasks 006, 013 and 018 are required scoped Markdown/command/link hygiene reviews at their milestones. Preserve the app-owned task index as the only cross-repository execution queue.
+
+## Local Git completion, T-005 onward (owner authorized 2026-11-18)
+
+For each eligible subsequent task, complete independent ordinary ChatGPT review and exact-tree local Mac checks, commit on its local task branch, merge the approved branch into **local `main`**, then verify the merged SHA/tree and working tree before marking DONE. **Do not push** either branch; an actual remote-PR requirement, conflicts or unmet review/check/external-action gates block merge. This policy does not itself authorize cloud writes, deployment or releases, and does not retroactively mark the in-progress T-004b accepted.
