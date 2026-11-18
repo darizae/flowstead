@@ -319,6 +319,51 @@ def _validate_schema_migrations(connection: psycopg.Connection[Any]) -> tuple[st
     }
     if columns != expected:
         raise MigrationStateError("public.schema_migrations does not match its historical shape")
+
+    # Historical marker integrity is part of the stamp boundary. Column names
+    # and stored version values alone cannot establish equivalence.
+    table_kind = connection.execute(
+        """
+        SELECT c.relkind FROM pg_class AS c
+        JOIN pg_namespace AS n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'schema_migrations'
+        """
+    ).fetchone()
+    if table_kind != ("r",):
+        raise MigrationStateError("public.schema_migrations is not the historical table")
+
+    column_metadata = set(connection.execute(
+        """
+        SELECT a.attname, pg_get_expr(d.adbin, d.adrelid),
+               a.attidentity, a.attgenerated
+        FROM pg_attribute AS a
+        JOIN pg_class AS c ON c.oid = a.attrelid
+        JOIN pg_namespace AS n ON n.oid = c.relnamespace
+        LEFT JOIN pg_attrdef AS d ON d.adrelid = c.oid AND d.adnum = a.attnum
+        WHERE n.nspname = 'public' AND c.relname = 'schema_migrations'
+          AND a.attnum > 0 AND NOT a.attisdropped
+        """
+    ).fetchall())
+    if column_metadata != {
+        ("version", None, "", ""),
+        ("applied_at", "now()", "", ""),
+    }:
+        raise MigrationStateError("public.schema_migrations defaults differ from historical shape")
+
+    constraints = connection.execute(
+        """
+        SELECT conname, contype, convalidated, condeferrable,
+               condeferred, pg_get_constraintdef(c.oid)
+        FROM pg_constraint AS c
+        JOIN pg_class AS t ON t.oid = c.conrelid
+        JOIN pg_namespace AS n ON n.oid = t.relnamespace
+        WHERE n.nspname = 'public' AND t.relname = 'schema_migrations'
+        """
+    ).fetchall()
+    if constraints != [
+        ("schema_migrations_pkey", "p", True, False, False, "PRIMARY KEY (version)")
+    ]:
+        raise MigrationStateError("public.schema_migrations constraints differ from historical shape")
     return tuple(
         row[0]
         for row in connection.execute(
