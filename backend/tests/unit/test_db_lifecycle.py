@@ -28,8 +28,10 @@ class FakeDocker:
         self, *, state: str = "healthy", foreign: bool = False,
         foreign_checkout: bool = False, foreign_workdir: bool = False,
         present: bool = True,
+        host_ip: str = "127.0.0.1",
     ):
         self.present = present
+        self.host_ip = host_ip
         self.foreign = foreign
         self.foreign_checkout = foreign_checkout
         self.foreign_workdir = foreign_workdir
@@ -61,7 +63,7 @@ class FakeDocker:
             },
             "HostConfig": {
                 "PortBindings": {
-                    "5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "54329"}]
+                    "5432/tcp": [{"HostIp": self.host_ip, "HostPort": "54329"}]
                 }
             },
             "State": {
@@ -158,3 +160,12 @@ def test_no_occupant_creates_controller_database_once() -> None:
     fake = FakeDocker(present=False)
     assert ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None) == "created"
     assert fake.commands.count(COMPOSE_UP) == 1
+
+
+@pytest.mark.parametrize("host_ip", ("0.0.0.0", "::", ""))
+def test_wildcard_published_database_is_not_trusted_as_loopback(host_ip: str) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    fake = FakeDocker(host_ip=host_ip)
+    with pytest.raises(DatabaseLifecycleError, match="foreign Docker container"):
+        ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None)
+    assert not any(cmd[1] in {"start", "restart", "compose"} for cmd in fake.commands)
