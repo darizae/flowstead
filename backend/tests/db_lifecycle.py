@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import socket
 import subprocess
@@ -102,25 +103,65 @@ def _published_on_loopback(container: dict, port: int) -> bool:
     )
 
 
+def _trusted_verify_worktrees_root() -> Path | None:
+    """Locate the active OMP controller's verify worktree directory."""
+    if (
+        PROJECT_ROOT.parent.name == "worktrees"
+        and re.fullmatch(r"verify-[1-9][0-9]*", PROJECT_ROOT.name)
+    ):
+        return PROJECT_ROOT.parent.resolve()
+
+    # Owner-controlled OMP configuration enables the same check outside a
+    # verify worktree. Never infer ownership from a generic verify-* label.
+    configured = os.environ.get("OMP_STATE_DIR")
+    if configured:
+        state_dir = Path(configured).expanduser()
+        if state_dir.is_absolute():
+            return (state_dir / "worktrees").resolve()
+    return None
+
+
+def _matching_compose_origin(
+    working_dir: str, files: list[str], root: Path, compose_file: Path
+) -> bool:
+    return bool(
+        working_dir
+        and Path(working_dir).is_absolute()
+        and Path(working_dir).resolve() == root
+        and len(files) == 1
+        and Path(files[0]).is_absolute()
+        and Path(files[0]).resolve() == compose_file
+    )
+
+
 def _owner(container: dict, port: int, db_name: str, db_user: str) -> bool:
     labels = container.get("Config", {}).get("Labels") or {}
     config_files = labels.get("com.docker.compose.project.config_files") or ""
     working_dir = labels.get("com.docker.compose.project.working_dir") or ""
     files = [part.strip() for part in config_files.split(",") if part.strip()]
-    # Labels naming a generic Flowstead service or a verify-* project are
-    # insufficient. Require this exact canonical checkout and compose file.
+    project = labels.get("com.docker.compose.project") or ""
     checkout_matches = (
-        bool(working_dir)
-        and Path(working_dir).is_absolute()
-        and Path(working_dir).resolve() == PROJECT_ROOT
-        and len(files) == 1
-        and Path(files[0]).is_absolute()
-        and Path(files[0]).resolve() == COMPOSE_FILE
+        project == _project_name()
+        and _matching_compose_origin(working_dir, files, PROJECT_ROOT, COMPOSE_FILE)
+    )
+
+    # Prior controller verify-N worktrees can own this loopback port. Require
+    # exact sibling worktree/config provenance, not just the Compose project
+    # name. Prior verification DBs are eligible only for healthy reuse:
+    # never start, restart or recreate one from another verification run.
+    verify_root = _trusted_verify_worktrees_root()
+    prior_verify_matches = bool(
+        verify_root is not None
+        and re.fullmatch(r"verify-[1-9][0-9]*", project)
+        and _matching_compose_origin(
+            working_dir, files, verify_root / project, verify_root / project / "compose.yml"
+        )
+        and _running(container)
+        and _health(container) == "healthy"
     )
     environment = set(container.get("Config", {}).get("Env") or [])
     return bool(
-        checkout_matches
-        and labels.get("com.docker.compose.project") == _project_name()
+        (checkout_matches or prior_verify_matches)
         and labels.get("com.docker.compose.service") == "db"
         and container.get("Config", {}).get("Image") == "postgres:16-alpine"
         and "POSTGRES_DB=" + db_name in environment
