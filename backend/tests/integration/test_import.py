@@ -6,14 +6,14 @@ import os
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlunsplit
 
 import psycopg
 from psycopg import sql
 import pytest
 
 from backend.importer import ImportValidationError, import_m1
-from backend.migrate import migrate
+from backend.migrate import _require_local_database_url, migrate
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 MANIFEST = os.environ.get("FLOWSTEAD_M1_MANIFEST")
@@ -30,9 +30,9 @@ pytestmark = pytest.mark.skipif(
 def isolated_url() -> Iterator[str]:
     """Never TRUNCATE or recreate the database named by DATABASE_URL."""
     assert DATABASE_URL is not None
-    parsed = urlsplit(DATABASE_URL)
-    if parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
-        pytest.fail("importer integration refuses a non-loopback PostgreSQL server")
+    # Validate before opening the admin connection: URI query parameters such
+    # as hostaddr/host/dbname can override the visually checked destination.
+    parsed = _require_local_database_url(DATABASE_URL)
     name = "flowstead_test_" + uuid.uuid4().hex
     with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
