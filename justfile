@@ -85,5 +85,23 @@ test-auth:
     python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_auth.py
 
+frontend-dev:
+    npm --prefix frontend run dev -- --host 127.0.0.1
+
+test-frontend-unit:
+    npm --prefix frontend test -- --run
+
+frontend-typecheck:
+    npm --prefix frontend run typecheck
+
+frontend-build:
+    npm --prefix frontend run build
+
+audit-frontend:
+    npm --prefix frontend audit --audit-level=moderate
+
+test-e2e-local:
+    uv run --project backend python frontend/e2e/run_local.py
+
 default:
     @just --list

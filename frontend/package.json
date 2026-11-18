@@ -1,0 +1,38 @@
+{
+  "name": "flowstead-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --config vitest.config.ts",
+    "audit": "npm audit --audit-level=moderate",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@vitejs/plugin-react": "6.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tailwindcss": "4.3.5",
+    "vite": "8.3.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.6",
+    "@types/react-dom": "19.2.3",
+    "fake-indexeddb": "6.2.4",
+    "jsdom": "27.1.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  }
+}

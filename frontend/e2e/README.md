@@ -1,0 +1,1 @@
+These tests intentionally use the real Vite/FastAPI same-origin boundary. `just test-e2e-local` starts only the owned local services that are available; it does not intercept API routes or seed production data. A disposable PostgreSQL/M1 fixture is required for a complete browser receipt.

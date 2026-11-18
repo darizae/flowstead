@@ -16,3 +16,12 @@ backend/tests/**/__pycache__/
 .idea/
 **/__pycache__/
 *.egg-info/
+
+# Frontend local dependencies and generated reports
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/tsconfig.tsbuildinfo
+docs/design/evidence/playwright-report/
+docs/design/evidence/playwright-test-results/
