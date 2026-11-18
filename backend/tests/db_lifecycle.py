@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
+from pathlib import Path
 import socket
 import subprocess
 import time
@@ -17,6 +17,22 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 
 DEFAULT_PORT = 54329
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+COMPOSE_FILE = (PROJECT_ROOT / "compose.yml").resolve()
+
+
+def _project_name() -> str:
+    """Require the single explicitly configured Compose project for this checkout."""
+    return os.environ.get("COMPOSE_PROJECT_NAME") or PROJECT_ROOT.name
+
+
+def _compose_up_command() -> list[str]:
+    # Pin both the project and the Compose file. Calling from another cwd must
+    # not inadvertently create/manage a service in that other checkout.
+    return [
+        "docker", "compose", "--project-directory", str(PROJECT_ROOT),
+        "-f", str(COMPOSE_FILE), "-p", _project_name(), "up", "-d", "db",
+    ]
 
 
 class DatabaseLifecycleError(RuntimeError):
@@ -79,19 +95,24 @@ def _published_on_loopback(container: dict, port: int) -> bool:
 
 def _owner(container: dict, port: int, db_name: str, db_user: str) -> bool:
     labels = container.get("Config", {}).get("Labels") or {}
-    project = labels.get("com.docker.compose.project", "")
-    config_files = labels.get("com.docker.compose.project.config_files", "")
-    expected_project = os.environ.get("COMPOSE_PROJECT_NAME", "flowstead")
-    controlled = (
-        project == expected_project
-        or project == "flowstead"
-        or re.fullmatch(r"verify-[0-9]+", project) is not None
+    config_files = labels.get("com.docker.compose.project.config_files") or ""
+    working_dir = labels.get("com.docker.compose.project.working_dir") or ""
+    files = [part.strip() for part in config_files.split(",") if part.strip()]
+    # Labels naming a generic Flowstead service or a verify-* project are
+    # insufficient. Require this exact canonical checkout and compose file.
+    checkout_matches = (
+        bool(working_dir)
+        and Path(working_dir).is_absolute()
+        and Path(working_dir).resolve() == PROJECT_ROOT
+        and len(files) == 1
+        and Path(files[0]).is_absolute()
+        and Path(files[0]).resolve() == COMPOSE_FILE
     )
     environment = set(container.get("Config", {}).get("Env") or [])
     return bool(
-        controlled
+        checkout_matches
+        and labels.get("com.docker.compose.project") == _project_name()
         and labels.get("com.docker.compose.service") == "db"
-        and any(value.strip().endswith("compose.yml") for value in config_files.split(","))
         and container.get("Config", {}).get("Image") == "postgres:16-alpine"
         and "POSTGRES_DB=" + db_name in environment
         and "POSTGRES_USER=" + db_user in environment
@@ -181,7 +202,7 @@ def ensure_database(
                 "(no controller-owned Docker binding); no compose up attempted"
             )
         # It is safe to create only when no known controller DB and no port owner exist.
-        run(["docker", "compose", "up", "-d", "db"])
+        run(_compose_up_command())
         selected = _candidate(_containers(run), port, db_name, db_user)
         if selected is None:
             raise DatabaseLifecycleError(
