@@ -181,7 +181,11 @@ def _check_url(port: int, db_name: str, *, required: bool) -> None:
         parsed.scheme not in {"postgres", "postgresql", "postgresql+psycopg"}
         or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
         or (parsed.port or 5432) != port
-        or parsed.path.lstrip("/") != db_name
+        or parsed.path != "/" + db_name
+        # libpq URI options (hostaddr/host/port/dbname/service) can redirect
+        # the effective endpoint; reject every query option, fail closed.
+        or parsed.query
+        or parsed.fragment
     ):
         raise DatabaseLifecycleError(
             f"DATABASE_URL does not target the controller-owned "
