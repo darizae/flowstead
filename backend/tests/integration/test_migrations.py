@@ -251,6 +251,30 @@ def test_unknown_alembic_revision_is_rejected_without_mutation(isolated_url: str
     assert _version(isolated_url) == "unrecognized_change"
 
 
+@pytest.mark.parametrize("broken", ("primary_key", "default"))
+def test_drifted_historical_marker_table_is_never_stamped(
+    isolated_url: str, broken: str
+) -> None:
+    """Case: DB-M4A-MISMATCH"""
+    _historical_upgrade(isolated_url)
+    with psycopg.connect(isolated_url) as connection:
+        if broken == "primary_key":
+            connection.execute(
+                "ALTER TABLE public.schema_migrations "
+                "DROP CONSTRAINT schema_migrations_pkey"
+            )
+        else:
+            connection.execute(
+                "ALTER TABLE public.schema_migrations "
+                "ALTER COLUMN applied_at DROP DEFAULT"
+            )
+    before = _snapshot(isolated_url)
+    with pytest.raises(MigrationStateError, match=r"public\\.schema_migrations"):
+        migrate(isolated_url)
+    assert _snapshot(isolated_url) == before
+    assert _version(isolated_url) is None
+
+
 def _install_local_descendant(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
