@@ -8,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.importer import SOURCE_SHA, import_m1
-from backend.migrate import migrate
 from flowstead_api.database import Database
 from flowstead_api.main import create_app
 
@@ -23,15 +22,12 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
-def clean_database() -> None:
-    migrate(DATABASE_URL)  # type: ignore[arg-type]
-    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
-        with connection.transaction():
-            connection.execute(
-                "TRUNCATE app.hourly_readings, app.forecast_hours, app.forecast_issuances, "
-                "app.operator_plant_access, app.plants, app.ingest_batches RESTART IDENTITY"
-            )
-    import_m1(DATABASE_URL, Path(MANIFEST), Path(DATA), SOURCE_SHA)  # type: ignore[arg-type]
+def seed_isolated_database(
+    isolated_service_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Only seed the disposable per-test DB; never reset configured DATABASE_URL."""
+    monkeypatch.setitem(globals(), "DATABASE_URL", isolated_service_url)
+    import_m1(isolated_service_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
 
 
 @pytest.fixture
