@@ -25,6 +25,21 @@ A **shared stack** can serve independent tests with case-owned principals and da
 | Browser interaction | desktop 1330×900, phone 390×844, 200% zoom, keyboard, WebGL/tile outage | Screenshot-only pass, overflow or fake map | Real Chromium clicks, network/tile attribution, fallback and screenshots |
 | Downloads | CSV formula-leading text, NULL, PNG both axes, PDF long name/12h forecast | Unsafe export, wrong units, unreadable/foreign report | Real downloads parsed/decoded/opened and independently visually inspected |
 
+## T-004a — Alembic acceptance fixtures and indexed cases
+
+All T-004a migration acceptance cases use fresh, uniquely named local `flowstead_test_<uuid>` PostgreSQL databases. Do not reset a shared or imported M1 database. Capture the real SQL assertions, source SHA, exact commands, actual PASS/FAIL/SKIP and reasons; without Mac receipts, each case below remains **UNVERIFIED**.
+
+| Indexed ID | Real fixture / variants | Required observable proof |
+|---|---|---|
+| `DB-M4A-FRESH` | Empty disposable PostgreSQL 16; Alembic to head; importer and API regression fixtures | Exact historical tables/columns/identities/defaults, CHECK/FK/unique/index definitions and two markers, plus real importer/API results |
+| `DB-M4A-STAMP` | Populated, historical-SQL-migrated database; exact five-Plant immutable M1 fixture and persisted 12-hour forecast when inputs configured | Validate schema before stamp; compare pre/post hashes of readings, ingest provenance, forecast receipts and historical marker records; no historical DDL rerun |
+| `DB-M4A-MISMATCH` | Partial schema; unknown Alembic/history; malformed same-named historical CHECK/index; *recognized local descendant* missing historical table/column or modifying a baseline constraint/index | Explicit fail-closed error and unchanged Alembic version/data after rejection; no blind repair |
+| `DB-M4A-REPEAT` | Migrated populated DB and isolated local 003 revision adding an extra Plant column | Repeated upgrade is no-op; new column allowed while original invariants remain intact; safe up/down without altered M1 rows |
+| `IT-M2-MIGRATE` | Existing M1 importer and repeat-import invariants; isolated disposable rollback | Preserve migration/import equivalence and data; reject rollback on non-disposable or non-loopback DB |
+| `UT-M4A-DB-LIFECYCLE` | Mock Docker healthy/stopped/unhealthy, foreign host/Compose project, and lookalike checkout/config labels | Exact project/service and canonical checkout/config identity, healthy reuse, stopped start, unhealthy one restart, and no mutating command for foreign port owners |
+
+The integration Docker preflight requires an explicit local `DATABASE_URL`. Missing configuration is an environment failure, not a passing or failing migration assertion. The configured `COMPOSE_PROJECT_NAME` and canonical target checkout determine which service can be managed. Missing full M1 fixtures must produce a visible SKIP rather than successful preservation evidence.
+
 ## Case execution and visible reports
 
 - Repeat every exact indexed ID in the **asserting pytest test docstring** (Case: ID or Cases: ID1, ID2), or in the **Vitest/Playwright test title**. Helpers, comments and fixtures do not count as coverage. Group cases only when assertions and fixture invariants genuinely coincide.

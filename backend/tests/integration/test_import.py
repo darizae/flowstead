@@ -1,13 +1,19 @@
+"""Real M1 importer regressions on isolated disposable PostgreSQL databases."""
+
 from __future__ import annotations
 
 import os
+import uuid
+from collections.abc import Iterator
 from pathlib import Path
+from urllib.parse import urlunsplit
 
 import psycopg
+from psycopg import sql
 import pytest
 
 from backend.importer import ImportValidationError, import_m1
-from backend.migrate import migrate
+from backend.migrate import _require_local_database_url, migrate
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 MANIFEST = os.environ.get("FLOWSTEAD_M1_MANIFEST")
@@ -20,39 +26,61 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture(autouse=True)
-def clean_database() -> None:
-    migrate(DATABASE_URL)  # type: ignore[arg-type]
-    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
-        with connection.transaction():
-            connection.execute("TRUNCATE app.hourly_readings, app.forecast_hours, app.forecast_issuances, "
-                               "app.operator_plant_access, app.plants, app.ingest_batches RESTART IDENTITY")
+@pytest.fixture
+def isolated_url() -> Iterator[str]:
+    """Never TRUNCATE or recreate the database named by DATABASE_URL."""
+    assert DATABASE_URL is not None
+    admin_url = DATABASE_URL  # pin the validated endpoint through teardown
+    # Validate before opening the admin connection: URI query parameters such
+    # as hostaddr/host/dbname can override the visually checked destination.
+    parsed = _require_local_database_url(admin_url)
+    name = "flowstead_test_" + uuid.uuid4().hex
+    with psycopg.connect(admin_url, autocommit=True) as admin:
+        admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    target = urlunsplit(parsed._replace(path="/" + name, query="", fragment=""))
+    try:
+        migrate(target)
+        yield target
+    finally:
+        # Only the uniquely generated test database is eligible for teardown.
+        with psycopg.connect(admin_url, autocommit=True) as admin:
+            admin.execute(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = %s AND pid <> pg_backend_pid()", (name,)
+            )
+            admin.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))
 
 
-def _count(table: str) -> int:
-    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
+def _count(url: str, table: str) -> int:
+    with psycopg.connect(url) as connection:
         return connection.execute(f"SELECT count(*) FROM app.{table}").fetchone()[0]
 
 
-def test_migration_and_full_import_are_idempotent() -> None:
-    migrate(DATABASE_URL)  # type: ignore[arg-type]
-    assert import_m1(DATABASE_URL, Path(MANIFEST), Path(DATA), SOURCE_SHA)  # type: ignore[arg-type]
-    first = (_count("plants"), _count("hourly_readings"), _count("ingest_batches"))
+def test_migration_and_full_import_are_idempotent(isolated_url: str) -> None:
+    """Cases: DB-M4A-FRESH, IT-M2-MIGRATE"""
+    migrate(isolated_url)
+    assert import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
+    first = (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
+             _count(isolated_url, "ingest_batches"))
     assert first == (5, 43_800, 1)
-    assert not import_m1(DATABASE_URL, Path(MANIFEST), Path(DATA), SOURCE_SHA)  # type: ignore[arg-type]
-    assert (_count("plants"), _count("hourly_readings"), _count("ingest_batches")) == first
+    assert not import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
+    assert (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
+            _count(isolated_url, "ingest_batches")) == first
 
 
-def test_tampered_source_sha_does_not_change_database() -> None:
+def test_tampered_source_sha_does_not_change_database(isolated_url: str) -> None:
     with pytest.raises(ImportValidationError):
-        import_m1(DATABASE_URL, Path(MANIFEST), Path(DATA), "0" * 40)  # type: ignore[arg-type]
-    assert _count("ingest_batches") == 0
+        import_m1(isolated_url, Path(MANIFEST), Path(DATA), "0" * 40)
+    assert _count(isolated_url, "ingest_batches") == 0
 
 
-def test_migration_is_reversible_on_disposable_database() -> None:
-    migrate(DATABASE_URL, rollback=True)  # type: ignore[arg-type]
-    with psycopg.connect(DATABASE_URL) as connection:
-        assert connection.execute(
-            "SELECT to_regclass('app.hourly_readings')"
-        ).fetchone()[0] is None
-    migrate(DATABASE_URL)  # type: ignore[arg-type]
+def test_repeated_migration_preserves_imported_data(isolated_url: str) -> None:
+    """Case: IT-M2-MIGRATE"""
+    assert import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
+    before = (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
+              _count(isolated_url, "ingest_batches"))
+    assert before == (5, 43_800, 1)
+    migrate(isolated_url)
+    migrate(isolated_url)
+    assert (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
+            _count(isolated_url, "ingest_batches")) == before
