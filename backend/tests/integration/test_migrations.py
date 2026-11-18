@@ -234,6 +234,42 @@ def test_same_name_wrong_definition_is_never_stamped(
     assert _version(isolated_url) is None
 
 
+@pytest.mark.parametrize("broken", ("primary_key", "column_width", "default"))
+def test_known_revision_in_malformed_alembic_table_is_rejected(
+    isolated_url: str, broken: str
+) -> None:
+    """Case: DB-M4A-MISMATCH"""
+    _historical_upgrade(isolated_url)
+    with psycopg.connect(isolated_url) as connection:
+        connection.execute(
+            "CREATE TABLE public.alembic_version "
+            "(version_num varchar(32) PRIMARY KEY)"
+        )
+        connection.execute(
+            "INSERT INTO public.alembic_version VALUES ('002_forecast_metadata')"
+        )
+        if broken == "primary_key":
+            connection.execute(
+                "ALTER TABLE public.alembic_version "
+                "DROP CONSTRAINT alembic_version_pkey"
+            )
+        elif broken == "column_width":
+            connection.execute(
+                "ALTER TABLE public.alembic_version "
+                "ALTER COLUMN version_num TYPE varchar(64)"
+            )
+        else:
+            connection.execute(
+                "ALTER TABLE public.alembic_version "
+                "ALTER COLUMN version_num SET DEFAULT '002_forecast_metadata'"
+            )
+    before = _snapshot(isolated_url)
+    with pytest.raises(MigrationStateError, match=r"public[.]alembic_version"):
+        migrate(isolated_url)
+    assert _snapshot(isolated_url) == before
+    assert _version(isolated_url) == "002_forecast_metadata"
+
+
 def test_unknown_alembic_revision_is_rejected_without_mutation(isolated_url: str) -> None:
     """Case: DB-M4A-MISMATCH"""
     _historical_upgrade(isolated_url)
