@@ -9,7 +9,14 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 
-from .auth import get_current_subject
+from .auth import (
+    AuthConfigurationError,
+    Principal,
+    TokenVerifier,
+    UnavailableVerifier,
+    get_current_principal,
+    verifier_from_env,
+)
 from .database import Database, ForecastRead, PlantRow, ReadingRow
 from .message_store import ForecastJob
 from .models import (
@@ -36,9 +43,23 @@ MAX_HISTORY_HOURS = 168
 MAX_RESPONSE_BYTES = 512_000
 
 
-def create_app(database_url: str | None = None) -> FastAPI:
+def create_app(
+    database_url: str | None = None,
+    *,
+    auth_verifier: TokenVerifier | None = None,
+) -> FastAPI:
     app = FastAPI(title="Flowstead API", version="0.1.0")
     app.state.database = Database(database_url)
+    if auth_verifier is not None:
+        app.state.auth_verifier = auth_verifier
+        app.state.auth_configuration_error = None
+    else:
+        try:
+            app.state.auth_verifier = verifier_from_env()
+            app.state.auth_configuration_error = None
+        except AuthConfigurationError as error:
+            app.state.auth_verifier = UnavailableVerifier()
+            app.state.auth_configuration_error = str(error)
 
     @app.get("/api/v1/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
@@ -80,15 +101,18 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
 
     @app.get("/api/v1/plants", response_model=PlantListResponse, tags=["private"])
-    def private_plants(subject_id: Annotated[str, Depends(get_current_subject)]) -> PlantListResponse:
-        plants = app.state.database.list_plants(subject_id=subject_id, public=False)
+    def private_plants(
+        principal: Annotated[Principal, Depends(get_current_principal)],
+    ) -> PlantListResponse:
+        plants = app.state.database.list_plants(subject_id=principal.sub, public=False)
         return PlantListResponse(plants=[_summary(plant, public=False) for plant in plants])
 
     @app.get("/api/v1/plants/{plant_id}/latest", response_model=LatestResponse, tags=["private"])
     def private_latest(
-        plant_id: str, subject_id: Annotated[str, Depends(get_current_subject)]
+        plant_id: str,
+        principal: Annotated[Principal, Depends(get_current_principal)],
     ) -> LatestResponse:
-        result = app.state.database.latest(plant_id, subject_id=subject_id, public=False)
+        result = app.state.database.latest(plant_id, subject_id=principal.sub, public=False)
         if result is None:
             raise _not_found()
         plant, reading = result
@@ -97,12 +121,12 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @app.get("/api/v1/plants/{plant_id}/history", response_model=HistoryResponse, tags=["private"])
     def private_history(
         plant_id: str,
-        subject_id: Annotated[str, Depends(get_current_subject)],
+        principal: Annotated[Principal, Depends(get_current_principal)],
         window: Annotated[tuple[datetime, datetime], Depends(parse_window)],
     ) -> HistoryResponse:
         from_utc, to_utc = window
         result = app.state.database.history(
-            plant_id, from_utc, to_utc, subject_id=subject_id, public=False
+            plant_id, from_utc, to_utc, subject_id=principal.sub, public=False
         )
         if result is None:
             raise _not_found()
@@ -115,9 +139,9 @@ def create_app(database_url: str | None = None) -> FastAPI:
     )
     def private_forecast(
         plant_id: str,
-        subject_id: Annotated[str, Depends(get_current_subject)],
+        principal: Annotated[Principal, Depends(get_current_principal)],
     ) -> ForecastResponse:
-        result = app.state.database.forecast(plant_id, subject_id=subject_id, public=False)
+        result = app.state.database.forecast(plant_id, subject_id=principal.sub, public=False)
         if result is None:
             raise _not_found()
         return _forecast_response(result, public=False)
@@ -130,9 +154,9 @@ def create_app(database_url: str | None = None) -> FastAPI:
     )
     def request_private_forecast(
         plant_id: str,
-        subject_id: Annotated[str, Depends(get_current_subject)],
+        principal: Annotated[Principal, Depends(get_current_principal)],
     ) -> ForecastJobResponse:
-        job = app.state.database.enqueue_forecast(plant_id, subject_id=subject_id)
+        job = app.state.database.enqueue_forecast(plant_id, subject_id=principal.sub)
         if job is None:
             raise _not_found()
         return _forecast_job_response(job)
@@ -144,10 +168,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
     )
     def private_forecast_status(
         correlation_id: UUID,
-        subject_id: Annotated[str, Depends(get_current_subject)],
+        principal: Annotated[Principal, Depends(get_current_principal)],
     ) -> ForecastJobResponse:
         job = app.state.database.forecast_job(
-            correlation_id, subject_id=subject_id
+            correlation_id, subject_id=principal.sub
         )
         if job is None:
             raise _not_found()

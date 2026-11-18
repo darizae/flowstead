@@ -80,5 +80,10 @@ test-api-integration:
     python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_api.py
 
+test-auth:
+    uv run --project backend pytest -q backend/tests/unit/test_auth.py
+    python3 backend/tests/db_lifecycle.py --require-database-url
+    uv run --project backend pytest -q backend/tests/integration/test_auth.py
+
 default:
     @just --list

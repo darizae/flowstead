@@ -22,6 +22,7 @@ from backend.importer import (
     ImportValidationError,
     import_m1,
 )
+from backend.tests.auth_helpers import install_test_principal, principal_headers
 from fastapi.testclient import TestClient
 from nats.errors import NoServersError
 from nats.js.errors import NotFoundError
@@ -46,7 +47,6 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 @pytest.fixture
 def seeded_url(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> str:
-    monkeypatch.setenv("FLOWSTEAD_AUTH_MODE", "local")
     with psycopg.connect(isolated_service_url) as connection, connection.transaction():
         batch_id = connection.execute(
             """
@@ -111,11 +111,11 @@ def seeded_url(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> st
 
 
 def _client(url: str) -> TestClient:
-    return TestClient(create_app(url))
+    return TestClient(install_test_principal(create_app(url)))
 
 
 def _headers() -> dict[str, str]:
-    return {"X-Flowstead-Subject": "operator-a"}
+    return principal_headers("operator-a")
 
 
 def _write_bounded_import(tmp_path: Path) -> tuple[Path, Path]:
@@ -178,7 +178,7 @@ def test_command_is_authorized_transactional_and_observably_queued(
     assert status.status_code == 200 and status.json()["status"] == "queued"
     assert client.post(
         "/api/v1/plants/plant-01/forecast-requests",
-        headers={"X-Flowstead-Subject": "operator-b"},
+        headers=principal_headers("operator-b"),
     ).status_code == 404
     assert client.post(
         "/api/v1/public/plants/plant-01/forecast-requests"

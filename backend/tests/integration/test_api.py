@@ -5,9 +5,10 @@ from pathlib import Path
 
 import psycopg
 import pytest
+from backend.importer import SOURCE_SHA, import_m1
+from backend.tests.auth_helpers import install_test_principal, principal_headers
 from fastapi.testclient import TestClient
 
-from backend.importer import SOURCE_SHA, import_m1
 from flowstead_api.main import create_app
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -30,27 +31,28 @@ def seed_isolated_database(
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("FLOWSTEAD_AUTH_MODE", "local")
-    return TestClient(create_app(DATABASE_URL))  # type: ignore[arg-type]
+def client() -> TestClient:
+    return TestClient(install_test_principal(create_app(DATABASE_URL)))  # type: ignore[arg-type]
 
 
 def _grant(subject_id: str, *plant_ids: str) -> None:
-    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
-        with connection.transaction():
-            with connection.cursor() as cursor:
-                cursor.executemany(
-                    "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
-                    [(subject_id, plant_id) for plant_id in plant_ids],
-                )
+    with (
+        psycopg.connect(DATABASE_URL) as connection,  # type: ignore[arg-type]
+        connection.transaction(),
+        connection.cursor() as cursor,
+    ):
+        cursor.executemany(
+            "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
+            [(subject_id, plant_id) for plant_id in plant_ids],
+        )
 
 
 def test_disjoint_principals_receive_disjoint_private_reads(client: TestClient) -> None:
     _grant("operator-a", "plant-01")
     _grant("operator-b", "plant-02")
 
-    headers_a = {"X-Flowstead-Subject": "operator-a"}
-    headers_b = {"X-Flowstead-Subject": "operator-b"}
+    headers_a = principal_headers("operator-a")
+    headers_b = principal_headers("operator-b")
     assert [plant["plant_id"] for plant in client.get("/api/v1/plants", headers=headers_a).json()["plants"]] == ["plant-01"]
     assert [plant["plant_id"] for plant in client.get("/api/v1/plants", headers=headers_b).json()["plants"]] == ["plant-02"]
     assert client.get("/api/v1/plants/plant-02/latest", headers=headers_a).status_code == 404
@@ -62,22 +64,20 @@ def test_private_denials_and_bounded_windows(client: TestClient) -> None:
     _grant("operator-a", "plant-01")
     assert client.get("/api/v1/plants").status_code == 401
     assert client.get("/api/v1/plants/plant-01/latest").status_code == 401
-    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T00:30:00Z", headers={"X-Flowstead-Subject": "operator-a"}).status_code == 422
-    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00-05:00&to=2025-01-01T02:00:00-05:00", headers={"X-Flowstead-Subject": "operator-a"}).status_code == 422
-    assert client.get("/api/v1/plants/unknown/latest", headers={"X-Flowstead-Subject": "operator-a"}).status_code == 404
+    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T00:30:00Z", headers=principal_headers("operator-a")).status_code == 422
+    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00-05:00&to=2025-01-01T02:00:00-05:00", headers=principal_headers("operator-a")).status_code == 422
+    assert client.get("/api/v1/plants/unknown/latest", headers=principal_headers("operator-a")).status_code == 404
 
 
 def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:
-    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
-        with connection.transaction():
-            connection.execute("UPDATE app.plants SET public_demo = false")
+    with psycopg.connect(DATABASE_URL) as connection, connection.transaction():  # type: ignore[arg-type]
+        connection.execute("UPDATE app.plants SET public_demo = false")
     assert client.get("/api/v1/public/plants").json() == {"plants": []}
-    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
-        with connection.transaction():
-            connection.execute(
-                "UPDATE app.plants SET public_demo = true WHERE plant_id = ANY(%s)",
-                [["plant-01", "plant-02", "plant-03", "plant-04", "plant-05"]],
-            )
+    with psycopg.connect(DATABASE_URL) as connection, connection.transaction():  # type: ignore[arg-type]
+        connection.execute(
+            "UPDATE app.plants SET public_demo = true WHERE plant_id = ANY(%s)",
+            [["plant-01", "plant-02", "plant-03", "plant-04", "plant-05"]],
+        )
 
     public = client.get("/api/v1/public/plants")
     assert public.status_code == 200

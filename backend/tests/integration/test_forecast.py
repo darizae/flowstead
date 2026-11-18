@@ -5,9 +5,10 @@ from pathlib import Path
 
 import psycopg
 import pytest
+from backend.importer import SOURCE_SHA, import_m1
+from backend.tests.auth_helpers import install_test_principal, principal_headers
 from fastapi.testclient import TestClient
 
-from backend.importer import SOURCE_SHA, import_m1
 from flowstead_api.database import Database
 from flowstead_api.main import create_app
 
@@ -31,19 +32,20 @@ def seed_isolated_database(
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("FLOWSTEAD_AUTH_MODE", "local")
-    return TestClient(create_app(DATABASE_URL))  # type: ignore[arg-type]
+def client() -> TestClient:
+    return TestClient(install_test_principal(create_app(DATABASE_URL)))  # type: ignore[arg-type]
 
 
 def _grant(subject_id: str, *plant_ids: str) -> None:
-    with psycopg.connect(DATABASE_URL) as connection:
-        with connection.transaction():
-            with connection.cursor() as cursor:
-                cursor.executemany(
-                    "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
-                    [(subject_id, plant_id) for plant_id in plant_ids],
-                )
+    with (
+        psycopg.connect(DATABASE_URL) as connection,
+        connection.transaction(),
+        connection.cursor() as cursor,
+    ):
+        cursor.executemany(
+            "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
+            [(subject_id, plant_id) for plant_id in plant_ids],
+        )
 
 
 def test_forecast_persists_twelve_rows_and_rerun_is_idempotent() -> None:
@@ -67,13 +69,12 @@ def test_forecast_persists_twelve_rows_and_rerun_is_idempotent() -> None:
 
 def test_private_forecast_authorization_and_default_public_denial(client: TestClient) -> None:
     _grant("operator-a", "plant-01")
-    with psycopg.connect(DATABASE_URL) as connection:
-        with connection.transaction():
-            connection.execute("UPDATE app.plants SET public_demo = false")
+    with psycopg.connect(DATABASE_URL) as connection, connection.transaction():
+        connection.execute("UPDATE app.plants SET public_demo = false")
     database = Database(DATABASE_URL)
     assert database.build_forecast("plant-01").available
 
-    headers = {"X-Flowstead-Subject": "operator-a"}
+    headers = principal_headers("operator-a")
     private = client.get("/api/v1/plants/plant-01/forecast", headers=headers)
     assert private.status_code == 200
     assert private.json()["status"] == "available"
@@ -85,10 +86,9 @@ def test_private_forecast_authorization_and_default_public_denial(client: TestCl
 def test_public_forecast_uses_verified_allowlist_only(client: TestClient) -> None:
     database = Database(DATABASE_URL)
     assert database.build_forecast("plant-01").available
-    with psycopg.connect(DATABASE_URL) as connection:
-        with connection.transaction():
-            connection.execute("UPDATE app.plants SET public_demo = false")
-            connection.execute("UPDATE app.plants SET public_demo = true WHERE plant_id = 'plant-01'")
+    with psycopg.connect(DATABASE_URL) as connection, connection.transaction():
+        connection.execute("UPDATE app.plants SET public_demo = false")
+        connection.execute("UPDATE app.plants SET public_demo = true WHERE plant_id = 'plant-01'")
 
     response = client.get("/api/v1/public/plants/plant-01/forecast")
 
