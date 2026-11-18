@@ -38,16 +38,17 @@ pytestmark = pytest.mark.skipif(
 def isolated_url() -> str:
     """Create one never-before-used local database; never reset shared M1 records."""
     assert DATABASE_URL is not None
+    admin_url = DATABASE_URL  # keep the validated endpoint stable for teardown
     # Reject libpq target overrides before CREATE/DROP DATABASE admin I/O.
-    parsed = _require_local_database_url(DATABASE_URL)
+    parsed = _require_local_database_url(admin_url)
     name = "flowstead_test_" + uuid.uuid4().hex
-    with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
+    with psycopg.connect(admin_url, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
     target = urlunsplit(parsed._replace(path="/" + name, query="", fragment=""))
     try:
         yield target
     finally:
-        with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
+        with psycopg.connect(admin_url, autocommit=True) as admin:
             admin.execute(
                 "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
                 "WHERE datname = %s AND pid <> pg_backend_pid()", (name,)
