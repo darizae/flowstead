@@ -314,9 +314,9 @@ def get_current_principal(
 
 
 def _bearer_token(authorization: str | None) -> str:
-    if not authorization or len(authorization.encode("utf-8")) > _MAX_BEARER_BYTES:
+    if not authorization or not authorization.isascii() or len(authorization) > _MAX_BEARER_BYTES:
         raise _unauthorized()
-    parts = authorization.split()
+    parts = authorization.split(" ", 1)
     if len(parts) != 2 or parts[0].lower() != "bearer" or not _JWT_COMPACT.fullmatch(parts[1]):
         raise _unauthorized()
     return parts[1]

@@ -7,10 +7,10 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from jwt.algorithms import RSAAlgorithm
+from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 
 from flowstead_api.auth import (
     AuthConfig,
@@ -270,6 +270,8 @@ def test_malformed_jwks_key_type_fails_closed() -> None:
     [
         "Bearer not-a-jwt",
         "Bearer é.jwt.token",
+        "Bearer a.b.c\n",
+        "Bearer\ta.b.c",
         "Bearer header.payload.signature\\nextra",
         "Basic a.b.c",
     ],
@@ -281,3 +283,25 @@ def test_invalid_bearer_values_are_rejected_before_http_header_forwarding(
     with pytest.raises(HTTPException) as caught:
         _bearer_token(authorization)
     assert caught.value.status_code == 401
+
+
+def test_es256_signed_jwt_is_accepted_from_configured_jwks() -> None:
+    """Case: UT-M5-JWT — supported ES256 signing keys verify like RS256."""
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    public_jwk = json.loads(ECAlgorithm.to_jwk(private_key.public_key()))
+    public_jwk.update({"kid": "ec-key", "alg": "ES256", "use": "sig", "key_ops": ["verify"]})
+
+    def serve_jwks(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"keys": [public_jwk]})
+
+    verifier = JWKSVerifier(
+        _config(algorithms=("ES256",)),
+        client=httpx.Client(transport=httpx.MockTransport(serve_jwks)),
+    )
+    token = jwt.encode(
+        _claims(),
+        private_key,
+        algorithm="ES256",
+        headers={"kid": "ec-key", "typ": "JWT"},
+    )
+    assert verifier.verify(token) == Principal(sub="operator-a")
