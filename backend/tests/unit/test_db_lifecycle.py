@@ -11,6 +11,7 @@ from backend.tests.db_lifecycle import (
     COMPOSE_FILE,
     PROJECT_ROOT,
     DatabaseLifecycleError,
+    _check_url,
     ensure_database,
 )
 
@@ -169,3 +170,34 @@ def test_wildcard_published_database_is_not_trusted_as_loopback(host_ip: str) ->
     with pytest.raises(DatabaseLifecycleError, match="foreign Docker container"):
         ensure_database(run=fake, port_open=fake.port_open, pause=lambda _: None)
     assert not any(cmd[1] in {"start", "restart", "compose"} for cmd in fake.commands)
+
+
+@pytest.mark.parametrize(
+    "option",
+    (
+        "hostaddr=203.0.113.10",
+        "host=database.example",
+        "dbname=protected_database",
+        "port=5432",
+        "service=other_cluster",
+    ),
+)
+def test_preflight_rejects_libpq_target_overrides_before_docker(
+    monkeypatch: pytest.MonkeyPatch, option: str
+) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead?" + option
+    )
+    with pytest.raises(DatabaseLifecycleError, match="does not target"):
+        _check_url(54329, "flowstead", required=True)
+
+
+def test_preflight_allows_plain_configured_loopback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Case: UT-M4A-DB-LIFECYCLE"""
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead"
+    )
+    _check_url(54329, "flowstead", required=True)
