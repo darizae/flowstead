@@ -6,7 +6,7 @@ import argparse
 import os
 import re
 import uuid
-from urllib.parse import unquote, urlsplit
+from urllib.parse import SplitResult, unquote, urlsplit
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -476,17 +476,51 @@ def _run(database_url: str, operation: str, revision: str = "head") -> None:
         engine.dispose()
 
 
-def _require_disposable_database(database_url: str, *, disposable: bool) -> None:
-    parsed = urlsplit(database_url)
-    database_name = unquote(parsed.path.lstrip("/"))
-    if not (
-        disposable
-        and parsed.hostname in {"localhost", "127.0.0.1", "::1"}
-        and re.fullmatch(r"flowstead_test_[0-9a-f]{32}", database_name)
+def _require_local_database_url(database_url: str) -> SplitResult:
+    """Fail before local DB administration if libpq URL options can redirect it.
+
+    For disposable/local-only actions, reject *all* URI query parameters, not
+    just known host/hostaddr/dbname overrides: libpq may add new options, and
+    even seemingly harmless options are unnecessary for local acceptance.
+    """
+    try:
+        parsed = urlsplit(database_url)
+        _ = parsed.port  # also reject malformed port values before connecting
+    except ValueError as exc:
+        raise MigrationStateError("unsafe local PostgreSQL connection URL") from exc
+    if (
+        parsed.scheme not in {"postgres", "postgresql", "postgresql+psycopg"}
+        or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+        or not parsed.path.startswith("/")
+        or parsed.path.count("/") != 1
+        or not parsed.path[1:]
+        or parsed.query
+        or parsed.fragment
     ):
+        raise MigrationStateError(
+            "unsafe local PostgreSQL connection URL: require an explicit "
+            "loopback database without libpq query options"
+        )
+    return parsed
+
+
+def _require_disposable_database(database_url: str, *, disposable: bool) -> None:
+    if not disposable:
         raise MigrationStateError(
             "destructive rollback refused: explicitly mark a loopback "
             "flowstead_test_<32 hex> database as disposable"
+        )
+    try:
+        parsed = _require_local_database_url(database_url)
+        database_name = unquote(parsed.path[1:])
+        safe = re.fullmatch(r"flowstead_test_[0-9a-f]{32}", database_name)
+    except MigrationStateError:
+        safe = False
+    if not safe:
+        raise MigrationStateError(
+            "destructive rollback refused: explicitly mark a loopback "
+            "flowstead_test_<32 hex> database as disposable "
+            "and exclude libpq query options"
         )
 
 
