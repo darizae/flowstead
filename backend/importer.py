@@ -497,6 +497,23 @@ def import_m1(database_url: str, manifest_path: Path, data_path: Path, source_sh
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                     ((*_reading_values(reading), batch_id) for reading in readings),
                 )
+                # Import locally to keep the source validator independent from
+                # the runtime messaging package while sharing this transaction.
+                from flowstead_api.message_store import emit_ingest_completed
+
+                # Historical 001/002 databases remain stampable without
+                # fabricating events for imports that predate the outbox.
+                if cursor.execute(
+                    "SELECT to_regclass('app.message_outbox')"
+                ).fetchone()[0] is not None:
+                    emit_ingest_completed(
+                        connection,
+                        batch_id=batch_id,
+                        plant_ids=list(manifest.plants),
+                        source_sha=source_sha,
+                        content_sha256=content_sha,
+                        reading_count=len(readings),
+                    )
     return True
 
 

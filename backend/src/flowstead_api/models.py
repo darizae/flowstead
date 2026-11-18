@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
-
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
@@ -165,6 +165,22 @@ class ForecastResponse(BaseModel):
         return None if value is None else _utc_iso(value)
 
 
+class ForecastJobResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_event_id: UUID
+    correlation_id: UUID
+    plant_id: str
+    status: Literal["queued", "processing", "completed", "failed"]
+    requested_at_utc: datetime
+    completed_at_utc: datetime | None = None
+    diagnostic: str | None = None
+
+    @field_serializer("requested_at_utc", "completed_at_utc")
+    def serialize_job_time(self, value: datetime | None) -> str | None:
+        return None if value is None else _utc_iso(value)
+
+
 class PlantListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -178,4 +194,4 @@ class HealthResponse(BaseModel):
 
 
 def _utc_iso(value: datetime) -> str:
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")

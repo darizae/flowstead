@@ -22,6 +22,29 @@ import-m1-local manifest source_sha data:
 forecast-local:
     uv run --project backend python -m flowstead_api.forecast
 
+message-up:
+    docker compose up -d --wait db nats
+
+message-init:
+    uv run --project backend python -m flowstead_api.messaging init
+
+message-dispatch-once:
+    uv run --project backend python -m flowstead_api.messaging dispatch
+
+message-worker-once:
+    uv run --project backend python -m flowstead_api.messaging worker
+
+message-worker:
+    uv run --project backend python -m flowstead_api.messaging run
+
+test-message-unit:
+    uv run --project backend pytest -q backend/tests/unit/test_messages.py
+
+test-message-integration:
+    python3 backend/tests/db_lifecycle.py --require-database-url
+    docker compose up -d --wait nats
+    FLOWSTEAD_ISOLATED_NATS_TEST=1 uv run --project backend pytest -q backend/tests/integration/test_messaging.py
+
 test-forecast-unit:
     uv run --project backend pytest -q backend/tests/unit/test_forecast.py
 
@@ -40,7 +63,9 @@ test-db-integration:
     uv run --project backend pytest -q backend/tests/integration
 
 audit-backend:
-    if uv help | grep -qE '(^|[[:space:]])audit([[:space:]]|$)'; then uv audit --project backend; elif command -v pip-audit >/dev/null 2>&1; then pip-audit; else echo "UNVERIFIED: neither uv audit nor pip-audit is available"; fi
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    uv tool run --from 'pip-audit==2.10.1' pip-audit --requirement <(uv export --quiet --project backend --locked --no-emit-project --format requirements.txt) --require-hashes --disable-pip --strict --progress-spinner off
 
 docs-check:
     uv run --project backend python -m backend.docs_check

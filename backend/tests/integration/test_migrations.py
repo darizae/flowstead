@@ -159,14 +159,25 @@ def test_fresh_alembic_head_has_approved_schema(isolated_url: str) -> None:
                 "SELECT table_name FROM information_schema.tables "
                 "WHERE table_schema = 'app'"
             ).fetchall()
-        ) == set(migrations.EXPECTED_COLUMNS)
+        ) == set(migrations.EXPECTED_COLUMNS) | {
+            "message_outbox",
+            "message_inbox",
+            "message_failures",
+            "forecast_jobs",
+        }
         # Compare actual parsed CHECK/FK/unique/index definitions and defaults
         # with the exact applied historical SQL, not merely object names.
-        migrations._validate_schema(connection, include_forecast_metadata=True)
+        migrations._validate_schema(
+            connection, include_forecast_metadata=True, allow_extensions=True
+        )
         assert connection.execute(
             "SELECT version FROM public.schema_migrations ORDER BY version"
-        ).fetchall() == [("001_initial",), ("002_forecast_metadata",)]
-    assert _version(isolated_url) == "002_forecast_metadata"
+        ).fetchall() == [
+            ("001_initial",),
+            ("002_forecast_metadata",),
+            ("003_jetstream_messages",),
+        ]
+    assert _version(isolated_url) == "003_jetstream_messages"
 
 
 def test_old_populated_database_is_stamped_without_data_change(isolated_url: str) -> None:
@@ -174,8 +185,15 @@ def test_old_populated_database_is_stamped_without_data_change(isolated_url: str
     _historical_upgrade(isolated_url)
     before = _snapshot(isolated_url)
     migrate(isolated_url)
-    assert _snapshot(isolated_url) == before
-    assert _version(isolated_url) == "002_forecast_metadata"
+    after = _snapshot(isolated_url)
+    assert {
+        table: digest for table, digest in after.items()
+        if table != "public.schema_migrations"
+    } == {
+        table: digest for table, digest in before.items()
+        if table != "public.schema_migrations"
+    }
+    assert _version(isolated_url) == "003_jetstream_messages"
 
 
 def test_full_immutable_m1_and_forecast_are_preserved_on_stamp(isolated_url: str) -> None:
@@ -190,8 +208,15 @@ def test_full_immutable_m1_and_forecast_are_preserved_on_stamp(isolated_url: str
         assert connection.execute("SELECT count(*) FROM app.hourly_readings").fetchone() == (43_800,)
     before = _snapshot(isolated_url)
     migrate(isolated_url)
-    assert _snapshot(isolated_url) == before
-    assert _version(isolated_url) == "002_forecast_metadata"
+    after = _snapshot(isolated_url)
+    assert {
+        table: digest for table, digest in after.items()
+        if table != "public.schema_migrations"
+    } == {
+        table: digest for table, digest in before.items()
+        if table != "public.schema_migrations"
+    }
+    assert _version(isolated_url) == "003_jetstream_messages"
 
 
 def test_partial_schema_is_rejected_without_mutation(isolated_url: str) -> None:
@@ -314,14 +339,14 @@ def test_drifted_historical_marker_table_is_never_stamped(
 def _install_local_descendant(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Create a disposable 003 revision for repeat and drift checks."""
+    """Create a disposable 004 revision for repeat and drift checks."""
     local_script = tmp_path / "alembic"
     shutil.copytree(migrations.ALEMBIC_INI.parent / "alembic", local_script)
-    (local_script / "versions" / "003_local_roundtrip.py").write_text(
+    (local_script / "versions" / "004_local_roundtrip.py").write_text(
         '"""Local disposable-only revision for DB-M4A-REPEAT."""\n'
         "from alembic import op\n"
-        "revision = '003_local_roundtrip'\n"
-        "down_revision = '002_forecast_metadata'\n"
+        "revision = '004_local_roundtrip'\n"
+        "down_revision = '003_jetstream_messages'\n"
         "branch_labels = None\n"
         "depends_on = None\n"
         "def upgrade():\n"
@@ -351,14 +376,14 @@ def test_repeat_and_local_descendant_upgrade_revert(
 
     _install_local_descendant(tmp_path, monkeypatch)
     migrate(isolated_url)
-    assert _version(isolated_url) == "003_local_roundtrip"
+    assert _version(isolated_url) == "004_local_roundtrip"
     migrate(isolated_url)  # recognized descendant may have an extra column
     assert _snapshot(isolated_url) == before
-    migrations._run(isolated_url, "downgrade", "002_forecast_metadata")
-    assert _version(isolated_url) == "002_forecast_metadata"
+    migrations._run(isolated_url, "downgrade", "003_jetstream_messages")
+    assert _version(isolated_url) == "003_jetstream_messages"
     assert _snapshot(isolated_url) == before
     migrate(isolated_url)
-    assert _version(isolated_url) == "003_local_roundtrip"
+    assert _version(isolated_url) == "004_local_roundtrip"
 
 
 @pytest.mark.parametrize("malformed", ("table", "column", "constraint", "index"))
@@ -371,7 +396,7 @@ def test_recognized_descendant_rejects_baseline_drift(
     migrate(isolated_url)
     _install_local_descendant(tmp_path, monkeypatch)
     migrate(isolated_url)
-    assert _version(isolated_url) == "003_local_roundtrip"
+    assert _version(isolated_url) == "004_local_roundtrip"
 
     with psycopg.connect(isolated_url) as connection:
         if malformed == "table":
@@ -396,7 +421,7 @@ def test_recognized_descendant_rejects_baseline_drift(
     before = None if malformed in {"table", "column"} else _snapshot(isolated_url)
     with pytest.raises(MigrationStateError, match="approved baseline"):
         migrate(isolated_url)
-    assert _version(isolated_url) == "003_local_roundtrip"
+    assert _version(isolated_url) == "004_local_roundtrip"
     if before is not None:
         assert _snapshot(isolated_url) == before
     else:

@@ -452,7 +452,12 @@ def _inspect_state(database_url: str) -> DatabaseState:
             raise MigrationStateError("app schema exists without historical migration markers")
 
         markers = _validate_schema_migrations(connection)
-        if markers not in (("001_initial",), ("001_initial", "002_forecast_metadata")):
+        known_markers = (
+            "001_initial",
+            "002_forecast_metadata",
+            "003_jetstream_messages",
+        )
+        if markers != known_markers[: len(markers)] or not markers:
             raise MigrationStateError(f"unrecognized historical migration markers: {markers!r}")
         if alembic_revision is not None:
             script = _script_directory()
@@ -472,7 +477,12 @@ def _inspect_state(database_url: str) -> DatabaseState:
                     connection, include_forecast_metadata=True, allow_extensions=True
                 )
                 return DatabaseState(False, markers[-1], alembic_revision)
-        _validate_schema(connection, include_forecast_metadata=len(markers) == 2)
+        if len(markers) >= 3:
+            _validate_schema(
+                connection, include_forecast_metadata=True, allow_extensions=True
+            )
+        else:
+            _validate_schema(connection, include_forecast_metadata=len(markers) == 2)
         return DatabaseState(False, markers[-1], alembic_revision)
 
 

@@ -198,15 +198,17 @@
 
 ### T-004b — [JetStream messaging](../planning/tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md)
 
+**Local implementation evidence (2026-11-18, base `f9503c1` plus uncommitted T-004b worktree):** `backend/tests/integration/test_messaging.py` ran against loopback PostgreSQL 16, FastAPI HTTP and the pinned NATS 2.12.15 JetStream image with `DATABASE_URL=postgresql://flowstead:flowstead_local@127.0.0.1:54329/flowstead NATS_URL=nats://127.0.0.1:42229 FLOWSTEAD_ISOLATED_NATS_TEST=1 uv run --project backend pytest -q backend/tests/integration/test_messaging.py`: **3 passed**. The test stopped and restarted the isolated Compose broker, exercised real publication/acknowledgement, duplicate delivery, durable retries and poison termination, and polled exact PostgreSQL state. `uv run --project backend pytest -q backend/tests/unit` reported **62 passed**; the full configured integration directory reported **20 passed, 10 skipped** after this task (skips require the external full-M1 files and are not counted as messaging evidence). `backend/tests/integration/test_migrations.py` reported **16 passed, 1 skipped**, including a fresh 003 schema. `just audit-backend` used pinned `pip-audit 2.10.1` with strict collection against a hash-verified `uv export --locked` of all runtime and development packages in `backend/uv.lock` and reported **No known vulnerabilities found**, including for `nats-py 2.17.0`. Exact-final-SHA review/Mac receipts remain a merge-stage gate.
+
 | ID | Intended observable assertion | Evidence status |
 |---|---|---|
-| `MSG-M4B-PUBLISH` | Outbox transaction and real JetStream publication retain exact typed event identity; rollback produces no event | UNVERIFIED until tested |
-| `MSG-M4B-FLOW` | Real worker persists exactly 12 forecast targets and completion event before acknowledging | UNVERIFIED until tested |
-| `MSG-M4B-DUP` | Replay/redelivery/reordering/crash restart do not duplicate issuance or side effects | UNVERIFIED until tested |
-| `MSG-M4B-OUTAGE` | Broker unavailable does not break read API or lose committed outbox; recovery replays safely | UNVERIFIED until tested |
-| `MSG-M4B-PAUSE` | Controlled worker pause proves queued distinct from completed and bounded resumption | UNVERIFIED until tested |
-| `MSG-M4B-POISON` | Invalid version, Plant or payload dead-lettered/failed safely with no business mutation | UNVERIFIED until tested |
-| `MSG-M4B-AUTH` | Private cross-Plant command denied; public read-only cannot queue arbitrary Plant work | UNVERIFIED until tested |
+| `MSG-M4B-PUBLISH` | Outbox transaction and real JetStream publication retain exact typed event identity; rollback produces no event | PASS — `test_import_events_commit_atomically_and_publish_to_real_jetstream`; command rollback assertion in `test_command_is_authorized_transactional_and_observably_queued` |
+| `MSG-M4B-FLOW` | Real worker persists exactly 12 forecast targets and completion event before acknowledging | PASS — `test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion` |
+| `MSG-M4B-DUP` | Replay/redelivery/reordering/crash restart do not duplicate issuance or side effects | PASS — same real JetStream test; message-ID republish and post-commit duplicate delivery asserted |
+| `MSG-M4B-OUTAGE` | Broker unavailable does not break read API or lose committed outbox; recovery replays safely | PASS — same test; real Compose NATS stop/start with pending SQL and live HTTP read asserted |
+| `MSG-M4B-PAUSE` | Controlled worker pause proves queued distinct from completed and bounded resumption | PASS — queued HTTP status asserted before worker; bounded real worker reached terminal state |
+| `MSG-M4B-POISON` | Invalid version, Plant or payload dead-lettered/failed safely with no business mutation | PASS — unit schema variants plus real unknown-version termination and five-delivery terminal receipt |
+| `MSG-M4B-AUTH` | Private cross-Plant command denied; public read-only cannot queue arbitrary Plant work | PASS — real HTTP/SQL assertion in `test_command_is_authorized_transactional_and_observably_queued` |
 
 ### T-007 — [IndexedDB foundation](../planning/tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md)
 

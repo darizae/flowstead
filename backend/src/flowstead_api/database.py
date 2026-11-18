@@ -9,18 +9,19 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 import psycopg
-
 from backend.importer import APPROVED_PLANT_IDS
 
 from .forecast import (
-    ForecastBuild,
-    FlowObservation,
     MODEL_VERSION,
     PHYSICAL_BOUND_RULE,
+    FlowObservation,
+    ForecastBuild,
     forecast_for_issuance,
 )
+from .message_store import ForecastJob, enqueue_forecast, read_forecast_job
 
 PUBLIC_PLANT_IDS = tuple(sorted(APPROVED_PLANT_IDS))
 
@@ -60,11 +61,22 @@ class Database:
 
     @contextmanager
     def connect(self) -> Iterator[psycopg.Connection[Any]]:
+        with psycopg.connect(self.resolved_url()) as connection:
+            yield connection
+
+    def resolved_url(self) -> str:
         database_url = self.database_url or os.environ.get("DATABASE_URL")
         if not database_url:
-            raise RuntimeError("DATABASE_URL is required for API reads")
-        with psycopg.connect(database_url) as connection:
-            yield connection
+            raise RuntimeError("DATABASE_URL is required for API access")
+        return database_url
+
+    def enqueue_forecast(self, plant_id: str, *, subject_id: str) -> ForecastJob | None:
+        return enqueue_forecast(self.resolved_url(), plant_id=plant_id, subject_id=subject_id)
+
+    def forecast_job(self, correlation_id: UUID, *, subject_id: str) -> ForecastJob | None:
+        return read_forecast_job(
+            self.resolved_url(), correlation_id=correlation_id, subject_id=subject_id
+        )
 
     def list_plants(self, *, subject_id: str | None, public: bool) -> list[PlantRow]:
         if public:
@@ -94,7 +106,9 @@ class Database:
             rows = connection.execute(query, params).fetchall()
         return [_plant_row(row) for row in rows]
 
-    def latest(self, plant_id: str, *, subject_id: str | None, public: bool) -> tuple[PlantRow, ReadingRow] | None:
+    def latest(
+        self, plant_id: str, *, subject_id: str | None, public: bool
+    ) -> tuple[PlantRow, ReadingRow] | None:
         access_clause, params = _access_clause(plant_id, subject_id=subject_id, public=public)
         query = f"""
             SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
@@ -149,6 +163,7 @@ class Database:
         if rows[0][7] is None:
             return plant, []
         return plant, [_reading_row(row[7:], row[0]) for row in rows]
+
     def build_forecast(
         self,
         plant_id: str,
@@ -156,28 +171,39 @@ class Database:
         model_version: str = MODEL_VERSION,
     ) -> ForecastBuild:
         """Build and atomically persist the latest forecast for one Plant."""
-        with self.connect() as connection:
-            with connection.transaction():
-                latest = connection.execute(
-                    """
+        with self.connect() as connection, connection.transaction():
+            return self.build_forecast_in_transaction(
+                connection, plant_id, model_version=model_version
+            )
+
+    def build_forecast_in_transaction(
+        self,
+        connection: psycopg.Connection[Any],
+        plant_id: str,
+        *,
+        model_version: str = MODEL_VERSION,
+    ) -> ForecastBuild:
+        """Persist a forecast inside a caller-owned transaction."""
+        latest = connection.execute(
+            """
                     SELECT max(r.timestamp_utc)
                     FROM app.plants AS p
                     JOIN app.hourly_readings AS r ON r.plant_id = p.plant_id
                     WHERE p.plant_id = %s
                     """,
-                    (plant_id,),
-                ).fetchone()[0]
-                if latest is None:
-                    return ForecastBuild(
-                        issued_at_utc=None,
-                        model_version=model_version,
-                        source_revision=None,
-                        physical_bound_rule=PHYSICAL_BOUND_RULE,
-                        points=(),
-                        unavailable_reason="no_observations",
-                    )
-                input_rows = connection.execute(
-                    """
+            (plant_id,),
+        ).fetchone()[0]
+        if latest is None:
+            return ForecastBuild(
+                issued_at_utc=None,
+                model_version=model_version,
+                source_revision=None,
+                physical_bound_rule=PHYSICAL_BOUND_RULE,
+                points=(),
+                unavailable_reason="no_observations",
+            )
+        input_rows = connection.execute(
+            """
                     SELECT r.timestamp_utc, r.influent_flow, r.influent_flow_quality,
                            ib.content_sha256
                     FROM app.hourly_readings AS r
@@ -187,54 +213,54 @@ class Database:
                       AND r.timestamp_utc <= %s
                     ORDER BY r.timestamp_utc
                     """,
-                    (plant_id, latest - timedelta(hours=24), latest),
-                ).fetchall()
-                observations = [
-                    FlowObservation(timestamp, value, quality)
-                    for timestamp, value, quality, _source_revision in input_rows
-                ]
-                revisions = sorted(
-                    {
-                        source_revision
-                        for _timestamp, _value, _quality, source_revision in input_rows
-                        if source_revision
-                    }
-                )
-                source_revision = ",".join(revisions) or None
-                build = forecast_for_issuance(
-                    observations,
-                    latest,
-                    source_revision=source_revision,
-                    model_version=model_version,
-                )
-                if not build.available:
-                    return build
+            (plant_id, latest - timedelta(hours=24), latest),
+        ).fetchall()
+        observations = [
+            FlowObservation(timestamp, value, quality)
+            for timestamp, value, quality, _source_revision in input_rows
+        ]
+        revisions = sorted(
+            {
+                source_revision
+                for _timestamp, _value, _quality, source_revision in input_rows
+                if source_revision
+            }
+        )
+        source_revision = ",".join(revisions) or None
+        build = forecast_for_issuance(
+            observations,
+            latest,
+            source_revision=source_revision,
+            model_version=model_version,
+        )
+        if not build.available:
+            return build
 
-                existing = connection.execute(
-                    """
+        existing = connection.execute(
+            """
                     SELECT id, issued_at, model_version, source_revision,
                            physical_bound_rule
                     FROM app.forecast_issuances
                     WHERE plant_id = %s AND issued_at = %s AND model_version = %s
                     """,
-                    (plant_id, build.issued_at_utc, model_version),
-                ).fetchone()
-                if existing is not None:
-                    stored = connection.execute(
-                        """
+            (plant_id, build.issued_at_utc, model_version),
+        ).fetchone()
+        if existing is not None:
+            stored = connection.execute(
+                """
                         SELECT hour_number, target_time, predicted_flow
                         FROM app.forecast_hours
                         WHERE issuance_id = %s
                         ORDER BY hour_number
                         """,
-                        (existing[0],),
-                    ).fetchall()
-                    if len(stored) != 12:
-                        raise RuntimeError("stored forecast is not exactly twelve rows")
-                    return _stored_forecast(existing, stored)
+                (existing[0],),
+            ).fetchall()
+            if len(stored) != 12:
+                raise RuntimeError("stored forecast is not exactly twelve rows")
+            return _stored_forecast(existing, stored)
 
-                inserted = connection.execute(
-                    """
+        inserted = connection.execute(
+            """
                     INSERT INTO app.forecast_issuances
                         (plant_id, issued_at, model_version, source_revision,
                          physical_bound_rule)
@@ -242,63 +268,63 @@ class Database:
                     ON CONFLICT (plant_id, issued_at) DO NOTHING
                     RETURNING id
                     """,
-                    (
-                        plant_id,
-                        build.issued_at_utc,
-                        model_version,
-                        build.source_revision,
-                        build.physical_bound_rule,
-                    ),
-                ).fetchone()
-                if inserted is None:
-                    existing = connection.execute(
-                        """
+            (
+                plant_id,
+                build.issued_at_utc,
+                model_version,
+                build.source_revision,
+                build.physical_bound_rule,
+            ),
+        ).fetchone()
+        if inserted is None:
+            existing = connection.execute(
+                """
                         SELECT id, issued_at, model_version, source_revision,
                                physical_bound_rule
                         FROM app.forecast_issuances
                         WHERE plant_id = %s AND issued_at = %s
                         """,
-                        (plant_id, build.issued_at_utc),
-                    ).fetchone()
-                    if existing is None:
-                        raise RuntimeError("forecast issuance disappeared during idempotent insert")
-                    stored = connection.execute(
-                        """
+                (plant_id, build.issued_at_utc),
+            ).fetchone()
+            if existing is None:
+                raise RuntimeError("forecast issuance disappeared during idempotent insert")
+            stored = connection.execute(
+                """
                         SELECT hour_number, target_time, predicted_flow
                         FROM app.forecast_hours
                         WHERE issuance_id = %s
                         ORDER BY hour_number
                         """,
-                        (existing[0],),
-                    ).fetchall()
-                    if len(stored) != 12:
-                        raise RuntimeError("stored forecast is not exactly twelve rows")
-                    return _stored_forecast(existing, stored)
+                (existing[0],),
+            ).fetchall()
+            if len(stored) != 12:
+                raise RuntimeError("stored forecast is not exactly twelve rows")
+            return _stored_forecast(existing, stored)
 
-                with connection.cursor() as cursor:
-                    cursor.executemany(
-                        """
+        with connection.cursor() as cursor:
+            cursor.executemany(
+                """
                         INSERT INTO app.forecast_hours
                             (issuance_id, target_time, predicted_flow, hour_number)
                         VALUES (%s, %s, %s, %s)
                         """,
-                        [
-                            (
-                                inserted[0],
-                                point.target_time_utc,
-                                point.predicted_flow_gal_h,
-                                point.hour_number,
-                            )
-                            for point in build.points
-                        ],
+                [
+                    (
+                        inserted[0],
+                        point.target_time_utc,
+                        point.predicted_flow_gal_h,
+                        point.hour_number,
                     )
-                count = connection.execute(
-                    "SELECT count(*) FROM app.forecast_hours WHERE issuance_id = %s",
-                    (inserted[0],),
-                ).fetchone()[0]
-                if count != 12:
-                    raise RuntimeError("forecast transaction did not create exactly twelve rows")
-                return build
+                    for point in build.points
+                ],
+            )
+        count = connection.execute(
+            "SELECT count(*) FROM app.forecast_hours WHERE issuance_id = %s",
+            (inserted[0],),
+        ).fetchone()[0]
+        if count != 12:
+            raise RuntimeError("forecast transaction did not create exactly twelve rows")
+        return build
 
     def forecast(
         self,
@@ -333,10 +359,7 @@ class Database:
                 model_version=first[9],
                 source_revision=first[10],
                 physical_bound_rule=first[11] or PHYSICAL_BOUND_RULE,
-                points=tuple(
-                    _stored_point(row[12], row[13], row[14])
-                    for row in rows
-                ),
+                points=tuple(_stored_point(row[12], row[13], row[14]) for row in rows),
             )
             return ForecastRead(_plant_row(first[:7]), build)
 
@@ -355,6 +378,7 @@ class Database:
                 unavailable_reason="not_issued",
             ),
         )
+
     def flow_observations(self, plant_id: str) -> list[FlowObservation]:
         """Return the source channel for a local chronological receipt."""
         with self.connect() as connection:
@@ -368,7 +392,6 @@ class Database:
                 (plant_id,),
             ).fetchall()
         return [FlowObservation(timestamp, value, quality) for timestamp, value, quality in rows]
-
 
 
 def _stored_point(hour_number: int, target_time: datetime, predicted_flow: Decimal) -> Any:
@@ -395,15 +418,19 @@ def _stored_forecast(
     )
 
 
-def _access_clause(plant_id: str, *, subject_id: str | None, public: bool) -> tuple[str, tuple[Any, ...]]:
+def _access_clause(
+    plant_id: str, *, subject_id: str | None, public: bool
+) -> tuple[str, tuple[Any, ...]]:
     if public:
         return "WHERE p.plant_id = %s AND p.public_demo = true AND p.plant_id = ANY(%s)", (
             plant_id,
             list(PUBLIC_PLANT_IDS),
         )
     return (
-        "JOIN app.operator_plant_access AS access ON access.plant_id = p.plant_id "
-        "WHERE p.plant_id = %s AND access.subject_id = %s",
+        (
+            "JOIN app.operator_plant_access AS access ON access.plant_id = p.plant_id "
+            "WHERE p.plant_id = %s AND access.subject_id = %s"
+        ),
         (plant_id, subject_id),
     )
 

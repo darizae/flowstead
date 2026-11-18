@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 
 from .auth import get_current_subject
 from .database import Database, ForecastRead, PlantRow, ReadingRow
+from .message_store import ForecastJob
 from .models import (
     DissolvedOxygenMeasurement,
     EffluentPhMeasurement,
     FlowMeasurement,
     ForecastHour,
+    ForecastJobResponse,
     ForecastResponse,
     HealthResponse,
     HistoryReading,
@@ -119,6 +122,37 @@ def create_app(database_url: str | None = None) -> FastAPI:
             raise _not_found()
         return _forecast_response(result, public=False)
 
+    @app.post(
+        "/api/v1/plants/{plant_id}/forecast-requests",
+        response_model=ForecastJobResponse,
+        status_code=202,
+        tags=["private"],
+    )
+    def request_private_forecast(
+        plant_id: str,
+        subject_id: Annotated[str, Depends(get_current_subject)],
+    ) -> ForecastJobResponse:
+        job = app.state.database.enqueue_forecast(plant_id, subject_id=subject_id)
+        if job is None:
+            raise _not_found()
+        return _forecast_job_response(job)
+
+    @app.get(
+        "/api/v1/forecast-requests/{correlation_id}",
+        response_model=ForecastJobResponse,
+        tags=["private"],
+    )
+    def private_forecast_status(
+        correlation_id: UUID,
+        subject_id: Annotated[str, Depends(get_current_subject)],
+    ) -> ForecastJobResponse:
+        job = app.state.database.forecast_job(
+            correlation_id, subject_id=subject_id
+        )
+        if job is None:
+            raise _not_found()
+        return _forecast_job_response(job)
+
 
     return app
 
@@ -150,7 +184,7 @@ def _parse_utc_hour(value: str) -> datetime:
         raise ValueError("timestamps must include UTC timezone information")
     if parsed.minute or parsed.second or parsed.microsecond:
         raise ValueError("timestamps must be aligned to UTC hours")
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _summary(plant: PlantRow, *, public: bool) -> PlantSummary:
@@ -234,6 +268,18 @@ def _forecast_response(result: ForecastRead, *, public: bool) -> ForecastRespons
     if len(payload.encode("utf-8")) > MAX_RESPONSE_BYTES:
         raise HTTPException(status_code=422, detail={"code": "response_too_large", "message": "response cap exceeded"})
     return response
+
+
+def _forecast_job_response(job: ForecastJob) -> ForecastJobResponse:
+    return ForecastJobResponse(
+        request_event_id=job.request_event_id,
+        correlation_id=job.correlation_id,
+        plant_id=job.plant_id,
+        status=job.status,
+        requested_at_utc=job.requested_at,
+        completed_at_utc=job.completed_at,
+        diagnostic=job.diagnostic,
+    )
 
 
 def _measurements(reading: ReadingRow) -> Measurements:
