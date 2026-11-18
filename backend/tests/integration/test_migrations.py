@@ -7,7 +7,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlunsplit
 
 import psycopg
 from psycopg import sql
@@ -15,7 +15,7 @@ import pytest
 
 import backend.migrate as migrations
 from backend.importer import import_m1
-from backend.migrate import MigrationStateError, migrate
+from backend.migrate import MigrationStateError, _require_local_database_url, migrate
 from flowstead_api.database import Database
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -38,9 +38,8 @@ pytestmark = pytest.mark.skipif(
 def isolated_url() -> str:
     """Create one never-before-used local database; never reset shared M1 records."""
     assert DATABASE_URL is not None
-    parsed = urlsplit(DATABASE_URL)
-    if parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
-        pytest.fail("migration acceptance refuses a non-loopback PostgreSQL server")
+    # Reject libpq target overrides before CREATE/DROP DATABASE admin I/O.
+    parsed = _require_local_database_url(DATABASE_URL)
     name = "flowstead_test_" + uuid.uuid4().hex
     with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
