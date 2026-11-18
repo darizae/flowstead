@@ -14,7 +14,7 @@
 | 004 | [Deterministic 12h forecast](tasks/004_deterministic-twelve-hour-forecast__codex-luna-5-6__high.md) | Historical: MERGED [PR #6](https://github.com/darizae/flowstead/pull/6) 8af51c3 |
 | 004a | [Alembic baseline](tasks/004a_alembic-baseline-adoption__codex-luna-5-6__high.md) | Historical: MERGED [PR #7](https://github.com/darizae/flowstead/pull/7), merge `78b109c`; acceptance receipt commit `3b40ce5` |
 | 004b | [NATS/JetStream messaging](tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md) | NATS implementation committed to `main` at `388a5ad`; remaining test/review evidence is informational |
-| 005 | [Local JWT/Auth verifier](tasks/005_supabase-auth-verifier-local__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 005 | [Local JWT/Auth verifier](tasks/005_supabase-auth-verifier-local__codex-luna-5-6__high.md) | Implemented on `main` at `e5482fdd3306dd83ed9c74b5b8d702bcdf2badf6`; tests were not rerun for this documentation update |
 | 006 | [Backend docs hygiene](tasks/006_backend-contract-docs-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 007 | [Frontend foundation and Plants](tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 008 | [Map and history](tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
@@ -32,7 +32,7 @@
 ## Execution conventions
 
 - Work on exactly the task the owner assigns. Earlier tasks explain source ownership and interfaces; examine current code instead of treating their documentation status as authoritative.
-- T-004b's NATS/JetStream implementation already appears on `main` in commit `388a5ad`. **T-005 may start now.** It does not require a T-004b review receipt, status update or new merge.
+- T-005's local Supabase-compatible verifier is implemented at `e5482fd`; hosted Supabase behavior remains explicitly unverified until its owning cloud task. T-006 and later assigned tasks start without a review or status gate.
 - Preserve the pinned M1 synthetic source commit `ad5c94d1f46e79312a99cb9721f38700f24fdf6b`, manifest `m1.v1`, seed `20250101` and telemetry digest `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`.
 - Implement and verify behavior locally using targeted tests plus relevant real PostgreSQL, NATS/JetStream or browser interactions. Document failures honestly; tests are engineering checks, **not permission checks for starting work**.
 - Complete the assigned task with a local commit and merge into local `main`, resolving actual Git conflicts and correcting failing checks. **Never push automatically.** Independent review may be done afterward and does not block the local workflow.

@@ -82,6 +82,7 @@
 | `UT-M7-FAIL` | empty/unauthorized/loading/offline/API error show useful, non-leaking copy and retry; no hardcoded demo data in shipped build. | UNVERIFIED until asserting test+run checked |
 | `UI-M7-PARITY` | documented v2 hierarchy/colors/type, 390px + desktop no overflow; keyboard/focus/accessible navigation checked in real browser. | UNVERIFIED until asserting test+run checked |
 | `SEC-M7-CLIENT` | server-only keys not in bundle; API URL config is explicit; isolated principal transitions clear in-memory cache. | UNVERIFIED until asserting test+run checked |
+| `IDB-M7-PREF` | Anonymous/public and per-principal selection preferences survive reload without permission leakage. | UNVERIFIED until asserting test+run checked |
 
 ### T-008 — [task source](../planning/tasks/008_map-and-history-visualizations__codex-luna-5-6__high.md)
 
@@ -100,6 +101,8 @@
 | `UT-M9-SESSIONS` | logged-out mode, valid invite/login, expiry, logout, forbidden/zero-Plant states; no open-signup flow. | UNVERIFIED until asserting test+run checked |
 | `SEC-M9-CACHE` | auth switch clears all private rows/tokens from in-memory stores; unauthorized URL never renders stale previous Plant. | UNVERIFIED until asserting test+run checked |
 | `UI-M9-PARITY` | real browser invitation/login/expired/forbidden/logout evidence including keyboard/mobile and documented copy. | UNVERIFIED until asserting test+run checked |
+| `IDB-M9-ISOLATE` | IndexedDB private namespaces clear on signout, expiry, switch and revocation; another principal cannot render stale data. | UNVERIFIED until asserting test+run checked |
+| `IDB-M9-BOUNDS` | TTL/quota/schema-corruption/eviction and offline behavior are bounded, deterministic and fail safely. | UNVERIFIED until asserting test+run checked |
 
 ### T-010 — [task source](../planning/tasks/010_bounded-csv-and-png-exports__codex-luna-5-6__high.md)
 
@@ -129,6 +132,7 @@
 | `SEC-M12-RATE` | bounded windows/rows/files, rate limit/timeout/cors constraints, SQL+JWT adversarial tests. | UNVERIFIED until asserting test+run checked |
 | `SEC-M12-AUDIT` | `npm audit` and Python locked dependency audit with remediations and unresolved advisory inventory. | UNVERIFIED until asserting test+run checked |
 | `UI-M12-ALL` | matrix row evidence for responsive desktop + mobile, zoom, keyboard, loading/missing/expired, intentional deviations documented. | UNVERIFIED until asserting test+run checked |
+| `E2E-M12-INDEX` | Local Playwright HTML report and indexed Markdown/JSON catalog match exact UI test IDs and real browser outcomes. | UNVERIFIED until asserting test+run checked |
 
 ### T-013 — [task source](../planning/tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md)
 
@@ -187,14 +191,6 @@
 | `DOC-M18-PRIVATE` | no secret/private planner DHI material in repo/docs/output. | UNVERIFIED until asserting test+run checked |
 | `DOC-M18-GATE` | documented feature state matches actual source and test evidence. | UNVERIFIED until asserting test+run checked |
 
-### T-004a — [Alembic baseline](../planning/tasks/004a_alembic-baseline-adoption__codex-luna-5-6__high.md)
-
-| ID | Intended observable assertion | Evidence status |
-|---|---|---|
-| `DB-M4A-FRESH` | Clean PostgreSQL Alembic upgrade reproduces approved schema, constraints/indexes and importer/API behavior | UNVERIFIED until tested |
-| `DB-M4A-STAMP` | Previously SQL-migrated populated database validates/stamps without replaying old DDL or changing M1+forecast records | UNVERIFIED until tested |
-| `DB-M4A-MISMATCH` | Unknown/partially migrated schema safely fails without destructive repair | UNVERIFIED until tested |
-| `DB-M4A-REPEAT` | Repeated upgrade is no-op; new local revision safely up/down without data loss | UNVERIFIED until tested |
 
 ### T-004b — [JetStream messaging](../planning/tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md)
 
@@ -210,23 +206,5 @@
 | `MSG-M4B-POISON` | Invalid version, Plant or payload dead-lettered/failed safely with no business mutation | PASS — unit schema variants plus real unknown-version termination and five-delivery terminal receipt |
 | `MSG-M4B-AUTH` | Private cross-Plant command denied; public read-only cannot queue arbitrary Plant work | PASS — real HTTP/SQL assertion in `test_command_is_authorized_transactional_and_observably_queued` |
 
-### T-007 — [IndexedDB foundation](../planning/tasks/007_frontend-foundation-and-plants__codex-luna-5-6__high.md)
 
-| ID | Intended observable assertion | Evidence status |
-|---|---|---|
-| `IDB-M7-PREF` | Anonymous/public and per-principal selection preferences survive reload without permission leakage | UNVERIFIED until tested |
-
-### T-009 — [IndexedDB principal isolation](../planning/tasks/009_forecast-and-session-ux__codex-luna-5-6__high.md)
-
-| ID | Intended observable assertion | Evidence status |
-|---|---|---|
-| `IDB-M9-ISOLATE` | IndexedDB private namespaces clear on signout, expiry, switch and revocation; other principal cannot render stale data | UNVERIFIED until tested |
-| `IDB-M9-BOUNDS` | TTL/quota/schema-corruption/eviction and offline behavior are bounded, deterministic and fail safely | UNVERIFIED until tested |
-
-### T-012 — [Indexed test visibility](../planning/tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md)
-
-| ID | Intended observable assertion | Evidence status |
-|---|---|---|
-| `E2E-M12-INDEX` | Local Playwright HTML report and indexed Markdown/JSON catalog match exact UI test IDs and real browser outcomes | UNVERIFIED until tested |
-
-**Inventory:** 91 distinct indexed cases. Initial evidence status is intentionally **UNVERIFIED**: no Mac case-by-case test scan was run in this document-authoring step. Any claimed pass must be substantiated in the actual test implementation and execution report.
+**Inventory:** 92 distinct indexed cases. Evidence status is intentionally mixed: historical PASS entries retain their cited accepted receipts, while every other case remains **UNVERIFIED** until its asserting test and observed run are checked. An index entry alone is never coverage evidence.

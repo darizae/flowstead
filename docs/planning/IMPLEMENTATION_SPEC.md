@@ -1,6 +1,6 @@
 # Flowstead — implementation contract
 
-**Status:** Canonical technical contract for the application repository. Execution order and actual completion state belong to [HANDOFF_SEQUENCE.md](HANDOFF_SEQUENCE.md); observable tests belong to [INDEXED_TEST_PLAN.md](../testing/INDEXED_TEST_PLAN.md). The current application includes the PostgreSQL importer, FastAPI read API and deterministic twelve-hour forecast. The frontend remains planned; backend NATS/JetStream implementation is present on `main` (commit `388a5ad`), without implying every test was rerun.
+**Status:** Canonical technical contract for the application repository. Execution order and actual completion state belong to [HANDOFF_SEQUENCE.md](HANDOFF_SEQUENCE.md); observable tests belong to [INDEXED_TEST_PLAN.md](../testing/INDEXED_TEST_PLAN.md). The current application includes the PostgreSQL importer, Alembic migrations, deterministic twelve-hour forecast, Plant-scoped FastAPI read/forecast-command API and local Supabase-compatible JWT verifier. The frontend remains planned. Backend NATS/JetStream is present on `main` at commit `388a5ad`, and auth verification at commit `e5482fd`, without implying that tests were rerun for this documentation update.
 
 ## Product boundary
 
@@ -14,7 +14,7 @@ The core user journey is Plants list and interactive Florida map → current met
 - Data is keyed uniquely by (plant_id, timestamp_utc) in UTC; display uses each Plant's IANA Eastern/Central timezone with explicit DST disambiguation. Do not fabricate missing spring-forward hours or merge repeated fall-back hours.
 - Quality distinguishes valid, missing (SQL NULL), and invalid (finite flagged value). Never zero-fill, interpolate silently, or count invalid data as valid.
 - Each forecast issuance yields exactly twelve consecutive future UTC-hour influent-flow predictions (gal/h), with issued_at, target_time, predicted_flow and model_version. Retain observed/predicted boundary, unavailable cases, deterministic baseline and chronological synthetic-only evaluation. No claims of field predictive accuracy.
-- Synthetic data comes from independent [flowstead-sim](https://github.com/darizae/flowstead-sim) generator source commit ad5c94d1f46e79312a99cb9721f38700f24fdf6b, manifest m1.v1, seed 20250101, telemetry SHA-256 e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e. M1 represents five Plants × 365 × 24 = 43,800 wide rows / 175,200 readings. Import from immutable verified output, not a mutable branch, unverified artifact, observed facility dataset or external research extract.
+- Synthetic data comes from independent [flowstead-sim](https://github.com/darizae/flowstead-sim) generator source commit ad5c94d1f46e79312a99cb9721f38700f24fdf6b, manifest m1.v1, seed 20250101, telemetry SHA-256 e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e. M1 represents five Plants × 365 × 24 = 43,800 wide rows / 175,200 readings. Before import, the caller independently verifies that the supplied manifest names this canonical telemetry digest. The importer validates the pinned source/schema/seed and compares CSV checksum, size and rows to that supplied manifest; it does not itself pin the canonical telemetry digest. Import from immutable verified output, not a mutable branch, unverified artifact, observed facility dataset or external research extract.
 - Bound all windows, downloads and response sizes; retain provenance and quality flags in data exports. CSV formula-injection defenses, openable correctly labeled PNG charts and a concise accurate on-demand Plant PDF are required.
 
 ## Code and ownership boundaries
@@ -29,7 +29,18 @@ The core user journey is Plants list and interactive Florida map → current met
 | Flowstead React/Tailwind | Plants, map, charts, invite/session states, exports and local UX cache | Actual API schemas, per-principal IndexedDB, approved design and browser parity |
 | OMP control-plane repository | Task execution, local runs and independent review handoff | Does not own product requirements or application data |
 
-Maintain the existing backend/importer.py, backend/src/flowstead_api/{main,models,auth,database,forecast}.py and tests; extend with focused modules only when needed. API routes parse/authorize/serialize, typed services enforce forecast and report invariants, database adapters own parameterized SQL and transactions. Avoid service/repository proliferation, duplicate algorithm implementations or frontend-only authorization. Under frontend/src/, use small page/feature components and shared typed API/time/cache adapters; do not put all application state into one component or a global store.
+Keep the focused ownership boundaries in `backend/importer.py`, `backend/migrate.py`, and `backend/src/flowstead_api/{main,models,auth,database,forecast,messages,message_store,messaging}.py`. API routes parse, authorize and serialize; forecast code owns the reusable calculation; the database and message-store adapters own parameterized SQL and transactions; messaging owns JetStream topology, outbox dispatch and durable consumption. Avoid service/repository proliferation, duplicate algorithm implementations or frontend-only authorization. Under `frontend/src/`, use small page/feature components and shared typed API/time/cache adapters; do not put all application state into one component or a global store.
+
+### Current backend HTTP routes
+
+`backend/src/flowstead_api/main.py` is authoritative and FastAPI generates `/openapi.json` from it. The implemented application routes are:
+
+- `GET /api/v1/health`
+- public reads: `GET /api/v1/public/plants`, `GET /api/v1/public/plants/{plant_id}/latest`, `GET /api/v1/public/plants/{plant_id}/history`, and `GET /api/v1/public/plants/{plant_id}/forecast`
+- bearer-authenticated reads: `GET /api/v1/plants`, `GET /api/v1/plants/{plant_id}/latest`, `GET /api/v1/plants/{plant_id}/history`, and `GET /api/v1/plants/{plant_id}/forecast`
+- bearer-authenticated asynchronous commands: `POST /api/v1/plants/{plant_id}/forecast-requests` and `GET /api/v1/forecast-requests/{correlation_id}`
+
+History requests require bounded `from` and `to` query parameters. There is no public forecast-command route.
 
 ### Authorization and caching
 
@@ -43,7 +54,7 @@ NATS/JetStream uses versioned typed messages, correlation/event IDs, validated P
 
 ### Schema and migrations
 
-Adopt **Alembic as the real migration runner** in task 004a. Preserve already applied SQL migration history and records: validate old schema equivalence before stamping existing databases, create equivalent clean-database upgrades, and test repeated upgrades, mismatched states and rollback on disposable databases. Do not drop or reset populated data. Task 004b adds durable message tables and services after 004a, with real PostgreSQL/JetStream checks.
+Alembic is the real forward migration runner through `backend/migrate.py` and `backend/migrations/alembic/`. Revisions `001_initial.py` and `002_forecast_metadata.py` preserve and validate the historical schema before stamping populated compatible databases; `003_jetstream_messages.py` adds durable outbox, inbox and forecast-job state. Repeated upgrades and mismatched states fail safely, and downgrade is restricted to explicitly disposable local databases. The historical SQL files and markers remain compatibility evidence, not a second forward runner.
 
 ## UI/UX and exports
 

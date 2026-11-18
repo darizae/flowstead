@@ -68,7 +68,7 @@ audit-backend:
     uv tool run --from 'pip-audit==2.10.1' pip-audit --requirement <(uv export --quiet --project backend --locked --no-emit-project --format requirements.txt) --require-hashes --disable-pip --strict --progress-spinner off
 
 docs-check:
-    uv run --project backend python -m backend.docs_check
+    python3 scripts/docs_check.py
 
 api-dev:
     uv run --project backend uvicorn flowstead_api.main:app --app-dir backend/src --host 127.0.0.1 --port 8000
