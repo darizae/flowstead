@@ -124,8 +124,14 @@ def _snapshot(url: str) -> dict[str, str]:
         with connection.cursor() as cursor:
             for table, order in tables.items():
                 digest = hashlib.sha256()
+                # Hash the immutable *historical* fields. A later Alembic
+                # revision is allowed to add columns without changing M1 data.
+                selected = (
+                    ", ".join(migrations.EXPECTED_COLUMNS[table.removeprefix("app.")])
+                    if table.startswith("app.") else "*"
+                )
                 with cursor.copy(
-                    f"COPY (SELECT * FROM {table} ORDER BY {order}) "
+                    f"COPY (SELECT {selected} FROM {table} ORDER BY {order}) "
                     "TO STDOUT WITH (FORMAT CSV)"
                 ) as copy:
                     for block in copy:
@@ -327,7 +333,7 @@ def test_recognized_descendant_rejects_baseline_drift(
                 "ON app.hourly_readings (plant_id)"
             )
 
-    before = None if malformed == "table" else _snapshot(isolated_url)
+    before = None if malformed in {"table", "column"} else _snapshot(isolated_url)
     with pytest.raises(MigrationStateError, match="approved baseline"):
         migrate(isolated_url)
     assert _version(isolated_url) == "003_local_roundtrip"
@@ -335,9 +341,16 @@ def test_recognized_descendant_rejects_baseline_drift(
         assert _snapshot(isolated_url) == before
     else:
         with psycopg.connect(isolated_url) as connection:
-            assert connection.execute(
-                "SELECT to_regclass('app.operator_plant_access')"
-            ).fetchone() == (None,)
+            if malformed == "table":
+                assert connection.execute(
+                    "SELECT to_regclass('app.operator_plant_access')"
+                ).fetchone() == (None,)
+            else:
+                assert connection.execute(
+                    "SELECT count(*) FROM information_schema.columns "
+                    "WHERE table_schema = 'app' AND table_name = 'plants' "
+                    "AND column_name = 'city'"
+                ).fetchone() == (0,)
 
 
 def test_historical_migrations_are_reversible_only_on_disposable_db(isolated_url: str) -> None:
