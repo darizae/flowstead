@@ -8,6 +8,7 @@ import httpx
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from jwt.algorithms import RSAAlgorithm
 
@@ -18,6 +19,7 @@ from flowstead_api.auth import (
     JWKSVerifier,
     LegacyAuthEndpointVerifier,
     Principal,
+    _bearer_token,
 )
 from flowstead_api.main import create_app
 
@@ -235,3 +237,47 @@ def test_production_configuration_rejects_bypasses_and_missing_authority(
     )
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
+
+def test_malformed_jwks_key_type_fails_closed() -> None:
+    """Case: UT-M5-FAIL — an invalid remote JWK must never produce a server error."""
+    private_key, _ = _key("key-a")
+
+    def malformed_key(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "keys": [
+                    {
+                        "kid": "key-a",
+                        "alg": "RS256",
+                        "kty": "oct",
+                        "k": "Zm9v",
+                        "use": "sig",
+                    }
+                ]
+            },
+        )
+
+    verifier = JWKSVerifier(
+        _config(),
+        client=httpx.Client(transport=httpx.MockTransport(malformed_key)),
+    )
+    _rejected(verifier, _token(private_key, "key-a"))
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    [
+        "Bearer not-a-jwt",
+        "Bearer é.jwt.token",
+        "Bearer header.payload.signature\\nextra",
+        "Basic a.b.c",
+    ],
+)
+def test_invalid_bearer_values_are_rejected_before_http_header_forwarding(
+    authorization: str,
+) -> None:
+    """Case: UT-M5-FAIL — invalid HTTP bearer values return 401, not a server error."""
+    with pytest.raises(HTTPException) as caught:
+        _bearer_token(authorization)
+    assert caught.value.status_code == 401

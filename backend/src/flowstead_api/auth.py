@@ -22,6 +22,7 @@ _SUPPORTED_ASYMMETRIC_ALGORITHMS = frozenset({"ES256", "RS256"})
 _MAX_RESPONSE_BYTES = 65_536
 _MAX_JWKS_KEYS = 16
 _MAX_BEARER_BYTES = 16_384
+_JWT_COMPACT = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
 
 
 class AuthConfigurationError(ValueError):
@@ -226,7 +227,7 @@ class JWKSVerifier:
                 parsed[cache_key] = pyjwk
             if not parsed:
                 raise ValueError("JWKS contains no supported verification key")
-        except (httpx.HTTPError, ValueError, TypeError, KeyError) as error:
+        except (httpx.HTTPError, jwt.PyJWTError, ValueError, TypeError, KeyError) as error:
             _LOGGER.warning("authentication key refresh failed")
             raise AuthenticationError() from error
 
@@ -316,7 +317,7 @@ def _bearer_token(authorization: str | None) -> str:
     if not authorization or len(authorization.encode("utf-8")) > _MAX_BEARER_BYTES:
         raise _unauthorized()
     parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1]:
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not _JWT_COMPACT.fullmatch(parts[1]):
         raise _unauthorized()
     return parts[1]
 
