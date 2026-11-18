@@ -23,15 +23,15 @@ ALEMBIC_INI = BACKEND_ROOT / "migrations" / "alembic.ini"
 
 EXPECTED_COLUMNS: dict[str, dict[str, tuple[Any, ...]]] = {
     "ingest_batches": {
-        "id": ("bigint", None, None, None, "NO"),
+        "id": ("bigint", None, 64, 0, "NO"),
         "content_sha256": ("character", 64, None, None, "NO"),
         "source_sha": ("character", 40, None, None, "NO"),
         "schema_version": ("text", None, None, None, "NO"),
         "generator_version": ("text", None, None, None, "NO"),
-        "seed": ("integer", None, None, None, "NO"),
+        "seed": ("integer", None, 32, 0, "NO"),
         "manifest_sha256": ("character", 64, None, None, "NO"),
-        "row_count": ("integer", None, None, None, "NO"),
-        "content_bytes": ("integer", None, None, None, "NO"),
+        "row_count": ("integer", None, 32, 0, "NO"),
+        "content_bytes": ("integer", None, 32, 0, "NO"),
         "imported_at": ("timestamp with time zone", None, None, None, "NO"),
     },
     "plants": {
@@ -56,14 +56,14 @@ EXPECTED_COLUMNS: dict[str, dict[str, tuple[Any, ...]]] = {
         "dissolved_oxygen_quality": ("text", None, None, None, "NO"),
         "effluent_ph": ("numeric", None, None, None, "YES"),
         "effluent_ph_quality": ("text", None, None, None, "NO"),
-        "source_batch_id": ("bigint", None, None, None, "NO"),
+        "source_batch_id": ("bigint", None, 64, 0, "NO"),
     },
     "operator_plant_access": {
         "subject_id": ("text", None, None, None, "NO"),
         "plant_id": ("text", None, None, None, "NO"),
     },
     "forecast_issuances": {
-        "id": ("bigint", None, None, None, "NO"),
+        "id": ("bigint", None, 64, 0, "NO"),
         "plant_id": ("text", None, None, None, "NO"),
         "issued_at": ("timestamp with time zone", None, None, None, "NO"),
         "model_version": ("text", None, None, None, "NO"),
@@ -71,10 +71,10 @@ EXPECTED_COLUMNS: dict[str, dict[str, tuple[Any, ...]]] = {
         "physical_bound_rule": ("text", None, None, None, "YES"),
     },
     "forecast_hours": {
-        "issuance_id": ("bigint", None, None, None, "NO"),
+        "issuance_id": ("bigint", None, 64, 0, "NO"),
         "target_time": ("timestamp with time zone", None, None, None, "NO"),
         "predicted_flow": ("numeric", None, None, None, "NO"),
-        "hour_number": ("smallint", None, None, None, "NO"),
+        "hour_number": ("smallint", None, 16, 0, "NO"),
     },
 }
 
