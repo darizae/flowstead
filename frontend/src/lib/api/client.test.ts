@@ -49,4 +49,27 @@ describe('ApiClient', () => {
     const auth = new Headers(fetcher.mock.calls[1]?.[1]?.headers).get('Authorization');
     expect(auth).toBe('Bearer jwt');
   });
+
+  it('UT-M11-PDF requests the current public/private report and returns a safe server filename', async () => {
+    const pdf = new Uint8Array([37, 80, 68, 70, 45, 49]);
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response(pdf, {
+      status: 200,
+      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="flowstead-demo-plant-plant-01.pdf"' },
+    }));
+    const client = new ApiClient({ basePath: '/api/v1', fetcher });
+    const publicReport = await client.downloadReport('plant-01');
+    expect(fetcher.mock.calls[0]?.[0]).toBe('/api/v1/public/plants/plant-01/report.pdf');
+    expect(publicReport.fileName).toBe('flowstead-demo-plant-plant-01.pdf');
+    const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(publicReport.blob);
+    });
+    expect(bytes).toEqual(pdf);
+    client.setToken('jwt');
+    await client.downloadReport('plant-01');
+    expect(fetcher.mock.calls[1]?.[0]).toBe('/api/v1/plants/plant-01/report.pdf');
+    expect(new Headers(fetcher.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer jwt');
+  });
 });

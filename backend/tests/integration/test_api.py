@@ -92,3 +92,16 @@ def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:
     assert set(body["readings"][0]["measurements"]) == {
         "influent_flow", "rainfall", "dissolved_oxygen", "effluent_ph"
     }
+
+def test_report_pdf_public_and_private_authorization(client: TestClient) -> None:
+    _grant("operator-a", "plant-01")
+    _grant("operator-b", "plant-02")
+    public = client.get("/api/v1/public/plants/plant-01/report.pdf")
+    assert public.status_code == 200
+    assert public.headers["content-type"] == "application/pdf"
+    assert public.content.startswith(b"%PDF-")
+    assert "attachment" in public.headers["content-disposition"]
+    assert client.get("/api/v1/public/plants/unknown/report.pdf").status_code == 404
+    assert client.get("/api/v1/plants/plant-01/report.pdf").status_code == 401
+    assert client.get("/api/v1/plants/plant-01/report.pdf", headers=principal_headers("operator-a")).status_code == 200
+    assert client.get("/api/v1/plants/plant-01/report.pdf", headers=principal_headers("operator-b")).status_code == 404

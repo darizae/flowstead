@@ -29,15 +29,15 @@ The core user journey is Plants list and interactive Florida map → current met
 | Flowstead React/Tailwind | Plants, map, charts, invite/session states, exports and local UX cache | Actual API schemas, per-principal IndexedDB, approved design and browser parity |
 | OMP control-plane repository | Task execution, local runs and independent review handoff | Does not own product requirements or application data |
 
-Keep the focused ownership boundaries in `backend/importer.py`, `backend/migrate.py`, and `backend/src/flowstead_api/{main,models,auth,database,forecast,messages,message_store,messaging}.py`. API routes parse, authorize and serialize; forecast code owns the reusable calculation; the database and message-store adapters own parameterized SQL and transactions; messaging owns JetStream topology, outbox dispatch and durable consumption. Avoid service/repository proliferation, duplicate algorithm implementations or frontend-only authorization. Under `frontend/src/`, use small page/feature components and shared typed API/time/cache adapters; do not put all application state into one component or a global store.
+Keep the focused ownership boundaries in `backend/importer.py`, `backend/migrate.py`, and `backend/src/flowstead_api/{main,models,auth,database,forecast,report,messages,message_store,messaging}.py`. API routes parse, authorize and serialize; forecast code owns the reusable calculation; the report module owns bounded in-memory PDF rendering; the database and message-store adapters own parameterized SQL and transactions; messaging owns JetStream topology, outbox dispatch and durable consumption. Avoid service/repository proliferation, duplicate algorithm implementations or frontend-only authorization. Under `frontend/src/`, use small page/feature components and shared typed API/time/cache adapters; do not put all application state into one component or a global store.
 
 ### Current backend HTTP routes
 
 `backend/src/flowstead_api/main.py` is authoritative and FastAPI generates `/openapi.json` from it. The implemented application routes are:
 
 - `GET /api/v1/health`
-- public reads: `GET /api/v1/public/plants`, `GET /api/v1/public/plants/{plant_id}/latest`, `GET /api/v1/public/plants/{plant_id}/history`, and `GET /api/v1/public/plants/{plant_id}/forecast`
-- bearer-authenticated reads: `GET /api/v1/plants`, `GET /api/v1/plants/{plant_id}/latest`, `GET /api/v1/plants/{plant_id}/history`, and `GET /api/v1/plants/{plant_id}/forecast`
+- public reads: `GET /api/v1/public/plants`, `GET /api/v1/public/plants/{plant_id}/latest`, `GET /api/v1/public/plants/{plant_id}/history`, `GET /api/v1/public/plants/{plant_id}/forecast`, and `GET /api/v1/public/plants/{plant_id}/report.pdf`
+- bearer-authenticated reads: `GET /api/v1/plants`, `GET /api/v1/plants/{plant_id}/latest`, `GET /api/v1/plants/{plant_id}/history`, `GET /api/v1/plants/{plant_id}/forecast`, and `GET /api/v1/plants/{plant_id}/report.pdf`
 - bearer-authenticated asynchronous commands: `POST /api/v1/plants/{plant_id}/forecast-requests` and `GET /api/v1/forecast-requests/{correlation_id}`
 
 History requests require bounded `from` and `to` query parameters. There is no public forecast-command route.

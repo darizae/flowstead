@@ -75,6 +75,9 @@ api-dev:
 
 test-api-unit:
     uv run --project backend pytest -q backend/tests/unit/test_api_contract.py
+test-report:
+    uv run --project backend pytest -q backend/tests/unit/test_report.py backend/tests/integration/test_api.py -k report
+
 
 test-api-integration:
     python3 backend/tests/db_lifecycle.py --require-database-url

@@ -15,14 +15,24 @@ export function PlantListRow({ plant, onSelect }: { plant: PlantSummary; onSelec
   </Button>;
 }
 
-export function PlantDetailHeader({ plant, plants, onBack, onSwitch }: { plant: PlantSummary; plants: PlantSummary[]; onBack: () => void; onSwitch: (plantId: string) => void }) {
+export function PlantDetailHeader({
+  plant, plants, onBack, onSwitch, onDownload, downloadDisabled, downloadLoading,
+}: {
+  plant: PlantSummary;
+  plants: PlantSummary[];
+  onBack: () => void;
+  onSwitch: (plantId: string) => void;
+  onDownload: () => void;
+  downloadDisabled: boolean;
+  downloadLoading: boolean;
+}) {
   return <PageHeading
     className="detail-header"
     eyebrow="Plant details"
     title={plant.name}
     description={`${plant.location.city}, Florida · ${plant.timezone}`}
     breadcrumbs={<Button className="back-link" variant="ghost" size="small" type="button" onClick={onBack}>← <span>All plants</span></Button>}
-    actions={<Select label="Select plant" value={plant.plant_id} options={plants.map((item) => ({ value: item.plant_id, label: item.name }))} onValueChange={onSwitch} />}
+    actions={<div className="detail-actions"><Button type="button" variant="secondary" size="small" onClick={onDownload} disabled={downloadDisabled || downloadLoading}>{downloadLoading ? 'Preparing PDF…' : 'Download PDF'}</Button><Select label="Select plant" value={plant.plant_id} options={plants.map((item) => ({ value: item.plant_id, label: item.name }))} onValueChange={onSwitch} /></div>}
   />;
 }
 

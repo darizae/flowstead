@@ -22,6 +22,7 @@ describe('Plants navigation', () => {
     expect(screen.getByRole('link', { name: 'Plants' })).toHaveAttribute('aria-current', 'page');
     await userEvent.click(screen.getByRole('button', { name: /Alpha Plant/ }));
     expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download PDF' })).toBeEnabled();
     await userEvent.click(screen.getByRole('button', { name: /All plants/ }));
     expect(await screen.findByRole('heading', { name: 'Plant list' })).toBeInTheDocument();
   });

@@ -78,6 +78,22 @@ class Database:
             self.resolved_url(), correlation_id=correlation_id, subject_id=subject_id
         )
 
+    def plant(
+        self, plant_id: str, *, subject_id: str | None, public: bool
+    ) -> PlantRow | None:
+        """Read one Plant through the same public/private access predicate."""
+        access_clause, params = _access_clause(plant_id, subject_id=subject_id, public=public)
+        query = f"""
+            SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
+                   p.latitude, p.longitude
+            FROM app.plants AS p
+            {access_clause}
+            LIMIT 1
+        """
+        with self.connect() as connection:
+            row = connection.execute(query, params).fetchone()
+        return None if row is None else _plant_row(row)
+
     def list_plants(self, *, subject_id: str | None, public: bool) -> list[PlantRow]:
         if public:
             query = """

@@ -43,6 +43,31 @@ export class ApiClient {
     try { return await response.json() as T; }
     catch { throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
   }
+  async downloadReport(plantId: string): Promise<{ blob: Blob; fileName: string }> {
+    const headers = new Headers({ Accept: 'application/pdf' });
+    if (this.token) headers.set('Authorization', `Bearer ${this.token}`);
+    const path = `${this.basePath}${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/report.pdf`;
+    let response: Response;
+    try { response = await this.fetcher(path, { headers }); }
+    catch { throw new ApiError('network', 'Unable to reach Flowstead. Check your connection and try again.'); }
+    if (!response.ok) {
+      let detail: ErrorDetail = {};
+      try { const payload = await response.json() as { detail?: ErrorDetail }; detail = payload.detail ?? {}; } catch { /* non-json error */ }
+      if (response.status === 401) {
+        this.authFailureHandler?.(401);
+        throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
+      }
+      if (response.status === 403 || response.status === 404) {
+        this.authFailureHandler?.(response.status);
+        throw new ApiError('plant_not_found', detail.message ?? 'Plant not available.', response.status);
+      }
+      throw new ApiError('http', detail.message ?? 'Flowstead returned an error.', response.status);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const match = disposition.match(/filename=\"([A-Za-z0-9._-]+)\"/i);
+    return { blob, fileName: match?.[1] ?? 'flowstead-plant-report.pdf' };
+  }
   listPlants(): Promise<PlantListResponse> { return this.get<PlantListResponse>(this.hasPrincipal ? '/plants' : '/public/plants'); }
   latestPlant(plantId: string): Promise<LatestResponse> {
     return this.get<LatestResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/latest`);

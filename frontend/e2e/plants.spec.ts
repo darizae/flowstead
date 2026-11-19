@@ -1,3 +1,5 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
@@ -9,6 +11,7 @@ const evidenceDirectory = path.resolve(
 const channels = ['dissolved_oxygen', 'effluent_ph', 'influent_flow', 'rainfall'];
 const cardLabels = ['Influent flow', 'Rainfall', 'Dissolved oxygen', 'Effluent pH'];
 const cardUnits = ['gal/h', 'in/h', 'mg/L', 'unitless'];
+const exec = promisify(execFile);
 
 function safeFilePart(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -308,6 +311,39 @@ test('SEC-M10-EXPORT logout removes private export actions and cannot reuse stal
   await expect(page.getByTestId('history-export-footer')).toHaveCount(0);
   await expect(page.getByTestId('forecast-export-footer')).toHaveCount(0);
 });
+test('UI-M11-PDF real download is bounded, safe, and text-readable', async ({ page }, testInfo) => {
+  testInfo.annotations.push({ type: 'coverage', description: 'UI-M11-PDF: actual PDF bytes, safe filename, four units/quality flags, twelve targets, model and synthetic source' });
+  const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
+  await page.goto('/plants');
+  const payload = await (await listResponsePromise).json() as { plants: Array<{ plant_id: string; name: string }> };
+  const first = payload.plants[0];
+  if (!first) throw new Error('Public Plant fixture missing');
+  const latestResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('/latest'));
+  await page.locator('.plant-row').first().click();
+  const latestPayload = await (await latestResponsePromise).json() as { reading: { measurements: Record<string, { quality: string }> } };
+  const qualities = new Set(Object.values(latestPayload.reading.measurements).map((measurement) => measurement.quality));
+  const pdfDownload = page.waitForEvent('download');
+  await expect(page.getByRole('button', { name: 'Download PDF' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Download PDF' }).click();
+  const download = await pdfDownload;
+  const pdfPath = await download.path();
+  expect(pdfPath).toBeTruthy();
+  if (!pdfPath) throw new Error('PDF download path missing');
+  const bytes = await readFile(pdfPath);
+  expect(bytes.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+  expect(bytes.length).toBeLessThanOrEqual(256_000);
+  expect(download.suggestedFilename()).toMatch(/^flowstead-[a-z0-9-]+-plant-\d+\.pdf$/);
+  const extracted = (await exec('pdftotext', [pdfPath, '-'])).stdout;
+  const normalizedText = extracted.replace(/\s+/g, ' ');
+  expect(normalizedText).toContain(first.name.normalize('NFKD').replace(/[^\x00-\x7F]/g, '?'));
+  for (const unit of cardUnits) expect(extracted).toContain(unit);
+  for (const quality of qualities) expect(extracted).toContain(quality);
+  for (let target = 1; target <= 12; target += 1) expect(extracted).toMatch(new RegExp(`\\b${target}\\b`));
+  expect(extracted).toContain('seasonal_naive_24h_v1');
+  expect(extracted).toContain('Synthetic source: Flowstead M1 dataset');
+  await page.screenshot({ path: path.join(evidenceDirectory, `plants-${testInfo.project.name}-ui-m11-pdf.png`), fullPage: true });
+});
+
 
 test('UI-M9-PARITY signed-out anonymous mode shows Sign in and no open-signup CTA', async ({ page }) => {
   await installTestAuth(page, {});

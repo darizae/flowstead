@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 
 from .auth import (
     AuthConfigurationError,
@@ -38,6 +38,7 @@ from .models import (
     PlantSummary,
     RainfallMeasurement,
 )
+from .report import render_report, safe_report_filename
 
 MAX_HISTORY_HOURS = 168
 MAX_RESPONSE_BYTES = 512_000
@@ -99,6 +100,16 @@ def create_app(
             raise _not_found()
         return _forecast_response(result, public=True)
 
+    @app.get("/api/v1/public/plants/{plant_id}/report.pdf", tags=["public"])
+    def public_report(plant_id: str) -> Response:
+        plant = app.state.database.plant(plant_id, subject_id=None, public=True)
+        if plant is None:
+            raise _not_found()
+        latest_result = app.state.database.latest(plant_id, subject_id=None, public=True)
+        reading = latest_result[1] if latest_result is not None else None
+        forecast = app.state.database.forecast(plant_id, subject_id=None, public=True)
+        content = render_report(plant, reading, forecast, generated_at_utc=datetime.now(UTC))
+        return _report_response(plant, content)
 
     @app.get("/api/v1/plants", response_model=PlantListResponse, tags=["private"])
     def private_plants(
@@ -145,6 +156,20 @@ def create_app(
         if result is None:
             raise _not_found()
         return _forecast_response(result, public=False)
+    @app.get("/api/v1/plants/{plant_id}/report.pdf", tags=["private"])
+    def private_report(
+        plant_id: str,
+        principal: Annotated[Principal, Depends(get_current_principal)],
+    ) -> Response:
+        plant = app.state.database.plant(plant_id, subject_id=principal.sub, public=False)
+        if plant is None:
+            raise _not_found()
+        latest_result = app.state.database.latest(plant_id, subject_id=principal.sub, public=False)
+        reading = latest_result[1] if latest_result is not None else None
+        forecast = app.state.database.forecast(plant_id, subject_id=principal.sub, public=False)
+        content = render_report(plant, reading, forecast, generated_at_utc=datetime.now(UTC))
+        return _report_response(plant, content)
+
 
     @app.post(
         "/api/v1/plants/{plant_id}/forecast-requests",
@@ -323,5 +348,16 @@ def _number(value: object) -> float | None:
 
 def _not_found() -> HTTPException:
     return HTTPException(status_code=404, detail={"code": "plant_not_found", "message": "Plant not found"})
+def _report_response(plant: PlantRow, content: bytes) -> Response:
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_report_filename(plant)}"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
 
 app = create_app()
