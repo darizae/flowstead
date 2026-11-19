@@ -48,7 +48,16 @@ just frontend-typecheck
 just frontend-build
 just audit-frontend
 just test-e2e-local
+just dev
+just dev-down
 ~~~
+
+`just dev` boots the whole local stack in one command and keeps it running until interrupted
+(Ctrl-C): `message-up` (Docker PostgreSQL + NATS), `db-upgrade` (Alembic), `message-init`
+(JetStream stream/consumer), then long-running FastAPI (`127.0.0.1:8000`), the JetStream
+dispatch/forecast worker, and the Vite frontend (`127.0.0.1:5173`, proxying `/api` to the
+API). It requires loopback `DATABASE_URL`/`NATS_URL` access and fails safely when either
+`8000` or `5173` is already occupied. `just dev-down` stops the Docker Compose services.
 
 The import recipe requires independent generator output at the pinned source revision; it never supplies a default manifest, source commit, or CSV. The importer validates the pinned source/schema/seed and verifies CSV checksum, size and rows against the supplied manifest. Before invoking it, independently confirm that manifest's telemetry checksum is the canonical `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`; the importer does not pin that digest. See [the implementation contract](docs/planning/IMPLEMENTATION_SPEC.md) for the complete immutable source contract.
 

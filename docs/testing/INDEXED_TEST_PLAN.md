@@ -215,4 +215,4 @@
 | `MSG-M4B-AUTH` | Private cross-Plant command denied; public read-only cannot queue arbitrary Plant work | PASS — real HTTP/SQL assertion in `test_command_is_authorized_transactional_and_observably_queued` |
 
 
-**Inventory:** 92 distinct indexed cases. Evidence status is intentionally mixed: historical PASS entries retain their cited accepted receipts, while every other case remains **UNVERIFIED** until its asserting test and observed run are checked. An index entry alone is never coverage evidence.
+**Inventory:** 95 distinct indexed cases. Evidence status is intentionally mixed: historical PASS entries retain their cited accepted receipts, while every other case remains **UNVERIFIED** until its asserting test and observed run are checked. An index entry alone is never coverage evidence.

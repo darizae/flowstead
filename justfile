@@ -103,5 +103,75 @@ audit-frontend:
 test-e2e-local:
     uv run --project backend python frontend/e2e/run_local.py
 
+# One-command local stack: Docker PostgreSQL + NATS, Alembic upgrade, JetStream
+# topology, FastAPI API, durable forecast worker and the Vite frontend.
+dev:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    cd {{ justfile_directory() }}
+
+    export DATABASE_URL="${DATABASE_URL:-postgresql://flowstead:flowstead_local@127.0.0.1:${POSTGRES_PORT:-54329}/flowstead}"
+    export NATS_URL="${NATS_URL:-nats://127.0.0.1:${NATS_PORT:-42229}}"
+    # flowstead_api.database imports backend.importer; the repo root must be
+    # importable (same contract as backend/tests/db_lifecycle.py consumers).
+    export PYTHONPATH="{{ justfile_directory() }}${PYTHONPATH:+:$PYTHONPATH}"
+
+    for port in 8000 5173; do
+        if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "just dev: 127.0.0.1:$port is already in use; free it first" >&2
+            exit 1
+        fi
+    done
+
+    echo "== Frontend dependencies =="
+    if [ ! -d frontend/node_modules ]; then
+        npm --prefix frontend install
+    else
+        echo "frontend/node_modules present, skipping npm install"
+    fi
+
+    echo "== Docker PostgreSQL + NATS =="
+    just message-up
+
+    echo "== Alembic schema upgrade =="
+    just db-upgrade
+
+    echo "== JetStream stream/consumer topology =="
+    just message-init
+
+    plant_count=$(docker compose exec -T -e PGPASSWORD="${POSTGRES_PASSWORD:-flowstead_local}" db psql -U "${POSTGRES_USER:-flowstead}" -d "${POSTGRES_DB:-flowstead}" -tAc "select count(*) from app.plants" || echo 0)
+    if [ "$plant_count" = "0" ]; then
+        echo "NOTE: app.plants is empty; the API serves /api/v1/health only."
+        echo "      Import M1 data first, e.g.: just import-m1-local <manifest> ad5c94d1f46e79312a99cb9721f38700f24fdf6b <telemetry.csv>"
+    else
+        echo "app.plants rows: $plant_count"
+    fi
+
+    cleanup() {
+        [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null
+        [ -n "${WORKER_PID:-}" ] && kill "$WORKER_PID" 2>/dev/null
+        [ -n "${FE_PID:-}" ] && kill "$FE_PID" 2>/dev/null
+        wait 2>/dev/null
+    }
+    trap cleanup EXIT INT TERM
+
+    echo "== FastAPI on http://127.0.0.1:8000 (frontend proxies /api) =="
+    uv run --project backend uvicorn flowstead_api.main:app --app-dir backend/src --host 127.0.0.1 --port 8000 &
+    API_PID=$!
+
+    echo "== JetStream dispatch/forecast worker =="
+    uv run --project backend python -m flowstead_api.messaging run &
+    WORKER_PID=$!
+
+    echo "== Vite frontend on http://127.0.0.1:5173 =="
+    (cd frontend && exec ./node_modules/.bin/vite --host 127.0.0.1 --port 5173) &
+    FE_PID=$!
+
+    echo "Flowstead dev stack is up: frontend http://127.0.0.1:5173, API http://127.0.0.1:8000/api/v1/health"
+    wait
+
+dev-down:
+    docker compose down
+
 default:
     @just --list
