@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
@@ -11,6 +12,11 @@ const cardUnits = ['gal/h', 'in/h', 'mg/L', 'unitless'];
 
 function safeFilePart(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+function pngDimensions(bytes: Buffer): { width: number; height: number } {
+  expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(bytes.toString('ascii', 12, 16)).toBe('IHDR');
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
 test.beforeEach(async ({ context }) => {
@@ -230,6 +236,77 @@ test('UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an obse
   await expect(page.getByTestId('forecast-chart')).toContainText('Influent flow (gal/h)');
   await expect(page.getByTestId('forecast-chart')).toContainText('Observed→predicted boundary');
   await page.screenshot({ path: path.join(evidenceDirectory, `plants-${testInfo.project.name}-forecast.png`), fullPage: true });
+});
+test('UI-M10-EXPORT actual CSV parsing, PNG decoding, and bounded private actions', async ({ page }, testInfo) => {
+  testInfo.annotations.push({ type: 'coverage', description: 'UI-M10-CSV/PNG: parse history and forecast downloads; decode PNG IHDR dimensions; verify chart axes, units, timezone and evidence screenshot' });
+  const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
+  await page.goto('/plants');
+  const payload = await (await listResponsePromise).json() as { plants: Array<{ plant_id: string }> };
+  const first = payload.plants[0];
+  if (!first) throw new Error('Public Plant fixture missing');
+  await page.locator('.plant-row').first().click();
+  await expect(page.getByTestId('history-chart')).toBeVisible();
+  await expect(page.getByTestId('history-chart')).toContainText('Plant-local time');
+  await expect(page.getByTestId('history-chart')).toContainText('UTC');
+  await expect(page.getByTestId('history-chart')).toContainText('gal/h');
+  const historyFooter = page.getByTestId('history-export-footer');
+  const historyCsvDownload = page.waitForEvent('download');
+  await historyFooter.getByRole('button', { name: 'Download CSV' }).click();
+  const historyCsv = await historyCsvDownload;
+  const historyCsvPath = await historyCsv.path();
+  expect(historyCsvPath).toBeTruthy();
+  if (!historyCsvPath) throw new Error('History CSV download path missing');
+  const historyCsvText = await readFile(historyCsvPath, 'utf8');
+  const historyRows = historyCsvText.trimEnd().split('\r\n');
+  expect(historyRows[0]).toBe('\"plant_id\",\"plant_name\",\"timestamp_utc\",\"measurement\",\"unit\",\"value\",\"quality\"');
+  expect(historyRows.length).toBeGreaterThan(1);
+  expect(historyRows.slice(1).every((row) => row.includes(`"${first.plant_id}"`) && row.includes('"influent_flow"') && /"20\d\d-\d\d-\d\dT.*Z"/.test(row))).toBe(true);
+
+  const historyPngDownload = page.waitForEvent('download');
+  await historyFooter.getByRole('button', { name: 'Download PNG' }).click();
+  const historyPng = await historyPngDownload;
+  const historyPngPath = await historyPng.path();
+  expect(historyPngPath).toBeTruthy();
+  if (!historyPngPath) throw new Error('History PNG download path missing');
+  const historyPngBytes = await readFile(historyPngPath);
+  expect(pngDimensions(historyPngBytes).width).toBeGreaterThanOrEqual(1320);
+
+  await expect(page.getByTestId('forecast-chart')).toBeVisible();
+  await expect(page.getByTestId('forecast-chart')).toContainText('Influent flow (gal/h)');
+  await expect(page.getByTestId('forecast-chart')).toContainText('Observed→predicted boundary');
+  const forecastFooter = page.getByTestId('forecast-export-footer');
+  const forecastCsvDownload = page.waitForEvent('download');
+  await forecastFooter.getByRole('button', { name: 'Download CSV' }).click();
+  const forecastCsv = await forecastCsvDownload;
+  const forecastCsvPath = await forecastCsv.path();
+  expect(forecastCsvPath).toBeTruthy();
+  if (!forecastCsvPath) throw new Error('Forecast CSV download path missing');
+  const forecastRows = (await readFile(forecastCsvPath, 'utf8')).trimEnd().split('\r\n');
+  expect(forecastRows[0]).toBe('\"plant_id\",\"plant_name\",\"issue_time_utc\",\"target_time_utc\",\"measurement\",\"unit\",\"value\",\"quality\",\"model_version\"');
+  expect(forecastRows).toHaveLength(13);
+  expect(forecastRows.slice(1).every((row) => row.includes(`"${first.plant_id}"`) && row.includes('"predicted"') && row.includes('"gal/h"'))).toBe(true);
+
+  const forecastPngDownload = page.waitForEvent('download');
+  await forecastFooter.getByRole('button', { name: 'Download PNG' }).click();
+  const forecastPng = await forecastPngDownload;
+  const forecastPngPath = await forecastPng.path();
+  expect(forecastPngPath).toBeTruthy();
+  if (!forecastPngPath) throw new Error('Forecast PNG download path missing');
+  expect(pngDimensions(await readFile(forecastPngPath)).width).toBeGreaterThanOrEqual(1320);
+  await page.screenshot({ path: path.join(evidenceDirectory, `plants-${testInfo.project.name}-ui-m10-exports.png`), fullPage: true });
+});
+
+test('SEC-M10-EXPORT logout removes private export actions and cannot reuse stale chart', async ({ page }) => {
+  const token = process.env.FLOWSTEAD_TEST_PRINCIPAL_A_TOKEN;
+  expect(token).toBeTruthy();
+  await installTestAuth(page, { token, principalId: 'test-principal-a' });
+  await page.goto('/plants');
+  await page.locator('.plant-row').first().click();
+  await expect(page.getByTestId('history-export-footer')).toBeVisible();
+  await page.getByTestId('sign-out').click();
+  await expect(page.getByTestId('sign-in-entry')).toBeVisible();
+  await expect(page.getByTestId('history-export-footer')).toHaveCount(0);
+  await expect(page.getByTestId('forecast-export-footer')).toHaveCount(0);
 });
 
 test('UI-M9-PARITY signed-out anonymous mode shows Sign in and no open-signup CTA', async ({ page }) => {

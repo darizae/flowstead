@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Select } from '@darizae/marisma';
 import type { HistoryResponse } from '../../lib/api/types';
+import { downloadBlob } from '../../lib/exports/download';
+import { serializeHistoryCsv } from '../../lib/exports/csv';
+import { historyCsvFileName, historyPngFileName } from '../../lib/exports/fileNames';
+import { svgToPng } from '../../lib/exports/svgToPng';
 import {
   CHANNELS, HISTORY_RANGES, chartTicks, channelMeta, labelHistoryPoints, qualitySegments,
   type ChannelKey, type HistoryRange,
@@ -30,8 +34,6 @@ function niceDomain(values: number[]): [number, number] {
 }
 
 function formatNumber(value: number): string { return Number.isInteger(value) ? String(value) : value.toFixed(2); }
-const XML_ESCAPES: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' };
-function escapeXml(value: string): string { return value.replace(/[<>&'"]/g, (character) => XML_ESCAPES[character] ?? character); }
 
 function tickLabel(timestamp: string, history: HistoryResponse): { local: string; zone: string } {
   const label = labelHistoryPoints([{ timestampUtc: timestamp, value: 0, quality: 'valid' }], history.plant)[0];
@@ -51,6 +53,10 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
   const points = useMemo(() => segments.flat(), [segments]);
   const [min, max] = useMemo(() => niceDomain(points.map((point) => point.value)), [points]);
   const chartRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const mountedRef = useRef(true);
+  const exportKeyRef = useRef('');
+  const [pngDownloading, setPngDownloading] = useState(false);
   const [chartWidth, setChartWidth] = useState(WIDTH);
   const from = history.from_utc;
   const to = history.to_utc;
@@ -64,7 +70,6 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
     return [allTicks[0], allTicks[middle], allTicks[allTicks.length - 1]];
   }, [allTicks, chartWidth]);
   const tickLabels = useMemo(() => ticks.map((tick) => tickLabel(tick, history)), [ticks, history]);
-  const downloadTickLabels = useMemo(() => allTicks.map((tick) => tickLabel(tick, history)), [allTicks, history]);
   const yTicks = [0, 0.5, 1].map((fraction) => ({ fraction, value: min + (max - min) * (1 - fraction) }));
   const labels = labelHistoryPoints(points, history.plant);
 
@@ -79,39 +84,28 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  const exportKey = `${history.plant.plant_id}:${from}:${to}:${range}:${channel}`;
+  exportKeyRef.current = exportKey;
+  const downloadCsv = () => {
+    downloadBlob(new Blob([serializeHistoryCsv(history, channel)], { type: 'text/csv;charset=utf-8' }), historyCsvFileName(history.plant, channel, range));
+  };
+  const downloadPng = async () => {
+    const svg = svgRef.current;
+    if (!svg || pngDownloading) return;
+    const requestKey = exportKeyRef.current;
+    setPngDownloading(true);
+    try {
+      const blob = await svgToPng(svg, {
+        title: `${meta.axisLabel} — ${range}h — ${history.plant.name}`,
+        legend: `Range: ${range} hours · Valid readings: ${points.length} · Missing/invalid readings shown as gaps · Timezone: ${history.plant.timezone}`,
+      });
+      if (mountedRef.current && requestKey === exportKeyRef.current) downloadBlob(blob, historyPngFileName(history.plant, channel, range));
+    } finally {
+      if (mountedRef.current) setPngDownloading(false);
+    }
+  };
 
-  const downloadHref = useMemo(() => {
-    const downloadX = (timestamp: string) => xPosition(timestamp, from, to, WIDTH, PADDING);
-    const lines = [
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img">`,
-      `<title>${escapeXml(meta.axisLabel)} — Plant-local time</title>`,
-      `<desc>${escapeXml(meta.axisLabel)} over ${escapeXml(history.plant.name)} history. Missing and invalid readings remain gaps.</desc>`,
-      '<style>text{font:12px sans-serif;fill:#183734}.axis{stroke:#54736c;stroke-width:1}.grid{stroke:#d5e1dc;stroke-width:1}.line{fill:none;stroke:#087968;stroke-width:2}.point{fill:#087968;stroke:#fff;stroke-width:1}</style>',
-      `<line class="axis" x1="${PADDING.left}" y1="${HEIGHT - PADDING.bottom}" x2="${WIDTH - PADDING.right}" y2="${HEIGHT - PADDING.bottom}"/>`,
-      `<line class="axis" x1="${PADDING.left}" y1="${PADDING.top}" x2="${PADDING.left}" y2="${HEIGHT - PADDING.bottom}"/>`,
-      ...yTicks.flatMap(({ fraction, value }) => [
-        `<line class="grid" x1="${PADDING.left}" y1="${PADDING.top + fraction * (HEIGHT - PADDING.top - PADDING.bottom)}" x2="${WIDTH - PADDING.right}" y2="${PADDING.top + fraction * (HEIGHT - PADDING.top - PADDING.bottom)}"/>`,
-        `<text x="${PADDING.left - 10}" y="${PADDING.top + fraction * (HEIGHT - PADDING.top - PADDING.bottom) + 4}" text-anchor="end">${escapeXml(formatNumber(value))}</text>`,
-      ]),
-      ...segments.map((segment) => `<polyline class="line" points="${segment.map((point) => `${downloadX(point.timestampUtc)},${y(point.value)}`).join(' ')}"/>`),
-      ...labels.map((point) => `<circle class="point" cx="${downloadX(point.timestampUtc)}" cy="${y(point.value)}" r="2.5"><title>${escapeXml(point.label)}</title></circle>`),
-      ...allTicks.flatMap((tick, index) => {
-        const anchor = index === 0 ? 'start' : index === allTicks.length - 1 ? 'end' : 'middle';
-        const tickX = downloadX(tick);
-        return [
-          `<line class="axis" x1="${tickX}" y1="${HEIGHT - PADDING.bottom}" x2="${tickX}" y2="${HEIGHT - PADDING.bottom + 5}"/>`,
-          `<text x="${tickX}" y="${HEIGHT - PADDING.bottom + 20}" text-anchor="${anchor}"><tspan x="${tickX}" dy="0">${escapeXml(downloadTickLabels[index].local)}</tspan><tspan x="${tickX}" dy="12">${escapeXml(downloadTickLabels[index].zone)}</tspan></text>`,
-        ];
-      }),
-      `<text x="${WIDTH / 2}" y="${HEIGHT - 10}" text-anchor="middle">Plant-local time</text>`,
-      `<text transform="translate(16 ${HEIGHT / 2}) rotate(-90)" text-anchor="middle">${escapeXml(meta.axisLabel)}</text>`,
-      `<text x="${PADDING.left}" y="16">${escapeXml(meta.axisLabel)}</text>`,
-      `<text x="${PADDING.left}" y="36">Timezone: ${escapeXml(history.plant.timezone)}</text>`,
-      `<text x="${PADDING.left}" y="${HEIGHT - 2}">Missing/invalid readings shown as gaps · ${points.length} valid readings</text>`,
-      '</svg>',
-    ].join('');
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(lines)}`;
-  }, [allTicks, downloadTickLabels, from, history, labels, meta.axisLabel, min, max, points.length, segments, to, yTicks]);
 
   return <section className="history-chart" data-testid="history-chart" aria-labelledby="history-chart-title">
     <div className="history-controls">
@@ -121,10 +115,10 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
       </div>
       <Select label="History range" value={String(range)} options={HISTORY_RANGES.map((value) => ({ value: String(value), label: value === 168 ? '7 days' : `${value} hours` }))} onValueChange={(value) => onRangeChange(Number(value) as HistoryRange)} />
     </div>
-    <div className="chart-heading"><h3 id="history-chart-title">{meta.axisLabel}</h3><a className="chart-download" href={downloadHref} download={`flowstead-${channel}-${range}h.svg`}>Download SVG</a></div>
+    <div className="chart-heading"><h3 id="history-chart-title">{meta.axisLabel}</h3></div>
     <p className="chart-status" aria-live="polite">Quality: valid values shown; missing and invalid readings are gaps.</p>
     {points.length === 0 && <p className="chart-empty" role="status">No valid readings in this window. Missing and invalid readings are shown as gaps.</p>}
-    <div className="chart-scroll" ref={chartRef}><svg className="history-svg" viewBox={`0 0 ${chartWidth} ${HEIGHT}`} role="img" aria-labelledby="history-chart-title history-chart-description">
+    <div className="chart-scroll" ref={chartRef}><svg ref={svgRef} className="history-svg" viewBox={`0 0 ${chartWidth} ${HEIGHT}`} role="img" aria-labelledby="history-chart-title history-chart-description">
       <desc id="history-chart-description">{meta.axisLabel} over the selected period for {history.plant.name}. The horizontal axis is Plant-local time.</desc>
       <line className="chart-axis" x1={padding.left} y1={HEIGHT - padding.bottom} x2={chartWidth - padding.right} y2={HEIGHT - padding.bottom} />
       <line className="chart-axis" x1={padding.left} y1={padding.top} x2={padding.left} y2={HEIGHT - padding.bottom} />
@@ -136,5 +130,6 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
       <text className="chart-axis-title" transform={`translate(16 ${HEIGHT / 2}) rotate(-90)`} textAnchor="middle">{meta.axisLabel}</text>
     </svg></div>
     <div className="quality-legend" aria-label="Chart quality legend"><span><i className="legend-swatch valid" />Valid</span><span><i className="legend-swatch gap" />Missing/invalid gap</span><span>{points.length} valid readings</span></div>
+    <div className="chart-footer" data-testid="history-export-footer"><div className="chart-export-actions"><Button type="button" size="small" variant="secondary" onClick={downloadCsv}>Download CSV</Button><Button type="button" size="small" variant="secondary" onClick={() => void downloadPng()} disabled={pngDownloading}>{pngDownloading ? 'Preparing PNG…' : 'Download PNG'}</Button></div></div>
   </section>;
 }

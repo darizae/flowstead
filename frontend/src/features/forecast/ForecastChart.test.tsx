@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ForecastResponse } from '../../lib/api/types';
-import { ForecastChart } from './ForecastChart';
+import { ForecastChart, visibleForecastAxisTicks } from './ForecastChart';
 import { forecastPoints } from './transforms';
 
 const plant = (id = 'plant-01') => ({ plant_id: id, name: 'Alpha Plant', location: { city: 'Test City', state_code: 'FL' as const, latitude: 27, longitude: -81 }, timezone: 'America/New_York', links: { latest: '', history: '', forecast: '' } });
@@ -58,5 +58,13 @@ describe('UT-M9-FORECAST', () => {
     expect(screen.getByText('No forecast targets are available for this Plant.')).toBeInTheDocument();
     expect(screen.queryAllByTestId('forecast-target')).toHaveLength(0);
     expect(screen.getByText(/Targets are API-predicted values, never client-computed/)).toBeInTheDocument();
+  });
+
+});
+describe('UT-M10-FORECAST-AXIS', () => {
+  it('keeps first, middle, and last time labels on narrow chart sources', () => {
+    const ticks = ['first', 'second', 'middle', 'fourth', 'last'];
+    expect(visibleForecastAxisTicks(ticks, 390)).toEqual(['first', 'middle', 'last']);
+    expect(visibleForecastAxisTicks(ticks, 760)).toEqual(ticks);
   });
 });
