@@ -15,6 +15,25 @@ export interface Measurements {
 export interface HistoryReading { plant_id: string; timestamp_utc: string; latest: false; measurements: Measurements }
 export interface HistoryResponse { plant: PlantSummary; from_utc: string; to_utc: string; readings: HistoryReading[] }
 
+export type ForecastStatus = 'available' | 'unavailable';
+export interface ForecastHour {
+  hour_number: number;
+  target_time_utc: string;
+  predicted_flow_gal_h: number;
+  units: 'gal/h';
+  source: string;
+}
+export interface ForecastResponse {
+  plant: PlantSummary;
+  status: ForecastStatus;
+  issued_at_utc: string | null;
+  model_version: string;
+  source_revision: string | null;
+  physical_bound_rule: string;
+  forecasts: ForecastHour[];
+  unavailable_reason: string | null;
+}
+
 export type HistoryWindowHours = 24 | 72 | 168;
 export interface LatestReading { plant_id: string; timestamp_utc: string; latest: true; measurements: Measurements }
 export interface LatestResponse { latest: true; plant: PlantSummary; reading: LatestReading }
