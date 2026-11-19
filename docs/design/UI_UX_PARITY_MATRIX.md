@@ -21,6 +21,18 @@ Browser runners use local FastAPI + Docker PostgreSQL seeded with the pinned M1 
 
 The React/Vite foundation provides API-backed Plants overview/detail/back routes, explicit loading/empty/error/non-leaking unavailable states, task-008 map placeholder, four latest measurement cards, and bounded versioned IndexedDB preference storage. The bounded runner is `just test-e2e-local`; it requires `DATABASE_URL`, `FLOWSTEAD_M1_MANIFEST`, and `FLOWSTEAD_M1_DATA`, independently verifies source SHA `ad5c94d1f46e79312a99cb9721f38700f24fdf6b` and telemetry SHA-256 `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`, then records Playwright HTML/report artifacts under `docs/design/evidence/`. The browser test writes `plants-{desktop,mobile}-{overview,detail}.png` and `{desktop,mobile}-ui-m7-parity-public-list-detail-back-deep-link-and-reload.zip` there. The attempted browser gate `just test-e2e-local` stopped before Playwright because `DATABASE_URL` was not set; functional and visual outcomes remain UNVERIFIED.
 
+## T-007a Marisma integration receipt
+
+Tested source commit: `4a14ae6b2838b7d0b4e104dbc42dcbc250f42801`. The frontend installs exact `@darizae/marisma@0.2.0`, imports its compiled theme and source, and renders its `AppShell`, `AppNavbar`, `PageHeading`, `Card`, `Button`, `Select`, and `Spinner` primitives under the Reedwater light theme.
+
+| Case | Functional evidence | Visual evidence | Status |
+| --- | --- | --- | --- |
+| `UT-M7A-MARISMA` | `just test-frontend-unit`, `just frontend-build`, and `just audit-frontend` passed; npm resolved Marisma 0.2.0 with React 19 and Tailwind 4 peers | Not applicable | PASS |
+| `UI-M7A-RENDER` | Real local PostgreSQL/FastAPI and managed Chromium loaded five M1 Plants; keyboard Tab focus and Enter opened a Plant, All plants returned, the Plant select was labelled, and four latest metrics rendered | Independent Chromium review found no Marisma regression or overflow | PASS |
+| `UI-M7A-PARITY` | 1330×900 and 390×844 overview/detail interactions passed with visible focus and no horizontal overflow | `docs/design/evidence/t007a-{desktop,mobile}-{overview,detail}.png`; NO DEVIATION from the approved hierarchy | PASS |
+
+`just test-e2e-local` reached the Playwright launch after verified M1 import and the FastAPI runner fix, but the local Playwright Chromium framework was incomplete and two repair downloads did not complete. The Playwright HTML-report gate therefore remains UNVERIFIED; the PASS results above come from separate real managed-Chromium interactions against the same local API/database, not from the failed Playwright command.
+
 | Flow / screen + state | Approved baseline and copy/hierarchy | Interaction, navigation and retained state | Size/accessibility & evidence | Status |
 | --- | --- | --- | --- | --- |
 | Public Plants overview/loading/empty | Header + Plants list + Florida map; all five public fictional Plants; `Sign in`, actual attribution | Select Plant via list or map; return without stale private data | 1330px + 390px; keyboard; real tiles and fallback; `just test-e2e-local` attempted, failed before Playwright: `DATABASE_URL is required`; report path `docs/design/evidence/playwright-report/` | UNVERIFIED |
