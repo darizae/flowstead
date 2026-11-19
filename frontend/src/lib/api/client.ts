@@ -1,4 +1,4 @@
-import { ApiError, type HistoryResponse, type LatestResponse, type PlantListResponse, type ErrorDetail } from './types';
+import { ApiError, type ForecastResponse, type HistoryResponse, type LatestResponse, type PlantListResponse, type ErrorDetail } from './types';
 
 export interface ApiClientOptions { basePath?: string; fetcher?: typeof fetch; token?: string }
 
@@ -8,6 +8,7 @@ export class ApiClient {
   private readonly basePath: string;
   private readonly fetcher: typeof fetch;
   private token?: string;
+  private authFailureHandler?: (status: 401 | 403 | 404) => void;
   constructor(options: ApiClientOptions = {}) {
     this.basePath = normalizeBasePath(options.basePath ?? import.meta.env.VITE_API_BASE_PATH ?? '/api/v1');
     this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
@@ -15,6 +16,7 @@ export class ApiClient {
   }
   setToken(token: string | undefined): void { this.token = token; }
   clearToken(): void { this.token = undefined; }
+  setAuthFailureHandler(handler: ((status: 401 | 403 | 404) => void) | undefined): void { this.authFailureHandler = handler; }
   get hasPrincipal(): boolean { return Boolean(this.token); }
   private async get<T>(resource: string): Promise<T> {
     const headers = new Headers({ Accept: 'application/json' });
@@ -25,9 +27,18 @@ export class ApiClient {
     if (!response.ok) {
       let detail: ErrorDetail = {};
       try { const payload = await response.json() as { detail?: ErrorDetail }; detail = payload.detail ?? {}; } catch { /* non-json error */ }
-      if (response.status === 401) throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
-      if (response.status === 404) throw new ApiError('plant_not_found', 'Plant not available.', 404);
-      throw new ApiError('http', detail.message ?? `Flowstead returned ${response.status}.`, response.status);
+      if (response.status === 401) {
+        this.authFailureHandler?.(401);
+        throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
+      }
+      if (response.status === 403) {
+        this.authFailureHandler?.(403);
+        throw new ApiError('plant_not_found', 'Plant not available.', 403);
+      }
+      if (response.status === 404) {
+        this.authFailureHandler?.(404);
+        throw new ApiError('plant_not_found', 'Plant not available.', 404);
+      }
     }
     try { return await response.json() as T; }
     catch { throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
@@ -39,6 +50,9 @@ export class ApiClient {
   historyPlant(plantId: string, from: string, to: string): Promise<HistoryResponse> {
     const params = new URLSearchParams({ from, to });
     return this.get<HistoryResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/history?${params.toString()}`);
+  }
+  forecastPlant(plantId: string): Promise<ForecastResponse> {
+    return this.get<ForecastResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/forecast`);
   }
 }
 

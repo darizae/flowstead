@@ -37,4 +37,16 @@ describe('ApiClient', () => {
     await new ApiClient({ basePath: '/api/v1', fetcher }).historyPlant('p1', '2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z');
     expect(fetcher.mock.calls[0]?.[0]).toBe('/api/v1/public/plants/p1/history?from=2025-01-01T00%3A00%3A00.000Z&to=2025-01-02T00%3A00%3A00.000Z');
   });
+
+  it('UT-M9-FORECAST requests the forecast endpoint (private when token set)', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response(JSON.stringify({ status: 'available', plant: {}, forecasts: [] }), { status: 200 }));
+    const client = new ApiClient({ basePath: '/api/v1', fetcher });
+    await client.forecastPlant('p1');
+    expect(fetcher.mock.calls[0]?.[0]).toBe('/api/v1/public/plants/p1/forecast');
+    client.setToken('jwt');
+    await client.forecastPlant('p1');
+    expect(fetcher.mock.calls[1]?.[0]).toBe('/api/v1/plants/p1/forecast');
+    const auth = new Headers(fetcher.mock.calls[1]?.[1]?.headers).get('Authorization');
+    expect(auth).toBe('Bearer jwt');
+  });
 });
