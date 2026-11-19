@@ -1,4 +1,4 @@
-import { ApiError, type LatestResponse, type PlantListResponse, type ErrorDetail } from './types';
+import { ApiError, type HistoryResponse, type LatestResponse, type PlantListResponse, type ErrorDetail } from './types';
 
 export interface ApiClientOptions { basePath?: string; fetcher?: typeof fetch; token?: string }
 
@@ -35,6 +35,10 @@ export class ApiClient {
   listPlants(): Promise<PlantListResponse> { return this.get<PlantListResponse>(this.hasPrincipal ? '/plants' : '/public/plants'); }
   latestPlant(plantId: string): Promise<LatestResponse> {
     return this.get<LatestResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/latest`);
+  }
+  historyPlant(plantId: string, from: string, to: string): Promise<HistoryResponse> {
+    const params = new URLSearchParams({ from, to });
+    return this.get<HistoryResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/history?${params.toString()}`);
   }
 }
 

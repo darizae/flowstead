@@ -31,4 +31,10 @@ describe('ApiClient', () => {
     const missing = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ detail: { code: 'plant_not_found', message: 'Plant not found' } }), { status: 404 }));
     await expect(new ApiClient({ fetcher: missing }).latestPlant('not-a-real-id')).rejects.toMatchObject({ code: 'plant_not_found', status: 404 });
   });
+
+  it('UT-M8-HISTORY requests the selected Plant-scoped half-open UTC window', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ plant: {}, from_utc: '', to_utc: '', readings: [] }), { status: 200 }));
+    await new ApiClient({ basePath: '/api/v1', fetcher }).historyPlant('p1', '2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z');
+    expect(fetcher.mock.calls[0]?.[0]).toBe('/api/v1/public/plants/p1/history?from=2025-01-01T00%3A00%3A00.000Z&to=2025-01-02T00%3A00%3A00.000Z');
+  });
 });

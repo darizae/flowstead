@@ -12,6 +12,10 @@ export interface Measurements {
   dissolved_oxygen: Measurement & { units: 'mg/L' };
   effluent_ph: Measurement & { units: 'unitless' };
 }
+export interface HistoryReading { plant_id: string; timestamp_utc: string; latest: false; measurements: Measurements }
+export interface HistoryResponse { plant: PlantSummary; from_utc: string; to_utc: string; readings: HistoryReading[] }
+
+export type HistoryWindowHours = 24 | 72 | 168;
 export interface LatestReading { plant_id: string; timestamp_utc: string; latest: true; measurements: Measurements }
 export interface LatestResponse { latest: true; plant: PlantSummary; reading: LatestReading }
 
