@@ -138,11 +138,15 @@ def _start_api(env: dict[str, str]) -> subprocess.Popen[bytes]:
     if _port_occupied(8000):
         raise RunnerError("refusing to start FastAPI: 127.0.0.1:8000 is already occupied")
     process: subprocess.Popen[bytes] | None = None
+    process_env = env.copy()
+    process_env["PYTHONPATH"] = os.pathsep.join(
+        value for value in (str(ROOT), process_env.get("PYTHONPATH")) if value
+    )
     try:
         process = subprocess.Popen(
             ["uv", "run", "--project", "backend", "uvicorn", "flowstead_api.main:app", "--app-dir", "backend/src", "--host", "127.0.0.1", "--port", "8000"],
             cwd=ROOT,
-            env=env,
+            env=process_env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,

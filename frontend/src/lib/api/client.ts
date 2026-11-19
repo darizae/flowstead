@@ -10,7 +10,7 @@ export class ApiClient {
   private token?: string;
   constructor(options: ApiClientOptions = {}) {
     this.basePath = normalizeBasePath(options.basePath ?? import.meta.env.VITE_API_BASE_PATH ?? '/api/v1');
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
     this.token = options.token;
   }
   setToken(token: string | undefined): void { this.token = token; }

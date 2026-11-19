@@ -13,7 +13,10 @@ describe('Plants navigation', () => {
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url) => new Response(JSON.stringify(String(url).endsWith('/latest') ? latest('a') : { plants: [plant('a', 'Alpha Plant')] }), { status: 200 }));
     render(<FlowsteadApp client={new ApiClient({ fetcher })} />);
     expect(await screen.findByText('Alpha Plant')).toBeInTheDocument();
-    expect(screen.queryByText('Preview states')).not.toBeInTheDocument();
+    expect(screen.getByTestId('marisma-scope')).toHaveAttribute('data-marisma-accent', 'reedwater');
+    expect(screen.getByTestId('marisma-scope')).toHaveAttribute('data-marisma-mode', 'light');
+    expect(screen.getByRole('button', { name: /Alpha Plant/ })).toHaveClass('plant-row');
+    expect(screen.getByRole('link', { name: 'Plants' })).toHaveAttribute('aria-current', 'page');
     await userEvent.click(screen.getByRole('button', { name: /Alpha Plant/ }));
     expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /All plants/ }));

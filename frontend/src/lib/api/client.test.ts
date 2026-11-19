@@ -11,6 +11,20 @@ describe('ApiClient', () => {
     expect(JSON.stringify(import.meta.env)).not.toContain('SERVICE_ROLE');
   });
 
+  it('UT-M7-FAIL calls the browser fetch function with its required global receiver', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetcher = vi.fn(async function (this: unknown): Promise<Response> {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return new Response(JSON.stringify({ plants: [] }), { status: 200 });
+    });
+    globalThis.fetch = fetcher as typeof fetch;
+    try {
+      await expect(new ApiClient().listPlants()).resolves.toEqual({ plants: [] });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('UT-M7-FAIL maps 401 and non-leaking 404 responses', async () => {
     const unauthorized = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ detail: { code: 'unauthorized' } }), { status: 401 }));
     await expect(new ApiClient({ fetcher: unauthorized }).listPlants()).rejects.toMatchObject({ code: 'unauthorized', status: 401 });

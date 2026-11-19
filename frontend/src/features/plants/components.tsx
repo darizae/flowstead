@@ -1,3 +1,4 @@
+import { Button, Card, PageHeading, Select } from '@darizae/marisma';
 import type { Measurement, Measurements, PlantSummary } from '../../lib/api/types';
 
 export const METRIC_ORDER = [
@@ -8,20 +9,21 @@ export const METRIC_ORDER = [
 ] as const satisfies ReadonlyArray<[keyof Measurements, string, string]>;
 
 export function PlantListRow({ plant, onSelect }: { plant: PlantSummary; onSelect: () => void }) {
-  return <button className="plant-row" type="button" onClick={onSelect}>
+  return <Button className="plant-row" variant="secondary" fullWidth type="button" onClick={onSelect}>
     <span><strong>{plant.name}</strong><small>{plant.location.city}, {plant.location.state_code}</small></span>
     <span aria-hidden="true" className="arrow">→</span>
-  </button>;
+  </Button>;
 }
 
 export function PlantDetailHeader({ plant, plants, onBack, onSwitch }: { plant: PlantSummary; plants: PlantSummary[]; onBack: () => void; onSwitch: (plantId: string) => void }) {
-  return <>
-    <button className="back-link" type="button" onClick={onBack}>← <span>All plants</span></button>
-    <div className="detail-header">
-      <div><p className="eyebrow">Plant details</p><h1>{plant.name}</h1><p className="lede">{plant.location.city}, Florida · {plant.timezone}</p></div>
-      <label className="switcher">Plant <select aria-label="Select plant" value={plant.plant_id} onChange={(event) => onSwitch(event.target.value)}>{plants.map((item) => <option key={item.plant_id} value={item.plant_id}>{item.name}</option>)}</select></label>
-    </div>
-  </>;
+  return <PageHeading
+    className="detail-header"
+    eyebrow="Plant details"
+    title={plant.name}
+    description={`${plant.location.city}, Florida · ${plant.timezone}`}
+    breadcrumbs={<Button className="back-link" variant="ghost" size="small" type="button" onClick={onBack}>← <span>All plants</span></Button>}
+    actions={<Select label="Select plant" value={plant.plant_id} options={plants.map((item) => ({ value: item.plant_id, label: item.name }))} onValueChange={onSwitch} />}
+  />;
 }
 
 function measurementCopy(measurement: Measurement): { value: string; status: string } {
@@ -33,6 +35,6 @@ function measurementCopy(measurement: Measurement): { value: string; status: str
 export function MetricCards({ measurements }: { measurements: Measurements }) {
   return <div className="metrics" aria-label="Latest measurements">{METRIC_ORDER.map(([key, label, unit]) => {
     const copy = measurementCopy(measurements[key]);
-    return <article className="metric-card surface" key={key}><p>{label}</p><strong>{copy.value} <small>{copy.value === '—' ? '' : unit}</small></strong><span>{copy.status}{copy.value === '—' ? ` · ${unit}` : ''}</span></article>;
+    return <Card className="metric-card" key={key}><p>{label}</p><strong>{copy.value} <small>{copy.value === '—' ? '' : unit}</small></strong><span>{copy.status}{copy.value === '—' ? ` · ${unit}` : ''}</span></Card>;
   })}</div>;
 }

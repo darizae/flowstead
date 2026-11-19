@@ -1,5 +1,6 @@
 @import "tailwindcss";
-
+@import "@darizae/marisma/theme.css";
+@source "../node_modules/@darizae/marisma/dist";
 :root {
   --ink: #183734;
   --ink-muted: #526a67;
