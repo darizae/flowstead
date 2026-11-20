@@ -35,7 +35,7 @@ Keep the focused ownership boundaries in `backend/importer.py`, `backend/migrate
 
 `backend/src/flowstead_api/main.py` is authoritative and FastAPI generates `/openapi.json` from it. The implemented application routes are:
 
-- `GET /api/v1/health`
+- `GET /api/v1/health` (liveness; process up), `GET /api/v1/health/live`, and `GET /api/v1/health/ready` (readiness; returns 503 when the database is unreachable)
 - public reads: `GET /api/v1/public/plants`, `GET /api/v1/public/plants/{plant_id}/latest`, `GET /api/v1/public/plants/{plant_id}/history`, `GET /api/v1/public/plants/{plant_id}/forecast`, and `GET /api/v1/public/plants/{plant_id}/report.pdf`
 - bearer-authenticated reads: `GET /api/v1/plants`, `GET /api/v1/plants/{plant_id}/latest`, `GET /api/v1/plants/{plant_id}/history`, `GET /api/v1/plants/{plant_id}/forecast`, and `GET /api/v1/plants/{plant_id}/report.pdf`
 - bearer-authenticated asynchronous commands: `POST /api/v1/plants/{plant_id}/forecast-requests` and `GET /api/v1/forecast-requests/{correlation_id}`

@@ -2,7 +2,13 @@ import { ApiError, type ForecastJobResponse, type ForecastResponse, type History
 
 export interface ApiClientOptions { basePath?: string; fetcher?: typeof fetch; token?: string }
 
-function normalizeBasePath(value: string): string { return `/${value.replace(/^\/+|\/+$/g, '')}`; }
+// Accept either a same-origin path (dev proxy "/api/v1") or an absolute HTTPS
+// API origin (host-separated production build via VITE_API_URL).
+function normalizeBasePath(value: string): string {
+  const raw = value.trim();
+  if (/^https?:\/\//i.test(raw)) return raw.replace(/\/+$/, '');
+  return `/${raw.replace(/^\/+|\/+$/g, '')}`;
+}
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export class ApiClient {
@@ -11,7 +17,7 @@ export class ApiClient {
   private token?: string;
   private authFailureHandler?: (status: 401 | 403 | 404) => void;
   constructor(options: ApiClientOptions = {}) {
-    this.basePath = normalizeBasePath(options.basePath ?? import.meta.env.VITE_API_BASE_PATH ?? '/api/v1');
+    this.basePath = normalizeBasePath(options.basePath ?? import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_PATH ?? '/api/v1');
     this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
     this.token = options.token;
   }

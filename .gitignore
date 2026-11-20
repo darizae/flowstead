@@ -9,6 +9,7 @@ priv/
 # Local agent MCP config may refer to owner-authenticated development services
 .omp/mcp.json
 generated-m1-*/
+.deploy_test/
 backend/.venv/
 backend/.pytest_cache/
 backend/__pycache__/

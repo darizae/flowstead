@@ -114,6 +114,26 @@ frontend-typecheck:
 frontend-build:
     npm --prefix frontend run build
 
+# Production backend+worker image from the committed uv.lock; non-root, no
+# secrets baked in. Build context is backend/ (Dockerfile + .dockerignore there).
+build-backend-image:
+    docker build -f backend/Dockerfile -t flowstead-backend:local backend
+
+# Production static frontend build configured for an explicit HTTPS API URL.
+# Default is the proposed (NOT assigned) host-separated API; override with
+# VITE_API_URL for a real target.
+build:
+    VITE_API_URL=$${VITE_API_URL:-https://api.flowstead.darizae.dev/api/v1} npm --prefix frontend run build
+
+# Local staging-like container acceptance (OPS-M15-BUILD, IT-M15-START,
+# SEC-M15-CONFIG, OPS-M15-RECOVER): real PostgreSQL + NATS/JetStream, Alembic
+# upgrade-to-head, M1 import, API/health/bounds/CORS/auth, outbox replay through
+# a worker restart, and backup/reseed/rollback on a disposable DB copy.
+build-smoke: build-backend-image build
+    uv run --project backend python scripts/test_deploy_local.py
+
+test-deploy-local: build-smoke
+
 audit-frontend:
     npm --prefix frontend audit --audit-level=moderate
 

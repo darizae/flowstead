@@ -81,6 +81,22 @@ def create_app(
             app.state.auth_verifier = UnavailableVerifier()
             app.state.auth_configuration_error = str(error)
 
+    @app.get("/api/v1/health/live", response_model=HealthResponse, tags=["system"])
+    def health_live() -> HealthResponse:
+        return HealthResponse()
+
+    @app.get("/api/v1/health/ready", response_model=HealthResponse, tags=["system"])
+    def health_ready() -> HealthResponse:
+        try:
+            with app.state.database.connect() as connection:
+                connection.execute("SELECT 1")
+        except Exception as error:  # noqa: BLE001 - readiness must fail closed on any DB fault
+            raise HTTPException(
+                status_code=503,
+                detail={"code": "not_ready", "message": "database is not reachable"},
+            ) from error
+        return HealthResponse()
+
     @app.get("/api/v1/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
         return HealthResponse()

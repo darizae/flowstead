@@ -165,10 +165,10 @@
 
 | ID | Intended observable assertion (from task) | Evidence status |
 |---|---|---|
-| `OPS-M15-BUILD` | production image and static frontend build locally from locks, no secret in image or bundle. | UNVERIFIED until asserting test+run checked |
-| `IT-M15-START` | local container can reach isolated local Postgres with scripted config, run migration, boot API/health, serve bounded requests and shut down. | UNVERIFIED until asserting test+run checked |
-| `SEC-M15-CONFIG` | missing secret/auth config fails closed, CORS restricts reviewed origin, no open signup or accidental public SQL endpoint. | UNVERIFIED until asserting test+run checked |
-| `OPS-M15-RECOVER` | documented local restore/reseed/rollback is actually exercised on disposable DB copy, with known data checksums. | UNVERIFIED until asserting test+run checked |
+| `OPS-M15-BUILD` | production image and static frontend build locally from locks, no secret in image or bundle. | PASS — `just test-deploy-local` (`scripts/test_deploy_local.py`): image runs uid 10001, no secret env; bundle has explicit HTTPS API URL and no secret string leaks. |
+| `IT-M15-START` | local container can reach isolated local Postgres with scripted config, run migration, boot API/health, serve bounded requests and shut down. | PASS — `just test-deploy-local`: isolated Compose stack, real Alembic head `003_jetstream_messages`, M1 import, liveness/readiness, bounded 413/public list, message to completion, outbox replay after worker restart, API and worker exit 0 on SIGTERM. |
+| `SEC-M15-CONFIG` | missing secret/auth config fails closed, CORS restricts reviewed origin, no open signup or accidental public SQL endpoint. | PASS — `just test-deploy-local`: private route 401 with no auth config, allowed origin echoed / unreviewed origin not, no `/signup`, `/sql` or `/query` endpoint. |
+| `OPS-M15-RECOVER` | documented local restore/reseed/rollback is actually exercised on disposable DB copy, with known data checksums. | PASS — `just test-deploy-local`: `pg_dump` restore reproduces the pre-backup seed fingerprint; fresh re-import reproduces the import fingerprint; image digest recorded for rollback. |
 
 ### T-016 — [task source](../planning/tasks/016_public-demo-provision-and-deploy__codex-luna-5-6__high.md)
 

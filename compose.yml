@@ -29,6 +29,70 @@ services:
     volumes:
       - flowstead-nats:/data
 
+  # Local staging-like production build: these use the image built by
+  # `just build-backend-image`. Bounding, CORS, auth and secret handling come
+  # only from the documented .env / host secret store, never from the image.
+  api:
+    image: flowstead-backend:local
+    profiles: ["staging"]
+    command: ["uvicorn", "flowstead_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      # Server-only; never ship this to the browser bundle.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flowstead}:${POSTGRES_PASSWORD:-flowstead_local}@db:5432/${POSTGRES_DB:-flowstead}
+      NATS_URL: nats://nats:4222
+      FLOWSTEAD_CORS_ORIGINS: ${FLOWSTEAD_CORS_ORIGINS:-http://127.0.0.1:5173,http://localhost:5173}
+      FLOWSTEAD_AUTH_MODE: ${FLOWSTEAD_AUTH_MODE:-supabase}
+      SUPABASE_AUTH_URL: ${SUPABASE_AUTH_URL:-}
+      SUPABASE_JWT_ISSUER: ${SUPABASE_JWT_ISSUER:-}
+      SUPABASE_JWT_AUDIENCE: ${SUPABASE_JWT_AUDIENCE:-authenticated}
+      SUPABASE_JWT_ALGORITHMS: ${SUPABASE_JWT_ALGORITHMS:-ES256,RS256}
+      SUPABASE_AUTH_VERIFICATION_MODE: ${SUPABASE_AUTH_VERIFICATION_MODE:-jwks}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      FLOWSTEAD_TRUSTED_PROXIES: ${FLOWSTEAD_TRUSTED_PROXIES:-}
+      FLOWSTEAD_RATE_LIMIT_REQUESTS: ${FLOWSTEAD_RATE_LIMIT_REQUESTS:-600}
+      FLOWSTEAD_RATE_LIMIT_WINDOW_SECONDS: ${FLOWSTEAD_RATE_LIMIT_WINDOW_SECONDS:-60}
+      FLOWSTEAD_RATE_LIMIT_MAX_CLIENTS: ${FLOWSTEAD_RATE_LIMIT_MAX_CLIENTS:-4096}
+      FLOWSTEAD_MAX_REQUEST_BODY_BYTES: ${FLOWSTEAD_MAX_REQUEST_BODY_BYTES:-16384}
+      FLOWSTEAD_MAX_REQUEST_TARGET_BYTES: ${FLOWSTEAD_MAX_REQUEST_TARGET_BYTES:-8192}
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 5s
+
+  worker:
+    image: flowstead-backend:local
+    profiles: ["staging"]
+    command: ["python", "-m", "flowstead_api.messaging", "run"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flowstead}:${POSTGRES_PASSWORD:-flowstead_local}@db:5432/${POSTGRES_DB:-flowstead}
+      NATS_URL: nats://nats:4222
+    depends_on:
+      db:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    # Process-alive probe; DB and JetStream reachability are asserted by the
+    # `just test-deploy-local` outbox/replay smoke, not by an HTTP endpoint.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; open('/proc/1/stat').read()"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+    # A durable consumer must drain (up to the ~30s JetStream ack_wait) before
+    # exiting on SIGTERM; the default 10s stop timeout would SIGKILL it.
+    stop_grace_period: 120s
+
 volumes:
   flowstead-postgres:
   flowstead-nats:

@@ -51,7 +51,19 @@ just test-e2e-local
 just dev-smoke
 just dev
 just dev-down
+just build-backend-image
+just build
+just test-deploy-local
 ~~~
+
+`just build-backend-image`, `just build` and `just test-deploy-local` implement the
+host-neutral production build and recovery acceptance from T-015: a non-root backend/worker
+Docker image from the committed `uv.lock`, a static frontend build pointed at an explicit
+HTTPS API URL, and an isolated local staging stack (real PostgreSQL + NATS/JetStream,
+Alembic upgrade-to-head, M1 import, bounded requests, outbox replay across a worker restart,
+graceful shutdown, and DB backup/reseed/rollback with known checksums). See
+[docs/deployment/LOCAL_AND_RECOVERY.md](docs/deployment/LOCAL_AND_RECOVERY.md) for the
+runbook. Public DNS aliases there are proposals only and not assigned.
 
 `just dev` boots the whole local stack in one command and keeps it running until interrupted
 (Ctrl-C): `message-up` (Docker PostgreSQL + NATS), `db-upgrade` (Alembic), `message-init`

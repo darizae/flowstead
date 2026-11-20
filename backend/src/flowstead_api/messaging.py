@@ -7,6 +7,7 @@ import asyncio
 import hashlib
 import json
 import os
+import signal
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
@@ -476,13 +477,21 @@ async def run_once(
 
 
 async def run_service(database_url: str, nats_url: str) -> None:
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, stop_event.set)
+        except NotImplementedError:  # e.g. Windows; fall back to default handling
+            pass
     client = await connect(nats_url)
     try:
         js = client.jetstream()
         await ensure_topology(js)
-        while True:
+        while not stop_event.is_set():
             await dispatch_once(database_url, js)
             await worker_once(database_url, js, timeout=1.0)
+            # Graceful-SIGTERM window: sleep so a pending stop_event is observed.
             await asyncio.sleep(0.25)
     finally:
         await client.drain()
