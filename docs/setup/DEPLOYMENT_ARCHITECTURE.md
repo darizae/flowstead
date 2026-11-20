@@ -28,6 +28,15 @@ PostgreSQL is the authoritative application data store; NATS/JetStream transport
 
 1. **Local implementation (tasks 004a–013):** establish real Alembic head, NATS/JetStream outbox/consumer recovery, JWT/Plant authorization and IndexedDB. Run fast tests, local real PostgreSQL and JetStream integration, Playwright desktop/mobile map/export/session acceptance and documentation hygiene. No cloud resources needed.
 2. **Development database (task 014):** verify current flowstead-dev project and project-scoped read-only connectivity first (e.g. actual list_tables); current Mac OAuth is not proven by a config entry. Use only a concrete owner-provided project ref, migration/revision, row scope, role privileges and invitation recipients; validate local rollback and RLS. Missing details do not block preparing local code, but do not guess targets for external writes. Record redacted before/after schema and real signed-token smoke. Remove temporary write grants.
+
+   T-014 verified read-only connectivity to `flowstead-dev` (`jryvzjwsrxctjeawnkqo`): the
+   project is empty (`public` and `app` have no tables, no migrations applied), so the
+   pre-change snapshot is clean. The local chain reaches head `003_jetstream_messages`,
+   `just test-db-integration` and `just dev-smoke` pass. Live writes (migration run, M1
+   import, invite-only Auth, demo identities, signed-token/Data API smoke) remain **not
+   performed** pending an owner-supplied admin connection string and invitation
+   recipients. See [the T-014 runbook](DEV_SUPABASE.md) for the approved, documented
+   plan.
 3. **Host-neutral local production build (task 015):** verify React build, FastAPI and worker launch, real local JetStream durability/ack/replay, Alembic startup, health, restart/recovery and safe local shutdown. Can precede development cloud integration where independent.
 4. **Public provisioning (task 016):** use concrete configured Python API+worker and persistent JetStream hosting, new Vercel project, isolated Supabase flowstead-demo database/Auth, specific DNS records/subdomains, free-tier limits/charges, secrets, M1 seed/digest, controls and rollback. Never silently fall back to paid services or use an existing unrelated Vercel app.
 5. **Host verification (task 017):** validate actual deployed SHAs, domain/TLS/CORS, anonymous public vs invited private authorization and leakage negatives, MapLibre tiles, download files, queue→forecast completion, dead-letter/restart behavior, DB backup/reseed and rollback. Preserve exact host receipts; mark unrun checks UNVERIFIED.

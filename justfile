@@ -88,6 +88,20 @@ test-auth:
     python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_auth.py
 
+# T-014 dev smoke: proves the local half of the Supabase integration without a
+# hosted project — migration head + JWT verification (signature/issuer/audience)
+# and SQL 401/404 Plant authorization against a disposable local PostgreSQL.
+# Live Supabase operations require an owner-supplied admin connection string and
+# invitation recipients; see docs/setup/DEV_SUPABASE.md.
+dev-smoke:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    export DATABASE_URL="${DATABASE_URL:-postgresql://flowstead:flowstead_local@127.0.0.1:${POSTGRES_PORT:-54329}/flowstead}"
+    python3 backend/tests/db_lifecycle.py --require-database-url
+    uv run --project backend pytest -q backend/tests/integration/test_migrations.py -k "head or stamp or reversible"
+    uv run --project backend pytest -q backend/tests/unit/test_auth.py
+    uv run --project backend pytest -q backend/tests/integration/test_auth.py
+
 frontend-dev:
     npm --prefix frontend run dev -- --host 127.0.0.1
 
