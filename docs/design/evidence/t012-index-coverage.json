@@ -1,0 +1,578 @@
+{
+  "cases": {
+    "E2E-M12-FILES": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M11-PDF E2E-M12-FILES real download is bounded, safe, and text-readable"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M11-PDF E2E-M12-FILES real download is bounded, safe, and text-readable"
+      }
+    ],
+    "E2E-M12-INDEX": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "E2E-M12-PATH E2E-M12-INDEX private queue journey preserves authorization, cache clearing, and a clean browser console"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "E2E-M12-PATH E2E-M12-INDEX private queue journey preserves authorization, cache clearing, and a clean browser console"
+      }
+    ],
+    "E2E-M12-MAP": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP exact API marker/list identity, attribution, and live style response"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic style failure keeps API list fallback usable"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic WebGL failure keeps API list fallback usable"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP exact API marker/list identity, attribution, and live style response"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic style failure keeps API list fallback usable"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic WebGL failure keeps API list fallback usable"
+      }
+    ],
+    "E2E-M12-PATH": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M12-ALL E2E-M12-PATH API outage has a useful retry and recovers without stale data"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "E2E-M12-PATH E2E-M12-INDEX private queue journey preserves authorization, cache clearing, and a clean browser console"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS E2E-M12-PATH principal B is denied principal A Plant by the actual API (404)"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M12-ALL E2E-M12-PATH API outage has a useful retry and recovers without stale data"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "E2E-M12-PATH E2E-M12-INDEX private queue journey preserves authorization, cache clearing, and a clean browser console"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS E2E-M12-PATH principal B is denied principal A Plant by the actual API (404)"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public"
+      }
+    ],
+    "IDB-M7-PREF": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload"
+      }
+    ],
+    "IDB-M9-ISOLATE": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public"
+      }
+    ],
+    "SEC-M10-EXPORT": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M10-EXPORT logout removes private export actions and cannot reuse stale chart"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M10-EXPORT logout removes private export actions and cannot reuse stale chart"
+      }
+    ],
+    "SEC-M9-CACHE": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public"
+      }
+    ],
+    "UI-M10-PARITY": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions"
+      }
+    ],
+    "UI-M10-PNG": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions"
+      }
+    ],
+    "UI-M11-PDF": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M11-PDF E2E-M12-FILES real download is bounded, safe, and text-readable"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M11-PDF E2E-M12-FILES real download is bounded, safe, and text-readable"
+      }
+    ],
+    "UI-M12-ALL": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M12-ALL E2E-M12-PATH API outage has a useful retry and recovers without stale data"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-PARITY UI-M12-ALL desktop and mobile expose four chart channels, units, 24-72-168 controls, keyboard focus, and 200% scale"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M12-ALL E2E-M12-PATH API outage has a useful retry and recovers without stale data"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-PARITY UI-M12-ALL desktop and mobile expose four chart channels, units, 24-72-168 controls, keyboard focus, and 200% scale"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired"
+      }
+    ],
+    "UI-M7-PARITY": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload"
+      }
+    ],
+    "UI-M8-MAP": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP exact API marker/list identity, attribution, and live style response"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP keyboard marker activation opens its API Plant"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic style failure keeps API list fallback usable"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic WebGL failure keeps API list fallback usable"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP exact API marker/list identity, attribution, and live style response"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP keyboard marker activation opens its API Plant"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic style failure keeps API list fallback usable"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-MAP E2E-M12-MAP deterministic WebGL failure keeps API list fallback usable"
+      }
+    ],
+    "UI-M8-PARITY": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-PARITY UI-M12-ALL desktop and mobile expose four chart channels, units, 24-72-168 controls, keyboard focus, and 200% scale"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M8-PARITY UI-M12-ALL desktop and mobile expose four chart channels, units, 24-72-168 controls, keyboard focus, and 200% scale"
+      }
+    ],
+    "UI-M9-PARITY": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an observed\u2192predicted boundary"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M9-PARITY signed-out anonymous mode shows Sign in and no open-signup CTA"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an observed\u2192predicted boundary"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UI-M9-PARITY signed-out anonymous mode shows Sign in and no open-signup CTA"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API"
+      }
+    ],
+    "UT-M9-FORECAST": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an observed\u2192predicted boundary"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an observed\u2192predicted boundary"
+      }
+    ],
+    "UT-M9-SESSIONS": [
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS E2E-M12-PATH principal B is denied principal A Plant by the actual API (404)"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired"
+      },
+      {
+        "project": "desktop",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS zero-Plant principal sees No plants assigned"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS E2E-M12-PATH principal B is denied principal A Plant by the actual API (404)"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired"
+      },
+      {
+        "project": "mobile",
+        "statuses": [
+          "passed"
+        ],
+        "title": "UT-M9-SESSIONS zero-Plant principal sees No plants assigned"
+      }
+    ]
+  },
+  "command": "just test-e2e-local",
+  "fixture": {
+    "manifest": "m1.v1",
+    "seed": 20250101,
+    "services": [
+      "PostgreSQL 16",
+      "NATS 2 JetStream",
+      "FastAPI",
+      "React/Vite",
+      "Chromium"
+    ],
+    "source_sha": "ad5c94d1f46e79312a99cb9721f38700f24fdf6b",
+    "telemetry_sha256": "e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e"
+  },
+  "source_sha": "16a79efff36afc0b690197bc4a55bd568d2e9676",
+  "viewports": [
+    "desktop 1330x900",
+    "mobile 390x844",
+    "Chromium page scale 200%"
+  ]
+}
