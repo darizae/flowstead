@@ -50,6 +50,28 @@ describe('ApiClient', () => {
     expect(auth).toBe('Bearer jwt');
   });
 
+  it('queues and reads an authenticated forecast request lifecycle', async () => {
+    const queued = {
+      request_event_id: 'request-id',
+      correlation_id: 'correlation-id',
+      plant_id: 'plant-01',
+      status: 'queued',
+      requested_at_utc: '2026-11-20T00:00:00Z',
+      completed_at_utc: null,
+      diagnostic: null,
+    };
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(
+      async () => new Response(JSON.stringify(queued), { status: 202 }),
+    );
+    const client = new ApiClient({ basePath: '/api/v1', fetcher, token: 'jwt' });
+    await expect(client.requestForecast('plant-01')).resolves.toEqual(queued);
+    expect(fetcher.mock.calls[0]?.[0]).toBe('/api/v1/plants/plant-01/forecast-requests');
+    expect(fetcher.mock.calls[0]?.[1]?.method).toBe('POST');
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe('Bearer jwt');
+    await expect(client.forecastRequest('correlation-id')).resolves.toEqual(queued);
+    expect(fetcher.mock.calls[1]?.[0]).toBe('/api/v1/forecast-requests/correlation-id');
+  });
+
   it('UT-M11-PDF requests the current public/private report and returns a safe server filename', async () => {
     const pdf = new Uint8Array([37, 80, 68, 70, 45, 49]);
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response(pdf, {

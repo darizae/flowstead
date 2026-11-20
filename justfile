@@ -104,6 +104,10 @@ audit-frontend:
     npm --prefix frontend audit --audit-level=moderate
 
 test-e2e-local:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    export DATABASE_URL="${DATABASE_URL:-postgresql://flowstead:flowstead_local@127.0.0.1:${POSTGRES_PORT:-54329}/flowstead}"
+    python3 backend/tests/db_lifecycle.py --require-database-url
     uv run --project backend python frontend/e2e/run_local.py
 
 # One-command local stack: Docker PostgreSQL + NATS, Alembic upgrade, JetStream

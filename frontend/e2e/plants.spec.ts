@@ -31,7 +31,7 @@ test.afterEach(async ({ context }, testInfo) => {
   await context.tracing.stop({ path: path.join(evidenceDirectory, fileName) });
 });
 
-test('IDB-M7-PREF UI-M7-PARITY public list, detail, back, deep-link and reload', async ({ page }, testInfo) => {
+test('IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link and reload', async ({ page }, testInfo) => {
   testInfo.annotations.push({ type: 'coverage', description: 'IDB-M7-PREF real IndexedDB persistence, bounded maintenance, and reload restoration' });
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
   await page.goto('/plants');
@@ -99,7 +99,7 @@ test('IDB-M7-PREF UI-M7-PARITY public list, detail, back, deep-link and reload',
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.body.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
 
-test('UI-M8-MAP exact API marker/list identity, attribution, and live style response', async ({ page }) => {
+test('UI-M8-MAP E2E-M12-MAP exact API marker/list identity, attribution, and live style response', async ({ page }) => {
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
   const styleResponsePromise = page.waitForResponse((response) => response.url().includes('tiles.openfreemap.org/styles/liberty'));
   await page.goto('/plants');
@@ -130,7 +130,7 @@ test('UI-M8-MAP keyboard marker activation opens its API Plant', async ({ page }
   await expect(page.getByRole('heading', { name: first.name })).toBeVisible();
 });
 
-test('UI-M8-MAP deterministic style failure keeps API list fallback usable', async ({ page }) => {
+test('UI-M8-MAP E2E-M12-MAP deterministic style failure keeps API list fallback usable', async ({ page }) => {
   await page.route('**/styles/liberty*', (route) => route.abort());
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
   await page.goto('/plants');
@@ -140,7 +140,7 @@ test('UI-M8-MAP deterministic style failure keeps API list fallback usable', asy
   await expect(page.locator('.plant-marker')).toHaveCount(0);
 });
 
-test('UI-M8-MAP deterministic WebGL failure keeps API list fallback usable', async ({ page }) => {
+test('UI-M8-MAP E2E-M12-MAP deterministic WebGL failure keeps API list fallback usable', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', { configurable: true, value: () => null });
   });
@@ -152,7 +152,19 @@ test('UI-M8-MAP deterministic WebGL failure keeps API list fallback usable', asy
   await expect(page.locator('.plant-marker')).toHaveCount(0);
 });
 
-test('UI-M8-PARITY desktop and mobile expose four chart channels, units, and 24/72/168 controls', async ({ page }, testInfo) => {
+test('UI-M12-ALL E2E-M12-PATH API outage has a useful retry and recovers without stale data', async ({ page }) => {
+  await page.route('**/api/v1/public/plants', (route) => route.abort('failed'));
+  await page.goto('/plants');
+  await expect(page.getByRole('alert')).toContainText('Plants unavailable');
+  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+  await page.unroute('**/api/v1/public/plants');
+  const recoveredResponse = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
+  await page.getByRole('button', { name: 'Retry' }).click();
+  expect((await recoveredResponse).status()).toBe(200);
+  await expect(page.locator('.plant-row')).toHaveCount(5);
+});
+
+test('UI-M8-PARITY UI-M12-ALL desktop and mobile expose four chart channels, units, 24-72-168 controls, keyboard focus, and 200% scale', async ({ page }, testInfo) => {
   const viewport = page.viewportSize();
   expect(viewport).toEqual(expect.objectContaining(testInfo.project.name === 'mobile' ? { width: 390, height: 844 } : { width: 1330, height: 900 }));
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
@@ -190,6 +202,15 @@ test('UI-M8-PARITY desktop and mobile expose four chart channels, units, and 24/
     expect(new URL(response.url()).searchParams.get('from')).toBe(new Date(anchor.getTime() - range * 60 * 60 * 1000).toISOString());
   }
   await expect(rangeSelect).toContainText('24 hours');
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
+  await page.getByRole('button', { name: 'Influent flow', exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Rainfall', exact: true })).toBeFocused();
+  await expect(page.locator(':focus-visible')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth && document.body.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+  await page.screenshot({ path: path.join(evidenceDirectory, `t012-${testInfo.project.name}-200-percent.png`), fullPage: true });
+  await session.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
 });
 
 /**
@@ -219,6 +240,78 @@ function installTestAuth(page: Page, arg: { token?: string; principalId?: string
   }, arg);
 }
 
+test('E2E-M12-PATH E2E-M12-INDEX private queue journey preserves authorization, cache clearing, and a clean browser console', async ({ page }, testInfo) => {
+  const tokenA = process.env.FLOWSTEAD_TEST_PRINCIPAL_A_TOKEN;
+  const tokenB = process.env.FLOWSTEAD_TEST_PRINCIPAL_B_TOKEN;
+  expect(tokenA).toBeTruthy();
+  expect(tokenB).toBeTruthy();
+  const browserErrors: string[] = [];
+  page.on('pageerror', (error) => browserErrors.push(error.message));
+  page.on('console', (message) => { if (message.type() === 'error') browserErrors.push(message.text()); });
+  await installTestAuth(page, { token: tokenA, principalId: 'test-principal-a' });
+  const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/plants');
+  await page.goto('/plants');
+  const listResponse = await listResponsePromise;
+  expect(listResponse.status()).toBe(200);
+  const body = await listResponse.json() as { plants: Array<{ plant_id: string }> };
+  expect(body.plants.map((plant) => plant.plant_id).sort()).toEqual(['plant-01', 'plant-02']);
+  await page.locator('.plant-row').first().click();
+  await expect(page.getByTestId('history-chart')).toBeVisible();
+  await expect(page.getByTestId('forecast-target')).toHaveCount(12);
+
+  const csvDownloadPromise = page.waitForEvent('download');
+  await page.getByTestId('history-export-footer').getByRole('button', { name: 'Download CSV' }).click();
+  const csvPath = await (await csvDownloadPromise).path();
+  expect(csvPath).toBeTruthy();
+  if (!csvPath) throw new Error('History CSV download path missing');
+  expect((await readFile(csvPath, 'utf8')).split('\r\n')[0]).toContain('"plant_id"');
+
+  const queueResponsePromise = page.waitForResponse((response) => (
+    response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/v1/plants/plant-01/forecast-requests'
+  ));
+  await page.getByTestId('forecast-refresh').click();
+  const queueResponse = await queueResponsePromise;
+  expect(queueResponse.status()).toBe(202);
+  expect((await queueResponse.json() as { status: string }).status).toBe('queued');
+  await expect(page.getByTestId('forecast-request-status')).toHaveText('Forecast queued');
+  await expect(page.getByTestId('forecast-request-status')).toHaveText('Forecast completed', { timeout: 15_000 });
+  await expect(page.getByTestId('forecast-target')).toHaveCount(12);
+  expect(browserErrors).toEqual([]);
+  await page.screenshot({ path: path.join(evidenceDirectory, `t012-${testInfo.project.name}-private-detail.png`), fullPage: true });
+
+  const deniedStatuses = await page.evaluate(async ({ bearerA, bearerB }) => {
+    const [foreign, anonymous] = await Promise.all([
+      fetch('/api/v1/plants/plant-01/latest', { headers: { Authorization: `Bearer ${bearerB}` } }),
+      fetch('/api/v1/plants', { headers: { Accept: 'application/json' } }),
+    ]);
+    const own = await fetch('/api/v1/plants/plant-01/latest', { headers: { Authorization: `Bearer ${bearerA}` } });
+    return { foreign: foreign.status, anonymous: anonymous.status, own: own.status };
+  }, { bearerA: tokenA, bearerB: tokenB });
+  expect(deniedStatuses).toEqual({ foreign: 404, anonymous: 401, own: 200 });
+
+  await page.getByTestId('sign-out').click();
+  await expect(page.getByTestId('sign-in-entry')).toBeVisible();
+  await expect.poll(async () => page.evaluate(() => {
+    const { promise, resolve, reject } = Promise.withResolvers<number>();
+    const open = indexedDB.open('flowstead-preferences', 2);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const request = open.result.transaction('entries', 'readonly').objectStore('entries').openCursor();
+      let count = 0;
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) { open.result.close(); resolve(count); return; }
+        if (String(cursor.key).includes('principal:')) count += 1;
+        cursor.continue();
+      };
+    };
+    return promise;
+  })).toBe(0);
+  await page.screenshot({ path: path.join(evidenceDirectory, `t012-${testInfo.project.name}-integrated-path.png`), fullPage: true });
+});
+
 test('UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an observed→predicted boundary', async ({ page }, testInfo) => {
   testInfo.annotations.push({ type: 'coverage', description: 'UT-M9-FORECAST: exactly 12 API forecast targets, issued/model label, boundary, gal/h, local time' });
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
@@ -240,7 +333,7 @@ test('UT-M9-FORECAST UI-M9-PARITY real API shows 12 forecast targets and an obse
   await expect(page.getByTestId('forecast-chart')).toContainText('Observed→predicted boundary');
   await page.screenshot({ path: path.join(evidenceDirectory, `plants-${testInfo.project.name}-forecast.png`), fullPage: true });
 });
-test('UI-M10-EXPORT actual CSV parsing, PNG decoding, and bounded private actions', async ({ page }, testInfo) => {
+test('UI-M10-PNG UI-M10-PARITY E2E-M12-FILES actual CSV parsing, PNG decoding, and bounded private actions', async ({ page }, testInfo) => {
   testInfo.annotations.push({ type: 'coverage', description: 'UI-M10-CSV/PNG: parse history and forecast downloads; decode PNG IHDR dimensions; verify chart axes, units, timezone and evidence screenshot' });
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
   await page.goto('/plants');
@@ -264,6 +357,7 @@ test('UI-M10-EXPORT actual CSV parsing, PNG decoding, and bounded private action
   expect(historyRows[0]).toBe('\"plant_id\",\"plant_name\",\"timestamp_utc\",\"measurement\",\"unit\",\"value\",\"quality\"');
   expect(historyRows.length).toBeGreaterThan(1);
   expect(historyRows.slice(1).every((row) => row.includes(`"${first.plant_id}"`) && row.includes('"influent_flow"') && /"20\d\d-\d\d-\d\dT.*Z"/.test(row))).toBe(true);
+  await historyCsv.saveAs(path.join(evidenceDirectory, `t012-${testInfo.project.name}-history.csv`));
 
   const historyPngDownload = page.waitForEvent('download');
   await historyFooter.getByRole('button', { name: 'Download PNG' }).click();
@@ -273,6 +367,7 @@ test('UI-M10-EXPORT actual CSV parsing, PNG decoding, and bounded private action
   if (!historyPngPath) throw new Error('History PNG download path missing');
   const historyPngBytes = await readFile(historyPngPath);
   expect(pngDimensions(historyPngBytes).width).toBeGreaterThanOrEqual(1320);
+  await historyPng.saveAs(path.join(evidenceDirectory, `t012-${testInfo.project.name}-history.png`));
 
   await expect(page.getByTestId('forecast-chart')).toBeVisible();
   await expect(page.getByTestId('forecast-chart')).toContainText('Influent flow (gal/h)');
@@ -288,6 +383,7 @@ test('UI-M10-EXPORT actual CSV parsing, PNG decoding, and bounded private action
   expect(forecastRows[0]).toBe('\"plant_id\",\"plant_name\",\"issue_time_utc\",\"target_time_utc\",\"measurement\",\"unit\",\"value\",\"quality\",\"model_version\"');
   expect(forecastRows).toHaveLength(13);
   expect(forecastRows.slice(1).every((row) => row.includes(`"${first.plant_id}"`) && row.includes('"predicted"') && row.includes('"gal/h"'))).toBe(true);
+  await forecastCsv.saveAs(path.join(evidenceDirectory, `t012-${testInfo.project.name}-forecast.csv`));
 
   const forecastPngDownload = page.waitForEvent('download');
   await forecastFooter.getByRole('button', { name: 'Download PNG' }).click();
@@ -296,6 +392,7 @@ test('UI-M10-EXPORT actual CSV parsing, PNG decoding, and bounded private action
   expect(forecastPngPath).toBeTruthy();
   if (!forecastPngPath) throw new Error('Forecast PNG download path missing');
   expect(pngDimensions(await readFile(forecastPngPath)).width).toBeGreaterThanOrEqual(1320);
+  await forecastPng.saveAs(path.join(evidenceDirectory, `t012-${testInfo.project.name}-forecast.png`));
   await page.screenshot({ path: path.join(evidenceDirectory, `plants-${testInfo.project.name}-ui-m10-exports.png`), fullPage: true });
 });
 
@@ -311,7 +408,7 @@ test('SEC-M10-EXPORT logout removes private export actions and cannot reuse stal
   await expect(page.getByTestId('history-export-footer')).toHaveCount(0);
   await expect(page.getByTestId('forecast-export-footer')).toHaveCount(0);
 });
-test('UI-M11-PDF real download is bounded, safe, and text-readable', async ({ page }, testInfo) => {
+test('UI-M11-PDF E2E-M12-FILES real download is bounded, safe, and text-readable', async ({ page }, testInfo) => {
   testInfo.annotations.push({ type: 'coverage', description: 'UI-M11-PDF: actual PDF bytes, safe filename, four units/quality flags, twelve targets, model and synthetic source' });
   const listResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/public/plants');
   await page.goto('/plants');
@@ -341,6 +438,7 @@ test('UI-M11-PDF real download is bounded, safe, and text-readable', async ({ pa
   for (let target = 1; target <= 12; target += 1) expect(extracted).toMatch(new RegExp(`\\b${target}\\b`));
   expect(extracted).toContain('seasonal_naive_24h_v1');
   expect(extracted).toContain('Synthetic source: Flowstead M1 dataset');
+  await download.saveAs(path.join(evidenceDirectory, `t012-${testInfo.project.name}-plant-report.pdf`));
   await page.screenshot({ path: path.join(evidenceDirectory, `plants-${testInfo.project.name}-ui-m11-pdf.png`), fullPage: true });
 });
 
@@ -357,7 +455,7 @@ test('UI-M9-PARITY signed-out anonymous mode shows Sign in and no open-signup CT
   await expect(page.getByText(/Sign up|Create account|Register/i)).toHaveCount(0);
 });
 
-test('UT-M9-SESSIONS UI-M9-PARITY invited principal sees only assigned Plants via the real API', async ({ page }) => {
+test('UT-M9-SESSIONS UI-M9-PARITY E2E-M12-PATH invited principal sees only assigned Plants via the real API', async ({ page }, testInfo) => {
   const token = process.env.FLOWSTEAD_TEST_PRINCIPAL_A_TOKEN;
   expect(token).toBeTruthy();
   await installTestAuth(page, { token, principalId: 'test-principal-a' });
@@ -367,12 +465,14 @@ test('UT-M9-SESSIONS UI-M9-PARITY invited principal sees only assigned Plants vi
   expect(listResponse.status()).toBe(200);
   const body = await listResponse.json() as { plants: Array<{ plant_id: string }> };
   expect(body.plants.map((plant) => plant.plant_id).sort()).toEqual(['plant-01', 'plant-02']);
+  await expect(page.locator('.plant-marker')).toHaveCount(2);
+  await page.screenshot({ path: path.join(evidenceDirectory, `t012-${testInfo.project.name}-private-overview.png`), fullPage: true });
   await expect(page.getByTestId('session-identity')).toContainText('test-principal-a');
   await expect(page.getByTestId('sign-out')).toBeVisible();
   await expect(page.getByTestId('sign-in-entry')).toHaveCount(0);
 });
 
-test('UT-M9-SESSIONS principal B is denied principal A Plant by the actual API (404)', async ({ page }) => {
+test('UT-M9-SESSIONS E2E-M12-PATH principal B is denied principal A Plant by the actual API (404)', async ({ page }) => {
   const token = process.env.FLOWSTEAD_TEST_PRINCIPAL_B_TOKEN;
   expect(token).toBeTruthy();
   await installTestAuth(page, { token, principalId: 'test-principal-b' });
@@ -387,7 +487,7 @@ test('UT-M9-SESSIONS principal B is denied principal A Plant by the actual API (
   expect(status).toBe(404);
 });
 
-test('UT-M9-SESSIONS expired session triggers 401 and returns to public with Session expired', async ({ page }) => {
+test('UT-M9-SESSIONS UI-M12-ALL E2E-M12-PATH expired session triggers 401 and returns to public with Session expired', async ({ page }) => {
   const expired = process.env.FLOWSTEAD_TEST_EXPIRED_TOKEN;
   expect(expired).toBeTruthy();
   await installTestAuth(page, { token: expired, principalId: 'test-principal-a' });
@@ -411,7 +511,7 @@ test('UT-M9-SESSIONS zero-Plant principal sees No plants assigned', async ({ pag
   await expect(page.getByText('No plants assigned')).toBeVisible();
 });
 
-test('SEC-M9-CACHE IDB-M9-ISOLATE sign out clears all private IndexedDB rows and restores public', async ({ page }) => {
+test('SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private IndexedDB rows and restores public', async ({ page }) => {
   const token = process.env.FLOWSTEAD_TEST_PRINCIPAL_A_TOKEN;
   expect(token).toBeTruthy();
   await installTestAuth(page, { token, principalId: 'test-principal-a' });

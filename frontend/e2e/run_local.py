@@ -35,6 +35,14 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE_SHA = "ad5c94d1f46e79312a99cb9721f38700f24fdf6b"
 TELEMETRY_SHA256 = "e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e"
 DB_PREFIX = "flowstead_test_"
+NATS_IMAGE = "nats:2.12-alpine@sha256:b270f5e2428354c0335612694d7dd2fb588148e567a5757fdff325ef9c9332e6"
+T012_BROWSER_CASES = (
+    "E2E-M12-PATH",
+    "E2E-M12-MAP",
+    "E2E-M12-FILES",
+    "UI-M12-ALL",
+    "E2E-M12-INDEX",
+)
 
 
 def _expected_chromium_revision() -> str | None:
@@ -88,7 +96,7 @@ def _loopback_url(value: str) -> SplitResult:
     if parsed.query or parsed.fragment:
         raise RunnerError("DATABASE_URL must not include PostgreSQL query or fragment options")
     try:
-        parsed.port
+        _ = parsed.port
     except ValueError as error:
         raise RunnerError("DATABASE_URL has an invalid PostgreSQL port") from error
     return parsed
@@ -181,6 +189,169 @@ def _terminate(process: subprocess.Popen[bytes] | None) -> None:
         except ProcessLookupError:
             pass
 
+def _start_nats() -> tuple[str, str]:
+    name = f"flowstead-e2e-nats-{uuid.uuid4().hex}"
+    command = [
+        "docker",
+        "run",
+        "--detach",
+        "--rm",
+        "--name",
+        name,
+        "--publish",
+        "127.0.0.1::4222",
+        NATS_IMAGE,
+        "-js",
+        "-sd",
+        "/data",
+    ]
+    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        raise RunnerError(f"isolated NATS failed to start: {result.stderr.strip()}")
+    try:
+        port_result = subprocess.run(
+            ["docker", "port", name, "4222/tcp"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        match = re.search(r":(\d+)\s*$", port_result.stdout)
+        if port_result.returncode != 0 or match is None:
+            raise RunnerError(f"isolated NATS port lookup failed: {port_result.stderr.strip()}")
+        port = int(match.group(1))
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            if _port_occupied(port):
+                return name, f"nats://127.0.0.1:{port}"
+            time.sleep(0.2)
+        raise RunnerError("isolated NATS did not accept connections within 30 seconds")
+    except BaseException:
+        _stop_nats(name)
+        raise
+
+
+def _stop_nats(name: str | None) -> None:
+    if name is None:
+        return
+    subprocess.run(
+        ["docker", "rm", "--force", name],
+        cwd=ROOT,
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=15,
+    )
+
+
+def _start_worker(env: dict[str, str]) -> subprocess.Popen[bytes]:
+    process_env = env.copy()
+    process_env["PYTHONPATH"] = os.pathsep.join(
+        value for value in (str(ROOT), process_env.get("PYTHONPATH")) if value
+    )
+    process = subprocess.Popen(
+        ["uv", "run", "--project", "backend", "python", "-m", "flowstead_api.messaging", "run"],
+        cwd=ROOT,
+        env=process_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    time.sleep(1)
+    if process.poll() is not None:
+        output = process.stdout.read().decode(errors="replace") if process.stdout else ""
+        raise RunnerError(f"forecast worker exited before browser startup:\n{output}")
+    return process
+
+
+def _write_coverage_report(report_path: Path, evidence_directory: Path) -> None:
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RunnerError(f"Playwright JSON report is unavailable: {error}") from error
+    coverage: dict[str, list[dict[str, object]]] = {}
+
+    def visit(suite: dict[str, object]) -> None:
+        for spec_value in suite.get("specs", []):
+            if not isinstance(spec_value, dict):
+                continue
+            title = str(spec_value.get("title", ""))
+            for case_id in sorted(set(re.findall(r"\b(?:E2E|IDB|SEC|UI|UT)-M\d+[A-Z]*(?:-[A-Z]+)+\b", title))):
+                for test_value in spec_value.get("tests", []):
+                    if not isinstance(test_value, dict):
+                        continue
+                    results = test_value.get("results", [])
+                    statuses = [
+                        str(result.get("status", "unknown"))
+                        for result in results
+                        if isinstance(result, dict)
+                    ]
+                    coverage.setdefault(case_id, []).append(
+                        {
+                            "title": title,
+                            "project": str(test_value.get("projectName", "")),
+                            "statuses": statuses,
+                        }
+                    )
+        for child in suite.get("suites", []):
+            if isinstance(child, dict):
+                visit(child)
+
+    for suite in report.get("suites", []):
+        if isinstance(suite, dict):
+            visit(suite)
+    for case_id in T012_BROWSER_CASES:
+        entries = coverage.get(case_id, [])
+        projects = {str(entry["project"]) for entry in entries}
+        if projects != {"desktop", "mobile"} or any(
+            status != "passed"
+            for entry in entries
+            for status in entry["statuses"]
+        ):
+            raise RunnerError(f"{case_id} lacks passing desktop and mobile Playwright coverage")
+    source_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    ).stdout.strip()
+    receipt = {
+        "source_sha": source_sha,
+        "command": "just test-e2e-local",
+        "fixture": {
+            "manifest": "m1.v1",
+            "seed": 20250101,
+            "source_sha": SOURCE_SHA,
+            "telemetry_sha256": TELEMETRY_SHA256,
+            "services": ["PostgreSQL 16", "NATS 2 JetStream", "FastAPI", "React/Vite", "Chromium"],
+        },
+        "viewports": ["desktop 1330x900", "mobile 390x844", "Chromium page scale 200%"],
+        "cases": dict(sorted(coverage.items())),
+    }
+    json_path = evidence_directory / "t012-index-coverage.json"
+    markdown_path = evidence_directory / "t012-index-coverage.md"
+    json_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    rows = [
+        "# T-012 browser indexed coverage",
+        "",
+        f"- Tested source SHA: `{source_sha}`",
+        "- Command: `just test-e2e-local`",
+        "- Fixture: pinned M1 + disposable PostgreSQL + isolated NATS/JetStream + real FastAPI/React/Chromium",
+        "- Viewports: 1330x900, 390x844, and Chromium page scale 200%",
+        "",
+        "| Case | Projects | Runtime titles | Result |",
+        "| --- | --- | --- | --- |",
+    ]
+    for case_id, entries in sorted(coverage.items()):
+        projects = ", ".join(sorted({str(entry["project"]) for entry in entries}))
+        titles = "<br>".join(sorted({str(entry["title"]) for entry in entries}))
+        passed = all(status == "passed" for entry in entries for status in entry["statuses"])
+        rows.append(f"| `{case_id}` | {projects} | {titles} | {'PASS' if passed else 'FAIL'} |")
+    markdown_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
 
 def _port_occupied(port: int) -> bool:
     try:
@@ -249,7 +420,7 @@ def _generate_ca() -> tuple[rsa.RSAPrivateKey, x509.Certificate, rsa.RSAPrivateK
     """Return (ca_key, ca_cert, server_key, server_cert, server_cert_pem_and_key)."""
     ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     ca_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Flowstead E2E Test CA")])
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     ca_cert = (
         x509.CertificateBuilder()
         .subject_name(ca_name).issuer_name(ca_name)
@@ -281,7 +452,7 @@ class _JWKSHandler(http.server.BaseHTTPRequestHandler):
 
     jwks_document = b""
 
-    def do_GET(self) -> None:  # noqa: N802 (http.server API)
+    def do_GET(self) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
@@ -308,11 +479,17 @@ def _start_jwks_server(ca_cert: x509.Certificate, server_key: rsa.RSAPrivateKey,
     }
     _JWKSHandler.jwks_document = json.dumps(jwks).encode()
     server = http.server.HTTPServer(("127.0.0.1", TEST_AUTH_PORT), _JWKSHandler)
+    key_path = _PEM(server_key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+    cert_path = _PEM(server_cert.public_bytes(serialization.Encoding.PEM))
+    server.flowstead_temp_files = [key_path, cert_path]
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(
-        keyfile=_PEM(server_key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())),
-        certfile=_PEM(server_cert.public_bytes(serialization.Encoding.PEM)),
-    )
+    try:
+        context.load_cert_chain(keyfile=key_path, certfile=cert_path)
+    except BaseException:
+        server.server_close()
+        for path in (key_path, cert_path):
+            Path(path).unlink(missing_ok=True)
+        raise
     server.socket = context.wrap_socket(server.socket, server_side=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -320,10 +497,9 @@ def _start_jwks_server(ca_cert: x509.Certificate, server_key: rsa.RSAPrivateKey,
 
 
 def _PEM(data: bytes) -> str:
-    path = tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
-    path.write(data)
-    path.close()
-    return path.name
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as path:
+        path.write(data)
+        return path.name
 
 
 def _b64(value: int) -> str:
@@ -333,7 +509,7 @@ def _b64(value: int) -> str:
 
 
 def _mint_token(private_key: rsa.RSAPrivateKey, subject: str, *, minutes: int = 30) -> str:
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     claims = {
         "sub": subject,
         "iss": TEST_AUTH_ISSUER,
@@ -347,17 +523,17 @@ def _mint_token(private_key: rsa.RSAPrivateKey, subject: str, *, minutes: int = 
 
 def _setup_test_auth(env: dict[str, str], database_url: str) -> dict[str, object]:
     """Configure FastAPI to verify deterministic RS256 JWTs against a local mock authority."""
-    ca_key, ca_cert, server_key, server_cert, _ = _generate_ca()
+    _ca_key, ca_cert, server_key, server_cert, _ = _generate_ca()
     # Seed two disjoint test principals against the approved M1 Plants.
     assignments = {"test-principal-a": ["plant-01", "plant-02"], "test-principal-b": ["plant-03"]}
     _seed_principal_access(database_url, assignments)
     server = _start_jwks_server(ca_cert, server_key, server_cert)
     # Trust our CA alongside the system bundle so httpx (FastAPI verifier) accepts the mock.
-    combined = tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
-    combined.write(open(certifi.where(), "rb").read())
-    combined.write(b"\n")
-    combined.write(ca_cert.public_bytes(serialization.Encoding.PEM))
-    combined.close()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as combined:
+        combined.write(Path(certifi.where()).read_bytes())
+        combined.write(b"\n")
+        combined.write(ca_cert.public_bytes(serialization.Encoding.PEM))
+    server.flowstead_temp_files.append(combined.name)
     env["SUPABASE_AUTH_URL"] = TEST_AUTH_BASE
     env["SUPABASE_JWT_ISSUER"] = TEST_AUTH_ISSUER
     env["SUPABASE_JWT_AUDIENCE"] = TEST_AUTH_AUDIENCE
@@ -380,6 +556,9 @@ def _terminate_server(server: http.server.HTTPServer | None) -> None:
         server.server_close()
     except OSError:
         pass
+    finally:
+        for path in getattr(server, "flowstead_temp_files", []):
+            Path(path).unlink(missing_ok=True)
 
 
 def main() -> int:
@@ -397,6 +576,8 @@ def main() -> int:
     _verify_m1(manifest_path, data_path)
 
     database_name: str | None = None
+    nats_name: str | None = None
+    worker_process: subprocess.Popen[bytes] | None = None
     api_process: subprocess.Popen[bytes] | None = None
     auth_server: http.server.HTTPServer | None = None
     previous_handlers: dict[int, object] = {}
@@ -416,6 +597,8 @@ def main() -> int:
             signal.signal(signum, request_shutdown)
         env = os.environ.copy()
         env["DATABASE_URL"] = disposable_url
+        nats_name, nats_url = _start_nats()
+        env["NATS_URL"] = nats_url
         if _run(["uv", "run", "--project", "backend", "python", "-m", "backend.migrate", "upgrade"], env) != 0:
             raise RunnerError("Alembic migration failed")
         if _run(["uv", "run", "--project", "backend", "python", "-m", "backend.importer", "--manifest", str(manifest_path), "--data", str(data_path), "--source-sha", SOURCE_SHA], env) != 0:
@@ -435,6 +618,7 @@ def main() -> int:
         env["FLOWSTEAD_TEST_PRINCIPAL_C_TOKEN"] = _mint_token(private_key, "test-principal-c")
         env["FLOWSTEAD_TEST_EXPIRED_TOKEN"] = _mint_token(private_key, "test-principal-a", minutes=-30)
         env["FLOWSTEAD_TEST_ASSIGNMENTS"] = json.dumps(auth_setup["assignments"])
+        worker_process = _start_worker(env)
         api_process = _start_api(env)
         evidence_directory = ROOT / "docs/design/evidence"
         evidence_directory.mkdir(parents=True, exist_ok=True)
@@ -445,6 +629,10 @@ def main() -> int:
                 e2e_env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"] = chromium_executable
         if _run(["npm", "--prefix", "frontend", "run", "e2e"], e2e_env, timeout=300) != 0:
             raise RunnerError("Playwright E2E failed")
+        _write_coverage_report(
+            evidence_directory / "playwright-report" / "results.json",
+            evidence_directory,
+        )
         return 0
     finally:
         cleanup_started = True
@@ -455,10 +643,16 @@ def main() -> int:
                 _terminate(api_process)
             finally:
                 try:
-                    _drop_database(database_name, base_url) if database_name is not None else None
+                    _terminate(worker_process)
                 finally:
-                    for signum, previous in previous_handlers.items():
-                        signal.signal(signum, previous)
+                    try:
+                        _stop_nats(nats_name) if nats_name is not None else None
+                    finally:
+                        try:
+                            _drop_database(database_name, base_url) if database_name is not None else None
+                        finally:
+                            for signum, previous in previous_handlers.items():
+                                signal.signal(signum, previous)
 
 
 if __name__ == "__main__":

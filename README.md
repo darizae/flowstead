@@ -61,7 +61,7 @@ API). It requires loopback `DATABASE_URL`/`NATS_URL` access and fails safely whe
 
 The import recipe requires independent generator output at the pinned source revision; it never supplies a default manifest, source commit, or CSV. The importer validates the pinned source/schema/seed and verifies CSV checksum, size and rows against the supplied manifest. Before invoking it, independently confirm that manifest's telemetry checksum is the canonical `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`; the importer does not pin that digest. See [the implementation contract](docs/planning/IMPLEMENTATION_SPEC.md) for the complete immutable source contract.
 
-`just test-e2e-local` is a real public API/browser gate, not a mocked Playwright server. It requires a loopback `DATABASE_URL` with database-create access plus `FLOWSTEAD_M1_MANIFEST` and `FLOWSTEAD_M1_DATA` pointing to the adjacent verified M1 manifest/`telemetry.csv`; the runner independently verifies the pinned source and telemetry digests, creates and drops only a unique `flowstead_test_<uuid>` database, runs Alembic/import, builds the deterministic 12-hour forecast, starts a throwaway local Supabase-compatible Auth authority (JWKS) with two seeded disjoint test principals, starts FastAPI, and runs Chromium through Vite's `/api` proxy. Browser evidence is written under `docs/design/evidence/`; no browser result is claimed until the command succeeds. Hosted Supabase identity remains UNVERIFIED; the browser gate uses deterministic test-only RS256 JWTs accepted by the real local FastAPI against the mock authority.
+`just test-e2e-local` is a real API/browser gate, not a mocked Playwright server. It starts the owned local PostgreSQL preflight and requires `FLOWSTEAD_M1_MANIFEST` and `FLOWSTEAD_M1_DATA` pointing to the adjacent verified M1 manifest/`telemetry.csv`. The runner verifies the pinned digests, creates and drops only a unique `flowstead_test_<uuid>` database, runs Alembic/import, builds the deterministic forecast, starts an isolated pinned NATS 2 JetStream container and durable worker, and starts a throwaway local Supabase-compatible JWKS authority with disjoint principals. Chromium then exercises public/private authorization, queued-to-completed forecast work, cache clearing, maps, exports, responsive views and 200% page scale through the real FastAPI and Vite proxy. The locally inspectable Playwright HTML report and generated indexed Markdown/JSON receipts live under `docs/design/evidence/`. Hosted Supabase identity remains UNVERIFIED.
 
 The integration recipes first run `backend/tests/db_lifecycle.py --require-database-url`, a bounded, owner-aware Docker PostgreSQL preflight. It checks the configured `127.0.0.1:${POSTGRES_PORT:-54329}` binding and local `DATABASE_URL`, reuses a healthy database only when its configured Compose project/service and canonical checkout/Compose-file identity match (set `COMPOSE_PROJECT_NAME` for an explicitly named controller project), starts that owned stopped instance, restarts that owned unhealthy instance once, and waits for Docker health plus TCP readiness. If a foreign container/process owns the port or ownership is ambiguous, it fails without stopping or replacing that service. The standalone `just db-up` uses the same preflight without requiring `DATABASE_URL`. `just message-up` additionally starts the pinned NATS 2 service with JetStream storage and monitoring bound only to loopback; `message-init`, dispatcher, and worker commands use `NATS_URL`. Migration and messaging tests use isolated, uniquely named local `flowstead_test_<uuid>` databases; destructive rollback is refused elsewhere. The integration commands require a working local Docker daemon and appropriate local environment. No hosted project, invitation, deployment or secret is provisioned by these commands. `just audit-backend` runs pinned `pip-audit` against a strict, hash-verified export of all runtime and development packages in `backend/uv.lock`.
 
@@ -77,6 +77,18 @@ custom headers and client-supplied Plant IDs are ignored. Configure the server-o
 only ES256/RS256 keys from the configured issuer's JWKS endpoint, uses a bounded ten-minute
 cache, and refreshes safely for key rotation. Missing or unsafe configuration fails private
 requests closed while `/api/v1/health` remains available.
+
+## Local HTTP security policy
+
+FastAPI applies `no-store`, `nosniff`, deny-framing, no-referrer, restrictive API CSP and
+permissions headers to every response. CORS accepts only the exact origins in
+`FLOWSTEAD_CORS_ORIGINS`; wildcard and non-loopback HTTP origins are rejected at startup.
+Requests have bounded target/body sizes and a bounded single-process per-client sliding
+rate limit configured by the `FLOWSTEAD_RATE_LIMIT_*` values in `.env.example`. A denied
+request returns JSON `429` with `Retry-After`. `X-Forwarded-For` is ignored unless the
+immediate peer matches `FLOWSTEAD_TRUSTED_PROXIES`; list only proxy CIDRs controlled by the
+deployment. This limiter is intentionally for the initial single-instance demo. A shared
+limiter is required before any multi-instance deployment.
 
 If task 014 confirms that the live project still uses legacy HS256 tokens, the documented
 temporary fallback is `SUPABASE_AUTH_VERIFICATION_MODE=legacy-auth-endpoint` plus the

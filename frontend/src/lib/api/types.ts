@@ -34,6 +34,17 @@ export interface ForecastResponse {
   unavailable_reason: string | null;
 }
 
+export type ForecastJobStatus = 'queued' | 'processing' | 'completed' | 'failed';
+export interface ForecastJobResponse {
+  request_event_id: string;
+  correlation_id: string;
+  plant_id: string;
+  status: ForecastJobStatus;
+  requested_at_utc: string;
+  completed_at_utc: string | null;
+  diagnostic: string | null;
+}
+
 export type HistoryWindowHours = 24 | 72 | 168;
 export interface LatestReading { plant_id: string; timestamp_utc: string; latest: true; measurements: Measurements }
 export interface LatestResponse { latest: true; plant: PlantSummary; reading: LatestReading }

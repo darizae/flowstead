@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, type ForecastResponse, type HistoryResponse, type LatestResponse, type PlantSummary } from '../lib/api/types';
+import { ApiError, type ForecastJobStatus, type ForecastResponse, type HistoryResponse, type LatestResponse, type PlantSummary } from '../lib/api/types';
 import { preferences, type PreferenceState } from '../lib/cache/preferences';
 import type { ApiClient } from '../lib/api/client';
 import { historyWindow, type HistoryRange } from '../features/history/transforms';
@@ -173,6 +173,55 @@ export function usePlantForecast(client: ApiClient, plantId: string | undefined,
     loading: scopeReady && plantReady ? loading : true,
     retry: load,
   };
+}
+
+export function useForecastRequest(
+  client: ApiClient,
+  plantId: string | undefined,
+  scopeKey: string,
+  onCompleted: () => Promise<unknown>,
+) {
+  const [status, setStatus] = useState<ForecastJobStatus>();
+  const [error, setError] = useState<ApiError>();
+  const requestGeneration = useRef(0);
+  useEffect(() => {
+    requestGeneration.current += 1;
+    setStatus(undefined);
+    setError(undefined);
+    return () => { requestGeneration.current += 1; };
+  }, [plantId, scopeKey]);
+  const refresh = useCallback(async () => {
+    if (!plantId || scopeKey === 'public') return;
+    const request = ++requestGeneration.current;
+    setError(undefined);
+    try {
+      let job = await client.requestForecast(plantId);
+      if (request !== requestGeneration.current) return;
+      setStatus(job.status);
+      for (const delay of [250, 500, 1_000, 2_000, 2_000, 2_000, 2_000]) {
+        if (job.status === 'completed' || job.status === 'failed') break;
+        const { promise, resolve } = Promise.withResolvers<void>();
+        window.setTimeout(resolve, delay);
+        await promise;
+        if (request !== requestGeneration.current) return;
+        job = await client.forecastRequest(job.correlation_id);
+        if (request !== requestGeneration.current) return;
+        setStatus(job.status);
+      }
+      if (job.status === 'completed') {
+        await onCompleted();
+      } else if (job.status === 'failed') {
+        throw new ApiError('http', 'Forecast refresh failed.');
+      } else {
+        throw new ApiError('network', 'Forecast refresh timed out. Try again.');
+      }
+    } catch (cause) {
+      if (request !== requestGeneration.current) return;
+      setError(cause instanceof ApiError ? cause : new ApiError('http', 'Unable to refresh forecast.'));
+      setStatus('failed');
+    }
+  }, [client, onCompleted, plantId, scopeKey]);
+  return { status, error, refresh };
 }
 
 export function usePreference(principalId?: string) {

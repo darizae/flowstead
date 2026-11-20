@@ -8,6 +8,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import (
     AuthConfigurationError,
@@ -39,6 +40,7 @@ from .models import (
     RainfallMeasurement,
 )
 from .report import render_report, safe_report_filename
+from .security import HttpSecurityMiddleware, SecurityConfig
 
 MAX_HISTORY_HOURS = 168
 MAX_RESPONSE_BYTES = 512_000
@@ -48,8 +50,25 @@ def create_app(
     database_url: str | None = None,
     *,
     auth_verifier: TokenVerifier | None = None,
+    security_config: SecurityConfig | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Flowstead API", version="0.1.0")
+    security = security_config or SecurityConfig.from_env()
+    if security.cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(security.cors_origins),
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["Accept", "Authorization", "Content-Type"],
+            expose_headers=[
+                "Content-Disposition",
+                "Retry-After",
+                "X-RateLimit-Remaining",
+            ],
+            max_age=600,
+        )
+    app.add_middleware(HttpSecurityMiddleware, config=security)
     app.state.database = Database(database_url)
     if auth_verifier is not None:
         app.state.auth_verifier = auth_verifier

@@ -12,7 +12,7 @@ import { type ForecastObservedPoint } from '../features/forecast/transforms';
 import { type ChannelKey, type HistoryRange } from '../features/history/transforms';
 import { createDefaultAuthProvider, type AuthProvider, type AuthSession } from '../lib/auth/provider';
 import '../app.css';
-import { usePlantForecast, usePlantHistory, usePlantLatest, usePlants, usePreference } from './hooks';
+import { useForecastRequest, usePlantForecast, usePlantHistory, usePlantLatest, usePlants, usePreference } from './hooks';
 
 function plantIdFromLocation(): string | undefined {
   const match = window.location.pathname.match(/^\/plants\/([^/]+)\/?$/);
@@ -157,6 +157,7 @@ function Detail({ client, selectedId: _selectedId, selectedPlant, plants, loadin
   const history = usePlantHistory(client, selectedPlant?.plant_id, range, scopeKey, latest?.reading.timestamp_utc);
   const forecast = usePlantForecast(client, selectedPlant?.plant_id, scopeKey);
   const observed = useMemo(() => observedFromHistory(history.history?.readings), [history.history]);
+  const forecastRequest = useForecastRequest(client, selectedPlant?.plant_id, scopeKey, forecast.retry);
   scopeRef.current = scopeKey;
   plantRef.current = selectedPlant?.plant_id;
   useEffect(() => {
@@ -179,5 +180,78 @@ function Detail({ client, selectedId: _selectedId, selectedPlant, plants, loadin
   if (listError?.code === 'unauthorized') return <div className="error-state" role="alert"><strong>Session expired</strong><p>Your authorized Plant list is no longer available.</p><RetryButton onClick={onBack}>All plants</RetryButton></div>;
   if (!selectedPlant) return <Card className="surface state"><strong>Plant not available</strong><p>This Plant is not available in your current view.</p><RetryButton onClick={onBack}>All plants</RetryButton></Card>;
   const reportDisabled = loading || Boolean(listError) || detailLoading || Boolean(detailError) || !latest;
-  return <><PlantDetailHeader plant={selectedPlant} plants={plants} onBack={onBack} onSwitch={onSwitch} onDownload={download} downloadDisabled={reportDisabled} downloadLoading={downloadLoading} />{downloadError && <p className="error-state" role="alert">{downloadError}</p>}{detailLoading ? <LoadingState label="Loading latest measurements…" /> : detailError ? <div className="error-state" role="alert"><strong>{detailError.code === 'plant_not_found' ? 'Plant not available' : detailError.code === 'unauthorized' ? 'Session expired' : 'Latest readings unavailable'}</strong><p>{detailError.code === 'plant_not_found' ? 'This Plant is not available in your current view.' : detailError.message}</p><RetryButton onClick={detailError.code === 'plant_not_found' ? onBack : retry}>{detailError.code === 'plant_not_found' ? 'All plants' : 'Retry'}</RetryButton></div> : latest ? <><MetricCards measurements={latest.reading.measurements} /><div className="detail-grid"><Card className="history-panel" aria-labelledby="history-title"><h2 id="history-title">Measurement history</h2>{history.loading ? <LoadingState label="Loading history…" /> : history.error ? <div className="error-state" role="alert"><strong>History unavailable</strong><p>{history.error.message}</p><RetryButton onClick={history.retry}>Retry</RetryButton></div> : history.history ? <HistoryChart history={history.history} range={range} channel={channel} onRangeChange={setRange} onChannelChange={setChannel} /> : <p>No history is available for this Plant.</p>}</Card><Card className="forecast-panel" aria-labelledby="forecast-title"><h2 id="forecast-title">Influent flow forecast</h2>{forecast.loading ? <LoadingState label="Loading forecast…" /> : forecast.error ? <div className="error-state" role="alert"><strong>Forecast unavailable</strong><p>{forecast.error.message}</p><RetryButton onClick={forecast.retry}>Retry</RetryButton></div> : forecast.forecast ? <ForecastChart forecast={forecast.forecast} observed={observed} /> : <p>No forecast is available for this Plant.</p>}</Card></div></> : <Card className="surface state"><strong>Latest readings unavailable</strong><p>Try again to load this Plant.</p><RetryButton onClick={retry}>Retry</RetryButton></Card>}</>;
+  return (
+    <>
+      <PlantDetailHeader
+        plant={selectedPlant}
+        plants={plants}
+        onBack={onBack}
+        onSwitch={onSwitch}
+        onDownload={download}
+        downloadDisabled={reportDisabled}
+        downloadLoading={downloadLoading}
+      />
+      {downloadError && <p className="error-state" role="alert">{downloadError}</p>}
+      {detailLoading ? (
+        <LoadingState label="Loading latest measurements…" />
+      ) : detailError ? (
+        <div className="error-state" role="alert">
+          <strong>{detailError.code === 'plant_not_found' ? 'Plant not available' : detailError.code === 'unauthorized' ? 'Session expired' : 'Latest readings unavailable'}</strong>
+          <p>{detailError.code === 'plant_not_found' ? 'This Plant is not available in your current view.' : detailError.message}</p>
+          <RetryButton onClick={detailError.code === 'plant_not_found' ? onBack : retry}>{detailError.code === 'plant_not_found' ? 'All plants' : 'Retry'}</RetryButton>
+        </div>
+      ) : latest ? (
+        <>
+          <MetricCards measurements={latest.reading.measurements} />
+          <div className="detail-grid">
+            <Card className="history-panel" aria-labelledby="history-title">
+              <h2 id="history-title">Measurement history</h2>
+              {history.loading ? (
+                <LoadingState label="Loading history…" />
+              ) : history.error ? (
+                <div className="error-state" role="alert"><strong>History unavailable</strong><p>{history.error.message}</p><RetryButton onClick={history.retry}>Retry</RetryButton></div>
+              ) : history.history ? (
+                <HistoryChart history={history.history} range={range} channel={channel} onRangeChange={setRange} onChannelChange={setChannel} />
+              ) : (
+                <p>No history is available for this Plant.</p>
+              )}
+            </Card>
+            <Card className="forecast-panel" aria-labelledby="forecast-title">
+              <div className="forecast-panel-head">
+                <h2 id="forecast-title">Influent flow forecast</h2>
+                {client.hasPrincipal ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="small"
+                    data-testid="forecast-refresh"
+                    disabled={forecastRequest.status === 'queued' || forecastRequest.status === 'processing'}
+                    onClick={() => void forecastRequest.refresh()}
+                  >
+                    Refresh forecast
+                  </Button>
+                ) : null}
+              </div>
+              {forecastRequest.status ? (
+                <p className={`forecast-request-status ${forecastRequest.status === 'failed' ? 'error' : ''}`} data-testid="forecast-request-status" role="status">
+                  {forecastRequest.status === 'queued' ? 'Forecast queued' : forecastRequest.status === 'processing' ? 'Forecast processing' : forecastRequest.status === 'completed' ? 'Forecast completed' : forecastRequest.error?.message ?? 'Forecast refresh failed.'}
+                </p>
+              ) : null}
+              {forecast.loading ? (
+                <LoadingState label="Loading forecast…" />
+              ) : forecast.error ? (
+                <div className="error-state" role="alert"><strong>Forecast unavailable</strong><p>{forecast.error.message}</p><RetryButton onClick={forecast.retry}>Retry</RetryButton></div>
+              ) : forecast.forecast ? (
+                <ForecastChart forecast={forecast.forecast} observed={observed} />
+              ) : (
+                <p>No forecast is available for this Plant.</p>
+              )}
+            </Card>
+          </div>
+        </>
+      ) : (
+        <Card className="surface state"><strong>Latest readings unavailable</strong><p>Try again to load this Plant.</p><RetryButton onClick={retry}>Retry</RetryButton></Card>
+      )}
+    </>
+  );
 }

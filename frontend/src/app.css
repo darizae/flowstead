@@ -7,3 +7,4 @@
 @media(max-width:600px){.session-identity{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 @media(max-width:640px){.top-meta{padding-left:10px;gap:6px;white-space:nowrap;overflow:hidden;border-left:0}.top-meta [data-testid="sign-in-entry"],.top-meta [data-testid="sign-out"]{padding-left:8px;padding-right:8px;min-height:0}.topbar nav{flex:0 1 auto}}
 .chart-footer{display:flex;justify-content:flex-end;border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.chart-export-actions{display:flex;gap:8px;flex-wrap:wrap}
+.forecast-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.forecast-request-status{margin:10px 0 0;color:var(--ink2);font-size:13px}.forecast-request-status.error{padding:9px 11px}

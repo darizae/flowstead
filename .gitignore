@@ -25,3 +25,4 @@ frontend/playwright-report/
 frontend/tsconfig.tsbuildinfo
 docs/design/evidence/playwright-report/
 docs/design/evidence/playwright-test-results/
+.omp/

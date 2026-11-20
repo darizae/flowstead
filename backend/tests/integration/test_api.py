@@ -61,12 +61,24 @@ def test_disjoint_principals_receive_disjoint_private_reads(client: TestClient) 
 
 
 def test_private_denials_and_bounded_windows(client: TestClient) -> None:
+    """Case: SEC-M12-RATE — JWT, window and SQL-shaped Plant inputs fail closed."""
     _grant("operator-a", "plant-01")
     assert client.get("/api/v1/plants").status_code == 401
     assert client.get("/api/v1/plants/plant-01/latest").status_code == 401
     assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T00:30:00Z", headers=principal_headers("operator-a")).status_code == 422
     assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00-05:00&to=2025-01-01T02:00:00-05:00", headers=principal_headers("operator-a")).status_code == 422
     assert client.get("/api/v1/plants/unknown/latest", headers=principal_headers("operator-a")).status_code == 404
+    malicious = "plant-01' OR '1'='1"
+    assert client.get(
+        f"/api/v1/plants/{malicious}/latest",
+        headers=principal_headers("operator-a"),
+    ).status_code == 404
+    assert client.get(
+        "/api/v1/plants",
+        headers={"Authorization": "Bearer forged.invalid.token"},
+    ).status_code == 401
+    with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
+        assert connection.execute("SELECT count(*) FROM app.plants").fetchone() == (5,)
 
 
 def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:

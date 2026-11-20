@@ -10,7 +10,10 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   outputDir: '../docs/design/evidence/playwright-test-results',
-  reporter: [['html', { outputFolder: '../docs/design/evidence/playwright-report', open: 'never' }]],
+  reporter: [
+    ['html', { outputFolder: '../docs/design/evidence/playwright-report', open: 'never' }],
+    ['json', { outputFile: '../docs/design/evidence/playwright-report/results.json' }],
+  ],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173',
     ...chromiumLaunch,
