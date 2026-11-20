@@ -48,6 +48,7 @@ just frontend-typecheck
 just frontend-build
 just audit-frontend
 just test-e2e-local
+just dev-smoke
 just dev
 just dev-down
 ~~~
@@ -90,9 +91,15 @@ immediate peer matches `FLOWSTEAD_TRUSTED_PROXIES`; list only proxy CIDRs contro
 deployment. This limiter is intentionally for the initial single-instance demo. A shared
 limiter is required before any multi-instance deployment.
 
-If task 014 confirms that the live project still uses legacy HS256 tokens, the documented
-temporary fallback is `SUPABASE_AUTH_VERIFICATION_MODE=legacy-auth-endpoint` plus the
-project's publishable key. That mode validates the exact bearer token through the configured
-HTTPS Supabase `/user` endpoint with a bounded timeout. It never stores or uses the JWT
-signing secret or service-role secret. Hosted behavior, invite-only signup settings and the
-fallback's need remain **UNVERIFIED** until task 014; this task makes no cloud changes.
+Task 014 verified read-only connectivity to the private `flowstead-dev` Supabase project
+(`jryvzjwsrxctjeawnkqo`): it is empty, so the pre-change snapshot is clean, and the reviewed
+local chain reaches head `003_jetstream_messages` (`just dev-smoke` passes). Live migration
+run, M1 import, invite-only Auth configuration, demo identities and signed-token/Data API
+smoke are **NOT PERFORMED** — they require an owner-supplied admin connection string and
+invitation recipients. If the live project then proves to still issue legacy HS256 tokens,
+the documented temporary fallback is `SUPABASE_AUTH_VERIFICATION_MODE=legacy-auth-endpoint`
+plus the project's publishable key. That mode validates the exact bearer token through the
+configured HTTPS Supabase `/user` endpoint with a bounded timeout. It never stores or uses
+the JWT signing secret or service-role secret. Hosted behavior, invite-only signup settings
+and the fallback's need remain **UNVERIFIED** until live admin access is exercised. See
+[docs/setup/DEV_SUPABASE.md](docs/setup/DEV_SUPABASE.md) for the approved runbook.
