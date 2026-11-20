@@ -134,6 +134,34 @@ build-smoke: build-backend-image build
 
 test-deploy-local: build-smoke
 
+# ARM64 backend image for the OCI A1 VM (OPS-M16-ARM): explicit linux/arm64
+# build + load, tagged for compose.hosted.yml. Same uv.lock-driven Dockerfile;
+# no secrets baked in.
+build-backend-image-arm64:
+    docker build --platform linux/arm64 --load -f backend/Dockerfile -t flowstead-backend:arm64-hosted backend
+
+# Verify linux/arm64 image arch + pinned NATS/Caddy arm64 manifests/digests.
+verify-hosted-arm64:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    echo "backend image: $(docker image inspect flowstead-backend:arm64-hosted | jq -r '.[0].Os + "/" + .[0].Architecture')"
+    echo "nats arm64 manifest:"
+    docker manifest inspect 'nats:2.12-alpine@sha256:b270f5e2428354c0335612694d7dd2fb588148e567a5757fdff325ef9c9332e6' | jq -r '.manifests[] | select(.platform.architecture=="arm64") | .digest'
+    echo "caddy arm64 manifest:"
+    docker manifest inspect 'caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d' | jq -r '.manifests[] | select(.platform.architecture=="arm64") | .digest'
+
+# Static-validation of compose.hosted.yml (syntax, no local PostgreSQL, secret
+# env-file path).
+hosted-config-validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HOSTED_ENV_FILE="${HOSTED_ENV_FILE:-/dev/null}" docker compose -f compose.hosted.yml config --quiet
+
+# Hosted-config acceptance (OPS-M16-ARM, OPS-M16-QUEUE, SEC-M16-NET) against a
+# disposable EXTERNAL PostgreSQL; compose.hosted.yml itself starts no db.
+test-deploy-hosted: build-backend-image-arm64
+    uv run --project backend python scripts/test_deploy_hosted.py
+
 audit-frontend:
     npm --prefix frontend audit --audit-level=moderate
 

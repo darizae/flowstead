@@ -1,0 +1,8 @@
+# Local-only HTTP proxy config for the hosted-config smoke test
+# (scripts/test_deploy_hosted.py). Serves plain HTTP on :80 and reverse-proxies
+# to the API on the internal network — no DNS/TLS — so the proxy→api path can be
+# validated deterministically without a public hostname. Not for production.
+:80 {
+	encode gzip
+	reverse_proxy api:8000
+}

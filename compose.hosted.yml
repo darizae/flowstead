@@ -1,0 +1,110 @@
+# Flowstead public-demo hosted deployment (T-016) — Oracle Always Free A1 VM.
+#
+# Distinct from compose.yml (local/staging): this stack starts NO local
+# PostgreSQL. The API and worker reach the existing Supabase `flowstead-demo`
+# PostgreSQL strictly through the server-only DATABASE_URL (TLS), injected from
+# a host secret file — never from an image, bundle or Git.
+#
+# Only the `proxy` service publishes host ports (80/443). FastAPI 8000, NATS
+# client 4222 and NATS monitor 8222 stay on the internal Docker network and are
+# never host-published, so a misconfigured OCI NSG/security-list cannot expose
+# them to the network. The host firewall must additionally deny 8000/4222/8222
+# ingress and allow only 80/443 plus restricted SSH (see
+# docs/deployment/HOSTED_DEPLOYMENT.md).
+#
+# Usage (on an ARM64 A1 VM):
+#   HOSTED_ENV_FILE=/etc/flowstead/hosted.env \
+#     docker compose -f compose.hosted.yml -p flowstead-demo up -d --wait
+#
+# Secrets must resolve to a host secret-file e.g. /etc/flowstead/hosted.env
+# (DATABASE_URL, SUPABASE_AUTH_URL, SUPABASE_JWT_*, FLOWSTEAD_CORS_ORIGINS,
+# FLOWSTEAD_TRUSTED_PROXIES …). See deploy/oci/env.hosted.example.
+
+x-backend: &backend
+  image: flowstead-backend:arm64-hosted
+  env_file:
+    - ${HOSTED_ENV_FILE:-/etc/flowstead/hosted.env}
+  environment:
+    NATS_URL: nats://nats:4222
+  depends_on:
+    nats:
+      condition: service_healthy
+  networks:
+    - internal
+  restart: unless-stopped
+
+services:
+  nats:
+    image: nats:2.12-alpine@sha256:b270f5e2428354c0335612694d7dd2fb588148e567a5757fdff325ef9c9332e6
+    # JetStream enabled with a persistent, host-owned data directory. Stream
+    # retention is bounded by the app (7-day max event age, 5-delivery retry);
+    # restarting NATS or the host preserves the durable queue.
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:8222/healthz?js-enabled-only=true' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    volumes:
+      - flowstead-nats:/data
+    networks:
+      - internal
+    # Never publish 4222/8222 to the host.
+
+  api:
+    <<: *backend
+    command: ["uvicorn", "flowstead_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 5s
+    stop_grace_period: 30s
+    # Never publish 8000 to the host; only the proxy terminates client TLS.
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "flowstead_api.messaging", "run"]
+    # Process-alive probe; DB/JetStream reachability is asserted by the hosted
+    # smoke (queue → forecast completion), not by an HTTP endpoint.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; open('/proc/1/stat').read()"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 5s
+    # A durable consumer must drain before exit on SIGTERM; the default 10s
+    # stop timeout would SIGKILL it and abort an in-flight forecast ack.
+    stop_grace_period: 120s
+
+  proxy:
+    # HTTPS reverse proxy (Caddy, digest-pinned). Only this service is public.
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    ports:
+      - "${PROXY_HTTP_PORT:-80}:80"
+      - "${PROXY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/oci/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - internal
+
+networks:
+  # Non-published bridge so api/nats/worker can reach Supabase/DATABASE_URL and
+  # the JWKS issuer outbound while being unreachable from the host's public
+  # interface. Do NOT toggle `internal: true` here: api/worker need outbound
+  # egress to the hosted database and Auth issuer.
+  internal:
+    driver: bridge
+
+volumes:
+  flowstead-nats:
+  caddy-data:
+  caddy-config:

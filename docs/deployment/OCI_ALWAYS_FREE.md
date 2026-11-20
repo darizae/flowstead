@@ -1,6 +1,15 @@
 # OCI Always Free deployment preflight — Flowstead
 
-**Status: proposed hosting target, not a live tenancy receipt.** Checked against Oracle's official documentation on 2026-11-20. T-016 is the only task allowed to implement the hosted deployment; T-017 independently verifies its behavior. The user's OCI Console URL selects `eu-frankfurt-1` but does **not** prove the tenancy home region, its account type, resource quota, free capacity, spend, or permissions. A signed-in Console inspection has not yet been performed by the planner.
+**Status: read-only Console inspected by T-016; provisioning STOPPED on cost.
+No VM, network, storage, budget or billing alert was created.** Checked against
+Oracle's official documentation and, on 2026-11-20, the owner's authenticated
+Oracle Console (home region **eu-frankfurt-1**, tenancy `danarech99`,
+**Free Tier / Free Trial** account, **zero** existing instances). The
+`VM.Standard.A1.Flex` shape is labelled Always Free-eligible, but the Create
+Instance estimate reported **€1.85/month** for the boot volume — not $0 — so the
+hard "$0 confirmed" gate was **not** met and nothing was provisioned. A1 is
+available in any AD; the default platform image is Oracle Linux 9. Details and
+T-016 acceptance status are in [HOSTED_DEPLOYMENT.md](HOSTED_DEPLOYMENT.md).
 
 ## Approved technical destination and isolation
 

@@ -1,0 +1,37 @@
+# Flowstead public-demo HTTPS proxy (Caddy) — T-016.
+#
+# WARNING: the hostname below is a PROPOSAL only (`api.flowstead.darizae.dev`
+# is NOT an approved DNS record). Caddy requests an automatic trusted TLS
+# certificate for the exact hostname in the site address; until the owner has
+# explicitly approved and created that specific subdomain DNS record pointing
+# at the VM's public IP, this file MUST remain disabled (or only used with a
+# staging/internal issuer). Do not repoint darizae.dev apex or the personal
+# website, and never run HTTPS on an unapproved hostname.
+#
+# Once the owner supplies the exact approved API hostname, replace the site
+# address below and reload: `docker compose -f compose.hosted.yml exec proxy \
+# caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+
+api.flowstead.darizae.dev {
+	# Only the public demo reads (health + the five synthetic Plants) are
+	# reachable here. Client-facing headers/limits are App-owned (security.py).
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-X-Server
+		-Server
+	}
+
+	# Caddy terminates TLS; FastAPI stays on the internal network. Proxy IP is
+	# the only trusted proxy: FLOWSTEAD_TRUSTED_PROXIES must hold the Docker
+	# bridge CIDR so the app recovers the real client address.
+	reverse_proxy api:8000 {
+		# Long-lived pooler/SSE-style reads stay connected but bounded.
+		transport http {
+			read_timeout 60s
+		}
+	}
+}
