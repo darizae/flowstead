@@ -181,7 +181,7 @@
 | `OPS-M16-ROLLBACK` | previous image/seed snapshot and safe teardown documented, not automatically destructive. | UNVERIFIED until asserting test+run checked |
 | `OPS-M16-ARM` | actual `linux/arm64` image architecture + local/VM container start for API, worker, NATS and TLS proxy; no x86-only dependency. | LOCAL PASS (`just test-deploy-hosted`); hosted VM UNVERIFIED |
 | `OPS-M16-QUEUE` | post/dispatch/JetStream/worker reaches persisted twelve-hour forecast; worker stop/restart preserves queued message. | LOCAL PASS (`just test-deploy-hosted`, disposable external DB); hosted UNVERIFIED |
-| `OPS-M16-COST` | before/after true OCI cost/usage snapshot and budget-alert status with no-charge caveats and paid-resource stop gates. | BLOCKED: A1 estimate €1.85/month, not $0 → not deployed |
+| `OPS-M16-COST` | before/after true OCI cost/usage snapshot and budget-alert status with no-charge caveats and paid-resource stop gates. | BLOCKED on live confirmation: €1.85 shown is rate-card list price (storage €0.00 with the 200 GB Free Tier discount); no VM/budget created; in-console cost/limits pending owner re-auth |
 | `SEC-M16-NET` | OCI NSG + host firewall deny public 8000/4222/8222/SQL; allow only 80/443 and bounded SSH; TLS, strict origins, proxy headers. | CONFIG/LOCAL PASS (compose publishes only proxy); hosted UNVERIFIED |
 
 ### T-017 — [task source](../planning/tasks/017_public-demo-verification__codex-luna-5-6__high.md)

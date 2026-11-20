@@ -1,15 +1,22 @@
 # OCI Always Free deployment preflight — Flowstead
 
-**Status: read-only Console inspected by T-016; provisioning STOPPED on cost.
-No VM, network, storage, budget or billing alert was created.** Checked against
-Oracle's official documentation and, on 2026-11-20, the owner's authenticated
-Oracle Console (home region **eu-frankfurt-1**, tenancy `danarech99`,
-**Free Tier / Free Trial** account, **zero** existing instances). The
-`VM.Standard.A1.Flex` shape is labelled Always Free-eligible, but the Create
-Instance estimate reported **€1.85/month** for the boot volume — not $0 — so the
-hard "$0 confirmed" gate was **not** met and nothing was provisioned. A1 is
-available in any AD; the default platform image is Oracle Linux 9. Details and
-T-016 acceptance status are in [HOSTED_DEPLOYMENT.md](HOSTED_DEPLOYMENT.md).
+**Status: read-only Console + Oracle Cost Estimator inspected by T-016;
+provisioning NOT performed (live zero-cost still unconfirmed). No VM, network,
+storage, budget or billing alert was created.** On 2026-11-20 the owner's
+authenticated Oracle Console confirmed home region **eu-frankfurt-1**, tenancy
+`danarech99`, a **Free Tier / Free Trial** account, and **zero** existing
+instances. The Create Instance estimate reported **€1.85/month (boot volume)**,
+which is the **rate-card list price** — that estimate shows no compute charge
+(A1 2 OCPU/12 GB is Always Free) and does not subtract the Always Free 200 GB
+storage allowance. Oracle's **Cost Estimator offers an explicit "Apply 200 GB
+Free Tier Discount"** option, which zeroes the boot volume (storage €0.00, EUR).
+Zero-cost for `VM.Standard.A1.Flex` (2 OCPU/12 GB) + 50 GB boot in
+`eu-frankfurt-1` is therefore **supported by official Always Free docs + the
+estimator, but not yet confirmed against the live tenancy** (in-console
+Cost/Limits unreachable after the OCI session lapsed; owner re-auth required).
+A1 is available in any AD; the default platform image is Oracle Linux 9.
+Details and T-016 acceptance status are in
+[HOSTED_DEPLOYMENT.md](HOSTED_DEPLOYMENT.md).
 
 ## Approved technical destination and isolation
 

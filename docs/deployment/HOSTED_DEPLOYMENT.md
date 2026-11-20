@@ -21,29 +21,46 @@ Observed on the owner's authenticated Oracle Console via the browser relay
 | A1 capacity | Ampere A1 available in any AD | Create Instance warning banner |
 | Default image | Oracle Linux 9 (build 2026.10.30-0) | Create Instance → Image |
 | Shape | `VM.Standard.A1.Flex`, marked **Always Free-eligible** | Create Instance → Shape |
-| **Estimated cost** | **€1.85/month (boot volume)** | Create Instance → "View estimated cost" |
+| **Create Instance estimate** | **Boot volume €1.85/month (no compute charge shown)** | Create Instance → "View estimated cost" |
+| **Cost Estimator (public, Oracle)** | A1 `VM.Standard.A1.Flex` 2 OCPU/12 GB + 50 GB boot with **"Apply 200 GB Free Tier Discount"** checked → **storage €0.00** | oracle.com/cloud/costestimator.html; toggle zeroes the boot volume |
+| **Live tenancy cost confirmation** | **UNVERIFIED** — in-console Cost Estimator/Limits unreachable (OCI session lapsed, owner re-auth required) | — |
 
-**Cost gate (BLOCKED, never provisioned).** Although `VM.Standard.A1.Flex` is
-labelled "Always Free-eligible", the Create Instance estimate on this **Free
-Trial** account reports a **€1.85/month** charge for the boot volume — **not
-$0**. The Always Free $0 discount is therefore not confirmed for this account,
-and the OCI preflight forbids provisioning anything whose estimated charge is
-not $0. Post-trial, a Free Tria/Free Tier account may bill or drop free
-resources; trial credits are **not** proof of permanent free eligibility.
-**No VM, VCN, boot/block volume, budget or billing alert was created.**
+**Cost reconciliation (BLOCKED on live confirmation — nothing provisioned).**
+The Create Instance "€1.85/month boot volume" is the **rate-card list price**;
+that estimate does **not** subtract the Always Free 200 GB combined block+boot
+storage allowance, and it shows **no compute charge** at all (A1 2 OCPU/12 GB is
+Always Free). Oracle's official Always Free docs ([Always Free Resources,
+resourceref](https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm)) confirm "All tenancies receive a total of 200 GB of
+Block Volume storage … apply to both boot volumes and block volumes combined",
+and A1 Ampere 2 OCPU/12 GB is Always Free; this allowance applies to eligible
+**Free Trial** accounts. Oracle's **Cost Estimator offers an explicit "Apply
+200 GB Free Tier Discount"** control, which changed the boot volume estimate from
+≈€8.50 to **€0.00** (EUR: storage `€0.00`). Net: the €1.85 figure is **not proof
+of a billable charge**, and the target configuration (A1 + 50 GB boot in
+`eu-frankfurt-1`) is **supported as €0** by official docs + the estimator.
 
-Additional provisioning blockers recorded for the record:
+**However**, that is estimator + documentation evidence, **not** a live-tenancy
+billing confirmation, and the OCI preflight forbids provisioning without
+confirmed zero-charge eligibility in the actual tenancy. Provisioning
+was **not** performed and remains gated on the live checks below. Post-trial a
+Free Tier account may bill or reclaim idle resources; trial credits are **not**
+proof of permanent free eligibility. **No VM, VCN, boot/block volume, budget or
+billing alert was created.**
 
-- Owner-controlled **OpenSSH public key** not supplied → no authenticated
-  VM access for deployment.
-- `flowstead.darizae.dev` / `api.flowstead.darizae.dev` are **proposals only**;
-  no DNS records approved or created (the apex `darizae.dev` personal site is
-  untouched).
-- Supabase **`flowstead-demo`** (`hkyobferqdfiicnsaupl`) has no verified app
-  migrations/import; no admin connection string or invitation recipients were
-  supplied → live Alembic/import/Auth are **UNVERIFIED**.
-- No Vercel Flowstead project had been provisioned; Vercel deploy is separate
-  and outside this task's verified execution.
+Remaining prerequisites to provision at confirmed €0 (each blocked):
+
+1. **Owner re-signs in to OCI** (session lapsed; a password-manager autofill
+   overlay also blocks the browser relay — must be dismissed in Chrome). Then
+   confirm in the **in-console Cost Estimator** with "Apply 200 GB Free Tier
+   discount" and read **Limits/Usage** to prove remaining quota
+   (0/2 OCPU, 0/12 GB, 0/200 GB) in `eu-frankfurt-1`.
+2. **Owner SSH public OpenSSH key** supplied → authenticated VM access for
+   deployment.
+3. **DNS approval** for `flowstead.darizae.dev` / `api.flowstead.darizae.dev`
+   (proposals only; apex `darizae.dev` personal site untouched).
+4. **Supabase `flowstead-demo`** admin connection string + invitation recipients
+   → live Alembic/import/Auth (else marked UNVERIFIED).
+5. Vercel static-frontend project provisioning (separate).
 
 ## Hosted deployment artifacts (this repo)
 
@@ -100,13 +117,13 @@ replays it (durable JetStream + outbox recovery); and graceful SIGTERM exit 0.
 
 | Gate | Status |
 | --- | --- |
-| `CLOUD-M16-RESOURCES` | FAIL (cost): home region/tenancy/shape recorded, but A1 estimate is **€1.85/month**, not $0 → **NOT DEPLOYED** |
+| `CLOUD-M16-RESOURCES` | PARTIAL/UNVERIFIED: home region/tenancy/shape recorded; zero-cost **supported** (docs + Cost Estimator "Apply 200 GB Free Tier discount" → storage €0.00) but **not confirmed live** (OCI session lapsed) → **NOT DEPLOYED** |
 | `OPS-M16-ARM` | **PASS (local)**: linux/arm64 backend image + nats/caddy arm64 manifests |
 | `SEC-M16-NET` | **PASS (config/local)**: compose hosts only proxy; live local containers expose no app/NATS ports |
 | `CLOUD-M16-DATA` | UNVERIFIED (no Supabase admin connection/DNS) |
 | `SEC-M16-AUTH` | UNVERIFIED (no real recipients / live Auth) |
 | `OPS-M16-QUEUE` | **PASS (local)**: durable queue survives worker restart (disposable external DB) |
-| `OPS-M16-COST` | BLOCKED: no VM created (non-zero estimate); no budget configured |
+| `OPS-M16-COST` | BLOCKED on live confirmation: €1.85 shown is rate-card list price (no compute charge; storage €0.00 with the 200 GB Free Tier discount). No VM/budget created; in-console Cost/Limits confirmation pending owner re-auth |
 | `OPS-M16-ROLLBACK` | Local: image digest recorded; no live deployment to roll back |
 | `OPS-M16-TLS` | UNVERIFIED (no approved DNS / no deployed proxy) |
 
