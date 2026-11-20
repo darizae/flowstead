@@ -23,7 +23,7 @@
 | 010 | [CSV/PNG exports](tasks/010_bounded-csv-and-png-exports__codex-luna-5-6__high.md) | Merged locally at `b9e9ccf` and pushed; T-010 receipt and evidence recorded |
 | 011 | [Plant PDF report](tasks/011_authorized-pdf-plant-report__codex-luna-5-6__high.md) | Merged locally at `e474c49`; T-011 receipt with real PostgreSQL, browser download and opened-PDF review recorded |
 | 012 | [Local MVP security/parity](tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
-| 013 | [MVP docs hygiene](tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 013 | [MVP docs hygiene](tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | Completed locally on `main`; `just docs-check`, `just --list`, `just check-backend` and `just frontend-typecheck` pass; no stale links/claims/AWS requirements found; DOC-M13 verified |
 | 014 | [Private development Supabase integration](tasks/014_dev-supabase-integration__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 015 | [Local deployment and recovery](tasks/015_local-deployment-build-and-recovery__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 016 | [Public-demo provision/deploy](tasks/016_public-demo-provision-and-deploy__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
