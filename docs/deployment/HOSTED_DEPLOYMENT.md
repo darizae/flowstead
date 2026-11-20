@@ -47,20 +47,27 @@ Free Tier account may bill or reclaim idle resources; trial credits are **not**
 proof of permanent free eligibility. **No VM, VCN, boot/block volume, budget or
 billing alert was created.**
 
-Remaining prerequisites to provision at confirmed €0 (each blocked):
+Remaining prerequisites to provision (resumed live attempt, 2026-11-20):
 
-1. **Owner re-signs in to OCI** (session lapsed; a password-manager autofill
-   overlay also blocks the browser relay — must be dismissed in Chrome). Then
-   confirm in the **in-console Cost Estimator** with "Apply 200 GB Free Tier
-   discount" and read **Limits/Usage** to prove remaining quota
-   (0/2 OCPU, 0/12 GB, 0/200 GB) in `eu-frankfurt-1`.
-2. **Owner SSH public OpenSSH key** supplied → authenticated VM access for
-   deployment.
-3. **DNS approval** for `flowstead.darizae.dev` / `api.flowstead.darizae.dev`
-   (proposals only; apex `darizae.dev` personal site untouched).
-4. **Supabase `flowstead-demo`** admin connection string + invitation recipients
-   → live Alembic/import/Auth (else marked UNVERIFIED).
-5. Vercel static-frontend project provisioning (separate).
+1. **OCI VM creation — one manual step.** The Create Instance form was prepared
+   via the live console (name `flowstead-demo`, Oracle Linux 9,
+   `VM.Standard.A1.Flex` Always Free 1 OCPU/6 GB, SSH public key pasted, default
+   public VCN/subnet/IP). OCI's `oj` form framework does not accept scripted
+   `value` insertion on the two **network name** fields (VCN/subnet), so they
+   remain uncommitted in the workbook; the owner types the two names (e.g.
+   `flowstead-demo-vcn` / `flowstead-demo-subnet`) and clicks **Create**. No VM
+   was created.
+2. **Owner SSH OpenSSH key — generated.** `~/.ssh/id_ed25519_flowstead_demo`
+   (private key stays on the Mac, `chmod 600`); public key pasted into the OCI
+   form.
+3. **Supabase `flowstead-demo` admin access — BLOCKED (no access).** The only
+   mounted Supabase connector is `flowstead-dev`, which must not be modified.
+   Live Alembic/import/Auth need a `flowstead-demo` admin path (owner opens the
+   `flowstead-demo` dashboard or supplies an admin connection outside chat).
+4. **Vercel frontend + DNS — BLOCKED (no access/token).** No Vercel tooling or
+   session is mounted; `flowstead.darizae.dev` / `api.flowstead.darizae.dev`
+   (proposals) and the Vercel project need owner access/session.
+5. **DNS approval** for the two subdomains (apex `darizae.dev` untouched).
 
 ## Hosted deployment artifacts (this repo)
 
