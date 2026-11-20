@@ -19,6 +19,11 @@ Update truthful README product/demo link (only if actually live), dev install/te
 
 
 
+
+## OCI hosting documentation and cost gate
+
+Check `docs/deployment/OCI_ALWAYS_FREE.md` against **actual** T-016/T-017 Oracle receipts: correct Frankfurt home region vs selected UI region, verified A1 shape/OCPU/RAM and total boot+block storage, current cost/budget alerts, Arm64 image, NSG/firewall, persisted JetStream, backup/reseed/rollback, API/frontend endpoints and the independent Supabase demo. Only replace provisional claims with hosted facts backed by observable evidence. Preserve the warning that $1-minimum budget alerts do not prevent charges, Oracle idle instances can be reclaimed and the owner's future billing reminder is not a current spending guarantee. Remove stale claims that demo DB/Vercel/VM have been created only when verified. Do not publish sensitive tenant resource identifiers, SSH keys, emails or console screenshots exposing account data.
+
 ## Dependencies and allowed file closure
 No new runtime deps; use `just docs-check` and existing low-cost local commands.
 

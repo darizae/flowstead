@@ -7,9 +7,9 @@
 | Component | Local development | Private development integration | Future public demo |
 | --- | --- | --- | --- |
 | React/Tailwind | Local dev server and Playwright | Local build/browser smoke; no required public frontend | New separately configured Vercel static frontend project |
-| FastAPI | Local uv/FastAPI adapter | Local or configured hosted API test; never expose server secrets | Compatible Python API host with bounded DB connections |
-| Async jobs | Local NATS 2 JetStream + dispatcher/forecast worker in Compose | Real broker/worker local tests; any remote broker is separately configured | Durable JetStream broker and independently restartable Python worker, with persistent storage/replay and safe secrets |
-| PostgreSQL | Disposable Docker PostgreSQL, local Alembic/importer | Existing private Supabase flowstead-dev, project ref jryvzjwsrxctjeawnkqo, eu-west-1 | Separate flowstead-demo Supabase project (not yet created), synthetic-only |
+| FastAPI | Local uv/FastAPI adapter | Local or configured hosted API test; never expose server secrets | Proposed same Oracle A1 VM (separate API container behind TLS proxy); validate Arm64 and free eligibility before provisioning |
+| Async jobs | Local NATS 2 JetStream + dispatcher/forecast worker in Compose | Real broker/worker local tests; any remote broker is separately configured | Proposed Oracle Always Free A1 Arm64 VM: persistent NATS/JetStream and separately restartable worker container; live capacity/eligibility NOT YET VERIFIED |
+| PostgreSQL | Disposable Docker PostgreSQL, local Alembic/importer | Existing private Supabase flowstead-dev, project ref jryvzjwsrxctjeawnkqo, eu-west-1 | Existing flowstead-demo Supabase project hkyobferqdfiicnsaupl, eu-west-1, created/healthy; application schema and import NOT YET PERFORMED |
 | Authentication | Deterministic test principals/JWKS; no public credential bypass | Invite-only Supabase Auth with real configured identities and project details | Invite-only Auth and protected operator routes; anonymous five-Plant synthetic read-only demo |
 | Files/exports | Reproducible local generator output; on-demand authorized CSV/PNG/PDF | Local/on-demand, no persistent output archive | On-demand bounded server/client exports; no object storage dependency |
 
@@ -38,9 +38,13 @@ PostgreSQL is the authoritative application data store; NATS/JetStream transport
    recipients. See [the T-014 runbook](DEV_SUPABASE.md) for the approved, documented
    plan.
 3. **Host-neutral local production build (task 015):** verify React build, FastAPI and worker launch, real local JetStream durability/ack/replay, Alembic startup, health, restart/recovery and safe local shutdown. Can precede development cloud integration where independent.
-4. **Public provisioning (task 016):** use concrete configured Python API+worker and persistent JetStream hosting, new Vercel project, isolated Supabase flowstead-demo database/Auth, specific DNS records/subdomains, free-tier limits/charges, secrets, M1 seed/digest, controls and rollback. Never silently fall back to paid services or use an existing unrelated Vercel app.
+4. **Public provisioning (task 016):** follow [OCI Always Free provider preflight](../deployment/OCI_ALWAYS_FREE.md). Owner has opened an Oracle account with Console region selector `eu-frankfurt-1`, but home region, actual live free capacity, $0 eligibility and VM status are not verified. If eligible, target one A1 Arm64 VM with separate FastAPI, durable JetStream and worker containers (not local PostgreSQL), HTTPS proxy, restricted SSH, source-backed image builds and observed no-charge spending limits. Reuse the **already-created** Supabase `flowstead-demo` project `hkyobferqdfiicnsaupl`; only after a reviewed plan apply Alembic/import/Auth with actual credentials/recipients. Create a separate Vercel static frontend and attach only specifically approved subdomain DNS. Do not upgrade, create paid services, overwrite personal website or invent charges/verification.
 5. **Host verification (task 017):** validate actual deployed SHAs, domain/TLS/CORS, anonymous public vs invited private authorization and leakage negatives, MapLibre tiles, download files, queue→forecast completion, dead-letter/restart behavior, DB backup/reseed and rollback. Preserve exact host receipts; mark unrun checks UNVERIFIED.
 6. **Release documentation (task 018):** reconcile runbooks, tested deployment config, links, versions and commands; no publication based only on a green unit suite.
+
+## OCI cost and UI preflight
+
+Oracle's current [Always Free resource documentation](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) describes **2 A1 OCPUs, 12 GB RAM, 200 GB combined boot/block volume storage** in the tenancy's **home region**, subject to the live account's remaining usage/capacity and idle-instance reclamation. The Oracle Console region query does not identify the home region. The owner created an account; no authenticated Oracle Console inspection, VM provisioning, payment/budget configuration or DNS edit is verified here. The agent may use a working `brave-browser-relay` to inspect the actual tenant after discovering tool capabilities; it must stop on paid/identity/admin prompts and report evidence rather than assume success. OCI budget minimum is **1 currency unit**, and alerts are notifications, not hard caps. Preserve the owner's separate two-week billing follow-up. See [the detailed OCI runbook](../deployment/OCI_ALWAYS_FREE.md).
 
 ## Operational verification
 

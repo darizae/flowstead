@@ -24,11 +24,13 @@
 | 011 | [Plant PDF report](tasks/011_authorized-pdf-plant-report__codex-luna-5-6__high.md) | Merged locally at `e474c49`; T-011 receipt with real PostgreSQL, browser download and opened-PDF review recorded |
 | 012 | [Local MVP security/parity](tasks/012_local-mvp-security-and-parity__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
 | 013 | [MVP docs hygiene](tasks/013_mvp-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | Completed locally on `main`; `just docs-check`, `just --list`, `just check-backend` and `just frontend-typecheck` pass; no stale links/claims/AWS requirements found; DOC-M13 verified |
-| 014 | [Private development Supabase integration](tasks/014_dev-supabase-integration__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
-| 015 | [Local deployment and recovery](tasks/015_local-deployment-build-and-recovery__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
-| 016 | [Public-demo provision/deploy](tasks/016_public-demo-provision-and-deploy__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
-| 017 | [Hosted verification/rollback](tasks/017_public-demo-verification__codex-luna-5-6__high.md) | Execute immediately when assigned; consult previous implementations as technical context |
+| 014 | [Private development Supabase integration](tasks/014_dev-supabase-integration__codex-luna-5-6__high.md) | Local runbook/connection proof merged 73345a5; dev live migrations/import/Auth unperformed; keep dev unchanged for demo |
+| 015 | [Local deployment and recovery](tasks/015_local-deployment-build-and-recovery__codex-luna-5-6__high.md) | Committed to remote main at 9c3ba5a; local staging build/recovery recorded, hosted state unverified |
+| 016 | [Public-demo provision/deploy](tasks/016_public-demo-provision-and-deploy__codex-luna-5-6__high.md) | NEXT: OCI Always Free preflight in [runbook](../deployment/OCI_ALWAYS_FREE.md); reuse existing flowstead-demo Supabase hkyobferqdfiicnsaupl; VM/Vercel/DNS and live migrations unverified |
+| 017 | [Hosted verification/rollback](tasks/017_public-demo-verification__codex-luna-5-6__high.md) | After actual T-016 hosted implementation; require Oracle ARM64, durable broker/worker, ingress, cost and browser/auth receipts; no hosting verified yet |
 | 018 | [Release docs hygiene](tasks/018_release-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md) | Execute immediately when assigned; consult previous implementations as technical context |
+
+Current cloud note (2026-11-20): owner created OCI account with console selected to `eu-frankfurt-1`; no Oracle home-region/billing/VM proof yet. OCI's [Always Free documentation](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) lists 2 A1 OCPUs/12 GB RAM and 200 GB boot+block combined. The agent must inspect its live tenant through approved `brave-browser-relay`, if available, and must not assume a $0 bill or paid eligibility. The [OCI runbook](../deployment/OCI_ALWAYS_FREE.md) contains ordered gates. T-016 is the next single assignment; T-017 and T-018 remain follow-on checks.
 
 ## Execution conventions
 
