@@ -1,10 +1,11 @@
 # Flowstead — hosted deployment status and operator guide
 
-**Status as inspected 2026-11-21:** The owner selected the existing `flowstead-demo-instance` (`VM.Standard.E2.1.Micro`, Oracle Linux 9.8, x86_64, Frankfurt) as the **sole deployment host**. OCI reported **RUNNING** following a verified CLI start, and Oracle SSH ingress was narrowed to the owner's current IPv4 `/32`. SSH and sudo were verified. A later remote package-inspection command hung, SSH subsequently timed out, and a graceful `SOFTRESET` was accepted; the last observed lifecycle state was **STOPPING**. Host recovery and application deployment remain incomplete. No additional VM is authorized.
+**Status as inspected 2026-11-21:** The owner selected the existing `flowstead-demo-instance` (`VM.Standard.E2.1.Micro`, Oracle Linux 9.8, x86_64, Frankfurt) as the **sole deployment host**. OCI reported **RUNNING**, and Oracle SSH ingress was narrowed to the owner's current IPv4 `/32`. SSH and sudo were verified; the host recovered from a graceful `SOFTRESET` and is healthy. The **NATS JetStream daemon v2.12.15 is installed, enabled and active** as the non-root `flowstead` user on loopback with verified persistence. API/worker/TLS proxy remain **not deployed** until a restricted Supabase runtime LOGIN and an authorized TLS domain are provisioned. No additional VM is authorized.
 
 ## Verified completed items
 
 - Existing Oracle instance is running; no new machine or volume was created.
+- NATS server **v2.12.15** (`linux-amd64`, publisher SHA-256 `58ab8131…ca15e`, installed binary SHA-256 `214ca5fd…b6d8`) installed to `/usr/local/bin`, config `/etc/flowstead/nats.conf`, loopback only (`127.0.0.1:4222/8222`), bounded JetStream store, `flowstead-nats.service` enabled + active, memory-bounded (`MemoryMax 80M`). Verified JetStream durability across a graceful restart (100/100 messages preserved). Details in [T017_LIVE_VERIFICATION_2026-11-21.md](T017_LIVE_VERIFICATION_2026-11-21.md).
 - Existing Supabase project `flowstead-demo` was migrated using the checked-in 001/002/003 Alembic schema definitions; `app` contains 10 application tables. Five synthetic Plants and 43,800 immutable M1 hourly rows were imported and independently counted (8,760 each). Five ingest-completed events are queued in `app.message_outbox`.
 - Migration history is `003_jetstream_messages`; the synthetic telemetry source checksum is `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`.
 - A separate non-superuser `flowstead_runtime` role was created with app-schema DML privileges, not DDL or access to migration history; database-login provisioning and connection testing remain **UNVERIFIED**. Migration-owner credentials must never be injected into API/worker services.
@@ -25,11 +26,11 @@ The existing x86_64 host has limited RAM (roughly 500 MiB guest memory with swap
 | Case | Current evidence |
 | --- | --- |
 | `CLOUD-M16-RESOURCES` | PARTIAL existing VM identified and started, later graceful reset **STOPPING**; billing hard-cap/current invoice **UNVERIFIED** |
-| `OPS-M16-ARM` (historical case ID) | Host observed x86_64; application process architecture/startup **UNVERIFIED** |
+| `OPS-M16-ARM` (historical case ID) | x86_64 host; NATS `v2.12.15` amd64 binary installed, enabled, running; worker/API process startup still **UNVERIFIED** |
 | `CLOUD-M16-DATA` | PASS migration 003 + five Plants + 43,800 validated rows |
 | `SEC-M16-NET` | SSH source restricted to Mac /32; HTTPS/host-firewall and public ingress **UNVERIFIED** |
 | `SEC-M16-AUTH` | Verified schema denies anonymous `app` access; live JWT identities **UNVERIFIED** |
-| `OPS-M16-QUEUE` | 5 pending ingest events persisted; hosted NATS/worker dispatch **UNVERIFIED** |
+| `OPS-M16-QUEUE` | 5 pending ingest events persisted; NATS JetStream daemon installed/durable probe passed; hosted worker dispatch of the 5 outbox events still **UNVERIFIED** |
 | `OPS-M16-COST` | E2 micro is an Always Free-eligible target; actual billing **UNVERIFIED** |
 | `OPS-M16-TLS` | Actual TLS endpoint/custom API domain **UNVERIFIED** |
 | `OPS-M16-ROLLBACK` | No live app stack to roll back yet; preserve synthetic source and migration history |

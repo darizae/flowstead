@@ -87,4 +87,31 @@ runtime DB credential and DNS/TLS are provisioned).
 
 Restore healthy SSH access to the existing host, verify swap/memory and whether any package operation remains stuck. Securely provision/verify a restricted Supabase runtime login without leaking credentials, and arrange actual invited identities if private tests are required. Install/start and monitor native service components on the existing VM; prove NATS persistence and queued→completed forecasts; configure DNS/certificate/front-end API binding; then run direct public/private browser tests and provider cost checks. Do not call T-017 completed until those observations exist.
 
+## NATS-only deployment on the existing host (2026-11-21, ~22:54–22:57 CET)
+
+Installed and tested **only** the low-footprint NATS JetStream daemon as the non-root
+`flowstead` system user on the existing Frankfurt micro. API/worker/proxy were **not**
+installed or enabled (Supabase runtime LOGIN and authorized TLS domain still pending);
+`install-unit-files.sh` was not run. No `dnf` install/upgrade was performed. No shell
+`history`/logs received any secret.
+
+| Item | Verified result |
+| --- | --- |
+| Host identity/state | `flowstead-demo-instance`, `VM.Standard.E2.1.Micro`, OCI **RUNNING**, Oracle Linux 9.8 x86_64 |
+| NATS version | **v2.12.15** (latest 2.12.x), `git_commit 8460a42`, go1.25.12, from `nats-server` release assets |
+| Publisher SHA-256 | tarball `nats-server-v2.12.15-linux-amd64.tar.gz` = `58ab8131f819263897e2fc38e503e1b755b63bcafeecc7d12582487df48ca15e` (verified against official release `SHA256SUMS`) |
+| Installed binary SHA-256 | `/usr/local/bin/nats-server` = `214ca5fdf5adbda087e0167de530fa248ef5f80cea469e5ce0a905cd5be4b6d8`; `nats-server -v` = `v2.12.15` on host |
+| Install path | `/usr/local/bin/nats-server` (root:root 0755); config `/etc/flowstead/nats.conf` (root:flowstead 0640); store `/var/lib/flowstead/nats` (flowstead 0700) |
+| Service unit | `flowstead-nats.service` (root 0644), user/group `flowstead`, `Restart=on-failure`, `RestartSec=5`, `MemoryMax=80M`, `MemorySwapMax=160M`, `NoNewPrivileges`, `ProtectSystem=strict`, `ReadWritePaths=/var/lib/flowstead/nats`, **enabled** at boot, **active (running)** |
+| Network | `listen 127.0.0.1:4222`, `http 127.0.0.1:8222`; `ss` shows both only on loopback. No public broker port. Only public listeners unchanged from baseline: `:22` ssh and `:111` rpc |
+| JetStream bounds | `max_mem_store 16MB`, `max_file_store 256MB`, `store_dir /var/lib/flowstead/nats`; server reported Max Memory 16.00 MB / Max Storage 256.00 MB |
+| Monitor health | `GET http://127.0.0.1:8222/healthz` → `{"status":"ok"}`; `/varz` host/port `127.0.0.1` |
+| JetStream durability | Temporary file stream `FLOWSTEAD_TEST`: 100 msgs published (seq 1–100); after `systemctl restart flowstead-nats` the stream state still showed **Messages 100, First seq 1, Last seq 100**; message #50 retrieved intact by content. Stream was then deleted (store back to 0) |
+| Memory | `MemoryCurrent` ≈ 3.4 MiB (peak 3.5 MiB) vs `MemoryMax 80M`; `MemorySwapMax 160M`; host free ≈ 233 MiB available, no OOM |
+| SSH after install | `sshd active`, SSH session established after NATS install/restart |
+
+The five original `app.message_outbox` ingest events still await a real worker dispatch;
+T-017 messaging durability beyond the isolated probe stream remains a scheduled
+acceptance test once API/worker are provisioned.
+
 No use of `flowstead-dev`, new VM, domain apex replacement, paid service, credential dump or destructive reset was performed.
