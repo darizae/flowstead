@@ -38,3 +38,32 @@ The existing x86_64 host has limited RAM (roughly 500 MiB guest memory with swap
 The earlier local disposable Compose recovery tests are useful engineering evidence, not a deployed-service pass. T-017 owns browser, authorization, TLS, broker recovery and cost verification **only after actual services exist**.
 
 Detailed start/access guide: [OCI_BOOT_SSH_RUNBOOK.md](OCI_BOOT_SSH_RUNBOOK.md). Provider and security restrictions: [OCI_ALWAYS_FREE.md](OCI_ALWAYS_FREE.md).
+
+## Security-hardening update — 2026-11-21
+
+The audit in [end-to-end security report](../security/2026-11-21-end-to-end-security-audit.md)
+supersedes the initial shared-`flowstead_runtime` wording above. The live
+`flowstead-demo` database now has **distinct NOLOGIN** roles
+`flowstead_api` and `flowstead_worker`, with separately verified grants.
+The old broad `flowstead_runtime` role has NOLOGIN and **all application
+schema permissions revoked**; its old connection string must not be reused.
+The worker cannot SELECT operator grants, and neither role can modify
+synthetic telemetry or access-control data. The two public-schema migration
+history tables have RLS enabled and no Data API read grants.
+
+The existing OCI VM is **RUNNING**, NATS JetStream v2.12.15 is active, durable,
+localhost-only, and NOW REQUIRES a protected host-generated authentication token;
+unauthenticated NATS connections were denied on the live guest. The API and
+worker OS users were created and are distinct from the broker user; their DB
+credential files have NOT been provisioned, and API/worker services have NOT
+been started. The proxy will use a fourth separate OS identity, but is not yet
+installed.
+
+The native templates are now `deploy/oci/native/api.env.example` and
+`worker.env.example` plus the protected NATS token file. The optional Docker
+fallback has **separate** API/worker env files and an explicit broker auth
+secret; the older `deploy/oci/env.hosted.example` is intentionally
+**deprecated**. Current Vercel project settings contain only the public
+Supabase Auth URL and `sb_publishable_` key; new HTTP response headers and
+non-HTML /api routing are in the local source, not deployed to production.
+The actual public API/TLS/identity end-to-end status remains UNVERIFIED.

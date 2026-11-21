@@ -1,31 +1,19 @@
-# Flowstead public-demo hosted deployment (T-016) — Oracle Always Free existing micro VM.
+# Flowstead public-demo hosted fallback on the owner's existing x86_64 VM.
+# Both API and worker use DIFFERENT restricted Postgres role secrets.
+# Do not put an owner/migration password in either host env file.
+# No local PostgreSQL. NATS only uses private internal ports.
+# This is an optional Docker fallback; native systemd services are preferred
+# on the memory-limited E2 micro.
 #
-# Distinct from compose.yml (local/staging): this stack starts NO local
-# PostgreSQL. The API and worker reach the existing Supabase `flowstead-demo`
-# PostgreSQL strictly through the server-only DATABASE_URL (TLS), injected from
-# a host secret file — never from an image, bundle or Git.
-#
-# Only the `proxy` service publishes host ports (80/443). FastAPI 8000, NATS
-# client 4222 and NATS monitor 8222 stay on the internal Docker network and are
-# never host-published, so a misconfigured OCI NSG/security-list cannot expose
-# them to the network. The host firewall must additionally deny 8000/4222/8222
-# ingress and allow only 80/443 plus restricted SSH (see
-# docs/deployment/HOSTED_DEPLOYMENT.md).
-#
-# Usage (on an AMD64 existing micro VM):
-#   HOSTED_ENV_FILE=/etc/flowstead/hosted.env \
-#     docker compose -f compose.hosted.yml -p flowstead-demo up -d --wait
-#
-# Secrets must resolve to a host secret-file e.g. /etc/flowstead/hosted.env
-# (DATABASE_URL, SUPABASE_AUTH_URL, SUPABASE_JWT_*, FLOWSTEAD_CORS_ORIGINS,
-# FLOWSTEAD_TRUSTED_PROXIES …). See deploy/oci/env.hosted.example.
+# Required settings (two different root-protected files):
+# HOSTED_API_ENV_FILE=/etc/flowstead/api.env
+# HOSTED_WORKER_ENV_FILE=/etc/flowstead/worker.env
 
 x-backend: &backend
   image: flowstead-backend:amd64-hosted
-  env_file:
-    - ${HOSTED_ENV_FILE:-/etc/flowstead/hosted.env}
-  environment:
-    NATS_URL: nats://nats:4222
+  # Public CA only; runtime secrets remain per-service env_file.
+  volumes:
+    - ${HOSTED_CA_FILE:-/etc/flowstead/supabase-root-2021.crt}:/etc/flowstead/supabase-root-2021.crt:ro
   depends_on:
     nats:
       condition: service_healthy
@@ -39,7 +27,7 @@ services:
     # JetStream enabled with a persistent, host-owned data directory. Stream
     # retention is bounded by the app (7-day max event age, 5-delivery retry);
     # restarting NATS or the host preserves the durable queue.
-    command: ["-js", "-sd", "/data", "-m", "8222"]
+    command: ["-c", "/etc/nats/nats.conf"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:8222/healthz?js-enabled-only=true' >/dev/null"]
@@ -49,12 +37,19 @@ services:
       start_period: 5s
     volumes:
       - flowstead-nats:/data
+      - ./deploy/oci/nats-docker.conf:/etc/nats/nats.conf:ro
+    secrets:
+      - source: nats_auth
+        target: /etc/nats/nats-auth.conf
+        mode: 0444
     networks:
       - internal
     # Never publish 4222/8222 to the host.
 
   api:
     <<: *backend
+    env_file:
+      - ${HOSTED_API_ENV_FILE:?set API-only credentials file}
     command: ["uvicorn", "flowstead_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3)"]
@@ -67,6 +62,8 @@ services:
 
   worker:
     <<: *backend
+    env_file:
+      - ${HOSTED_WORKER_ENV_FILE:?set worker-only credentials file}
     command: ["python", "-m", "flowstead_api.messaging", "run"]
     # Process-alive probe; DB/JetStream reachability is asserted by the hosted
     # smoke (queue → forecast completion), not by an HTTP endpoint.
@@ -103,6 +100,10 @@ networks:
   # egress to the hosted database and Auth issuer.
   internal:
     driver: bridge
+
+secrets:
+  nats_auth:
+    file: ${HOSTED_NATS_AUTH_FILE:?set root-protected NATS token file}
 
 volumes:
   flowstead-nats:

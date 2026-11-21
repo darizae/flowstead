@@ -66,14 +66,20 @@ PORT_PROXY_HTTPS = 18443
 PROXY_API = f"http://127.0.0.1:{PORT_PROXY_HTTP}"
 TEST_DIR = REPO_ROOT / ".deploy_test" / "hosted"
 OVERRIDE = TEST_DIR / "override.yml"
-SECRET_ENV = TEST_DIR / "hosted.env"
+API_ENV = TEST_DIR / "api.env"
+WORKER_ENV = TEST_DIR / "worker.env"
+CA_FILE = TEST_DIR / "fixture-ca.crt"
+NATS_AUTH = TEST_DIR / "nats-auth.conf"
 
 
 def compose(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     merged = {
         **os.environ,
         "COMPOSE_PROJECT_NAME": PROJECT,
-        "HOSTED_ENV_FILE": str(SECRET_ENV),
+        "HOSTED_API_ENV_FILE": str(API_ENV),
+        "HOSTED_WORKER_ENV_FILE": str(WORKER_ENV),
+        "HOSTED_CA_FILE": str(CA_FILE),
+        "HOSTED_NATS_AUTH_FILE": str(NATS_AUTH),
         "PROXY_HTTP_PORT": str(PORT_PROXY_HTTP),
         "PROXY_HTTPS_PORT": str(PORT_PROXY_HTTPS),
     }
@@ -180,7 +186,7 @@ def main() -> int:
 
         # ---- secret env file (simulating the host secret-store) -------
         TEST_DIR.mkdir(parents=True, exist_ok=True)
-        SECRET_ENV.write_text(
+        API_ENV.write_text(
             "\n".join(
                 [
                     f"DATABASE_URL={CONTAINER_DB_URL}",
@@ -197,6 +203,13 @@ def main() -> int:
                 ]
             )
             + "\n",
+            encoding="utf-8",
+        )
+        # Separate runtime credentials even in disposable integration tests.
+        CA_FILE.write_text("disposable local fixture only\n", encoding="utf-8")
+        NATS_AUTH.write_text('authorization { token: "flowstead_local_nats_fixture" }\n', encoding="utf-8")
+        WORKER_ENV.write_text(
+            f"DATABASE_URL={CONTAINER_DB_URL}\nNATS_URL=nats://flowstead_local_nats_fixture@nats:4222\n",
             encoding="utf-8",
         )
         OVERRIDE.write_text(

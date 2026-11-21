@@ -115,3 +115,65 @@ T-017 messaging durability beyond the isolated probe stream remains a scheduled
 acceptance test once API/worker are provisioned.
 
 No use of `flowstead-dev`, new VM, domain apex replacement, paid service, credential dump or destructive reset was performed.
+
+## End-to-end hardening follow-up — same day
+
+This section **supersedes older STOPPING and pre-NATS entries above** where
+they described a temporarily unreachable host. The existing OCI micro is
+RUNNING and NATS is deployed; neither the API nor worker is deployed yet.
+
+- **Verified live OCI NATS auth:** Broker has a host-generated random token
+  stored at `/etc/flowstead/nats-auth.conf`, owned root:flowstead 0640.
+  `nats.conf` includes this protected file. An unauthenticated NATS protocol
+  client received no successful PONG, while a client with the protected worker
+  token authenticated successfully. `flowstead-nats` remains active, with
+  file-backed JetStream, localhost-only 4222/8222, healthy `/healthz`, no
+  additional volume, package upgrade or public port.
+- **Separate operating-system identity:** On the existing VM, Linux accounts
+  `flowstead-api` and `flowstead-worker` were created for future services;
+  the `flowstead-proxy` identity is defined in the local service config but
+  has NOT been installed on the host (the proxy is not deployed),
+  separate from the already-running `flowstead` broker user. The worker-only
+  broker connection exists in root:flowstead-worker 0640
+  `/etc/flowstead/nats-worker.env`. API service code does not load that file
+  or a NATS_URL. Future API and worker DB environment files are distinct and
+  have not yet been populated with DB secrets.
+- **Verified live Supabase permission fix:** The initial
+  `flowstead_runtime` DML role was excessively broad; the revised SQL
+  migrations `005_least_privilege_runtime_roles` and
+  `006_remove_worker_operator_grant` were applied on **flowstead-demo only**.
+  `flowstead_runtime` retains no app DML and NOLOGIN; dedicated
+  `flowstead_api` and `flowstead_worker` are also currently NOLOGIN pending
+  separate secure passwords. API cannot mutate source/Plant/operator grants,
+  worker cannot mutate source/Plant data **or even SELECT operator assignments**,
+  and API cannot read broker/worker credentials. Public-schema historical
+  migration tables gained RLS; Data API anon/auth still have no app-schema use.
+- **Database TLS (Mac, not credential-authenticated host):** An OpenSSL
+  Postgres STARTTLS connection to an observed Supabase session pooler completed
+  with TLSv1.3 and `Verification: OK` using a pinned Supabase Root 2021 CA.
+  The CA came from an independent public repository and should be cross-checked
+  against the CA served by Supabase Database Settings before first credential
+  delivery. The **correct** project-specific pooler host must come from the
+  Supabase Connect panel; no database LOGIN connection yet passed.
+- **Vercel:** Existing production host served HTTP 200 HTML for
+  `/api/v1/public/plants`, **not JSON**. Local Vercel rewrite now excludes
+  `/api` and adds HTTP-level CSP/anti-framing/MIME/referrer headers; this
+  has **not been redeployed**. Live Vercel project was configured with only
+  the `flowstead-demo` public Auth URL and `sb_publishable_` key for
+  production and preview. No database or service-role credential was sent
+  to Vercel. A new build is required.
+- **Operator identities:** Supabase `auth.users=0` and
+  `app.operator_plant_access=0`; no owner-selected invitee, grant or
+  token exists. Real signed-in private E2E remains **BLOCKED**.
+- **Optional Docker fallback:** Local config has independent API/worker DB
+  files, a protected NATS token secret and separate worker-only broker URL.
+  Static Docker Compose configuration passes. The Docker daemon is not running
+  in the available local environment, so no container runtime test is claimed.
+- **Provider billing and public HTTPS:** Still **UNVERIFIED**, no new paid
+  resource/VM made, and no DNS zone-wide replacement performed.
+
+See the [end-to-end security report](../security/2026-11-21-end-to-end-security-audit.md)
+for remaining P1/P2 checks. **T-017 remains PARTIAL** until a real configured
+FastAPI/worker, invited-operator JWT authorization, NATS outbox delivery and
+HTTPS browser smoke have all been observed. The five initial outbox events
+remain awaiting a worker.

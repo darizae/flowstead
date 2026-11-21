@@ -5,8 +5,8 @@ Wants=network-online.target
 Requires=flowstead-api.service
 [Service]
 Type=simple
-User=flowstead
-Group=flowstead
+User=flowstead-proxy
+Group=flowstead-proxy
 ExecStart=/usr/local/bin/caddy run --config /etc/flowstead/Caddyfile --adapter caddyfile
 ExecReload=/usr/local/bin/caddy reload --config /etc/flowstead/Caddyfile --adapter caddyfile
 Restart=on-failure

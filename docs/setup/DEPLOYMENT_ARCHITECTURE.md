@@ -49,3 +49,18 @@ The owner has selected the **already provisioned** Frankfurt `flowstead-demo-ins
 ## Operational verification
 
 A hosted broker must retain messages through worker restart and satisfy bounded retries and idempotent replay; provider sleep/cold starts and network partition must not produce fabricated completed forecasts. Verify actual backend host ability to maintain a durable worker, PostgreSQL pooler/direct connection constraints, supported Python runtime and provider quota/price/expiry just before task 016. Minimize remote CI; keep locally runnable integration and recovery tests primary. A successful local build, project existence or cloud OAuth setup alone is not hosted acceptance.
+
+## Superseding security isolation decision (2026-11-21)
+
+The shared `flowstead_runtime` model described in earlier planning is
+**retired**. In live `flowstead-demo` migrations 005/006, `flowstead_api`
+and `flowstead_worker` were created as distinct, NOLOGIN database roles
+with mutually restricted grants. They require separate verified session-pooler
+credentials and root-protected environment files before services can start.
+The approved OCI host has a live authenticated NATS broker, a separate
+`flowstead` OS account, distinct proposed `flowstead-api`/`flowstead-worker`
+accounts and a fourth future proxy account; these must not share a Linux group
+capable of reading each other's secrets. Read the current
+[end-to-end security report](../security/2026-11-21-end-to-end-security-audit.md)
+rather than treating any proposed public hostname or earlier shared
+`DATABASE_URL` as verified deployment state.

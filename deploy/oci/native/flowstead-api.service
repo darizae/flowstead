@@ -5,11 +5,10 @@ Wants=network-online.target
 Requires=flowstead-nats.service
 [Service]
 Type=simple
-User=flowstead
-Group=flowstead
+User=flowstead-api
+Group=flowstead-api
 Environment=PYTHONPATH=/opt/flowstead/current:/opt/flowstead/current/backend/src
-Environment=NATS_URL=nats://127.0.0.1:4222
-EnvironmentFile=/etc/flowstead/runtime.env
+EnvironmentFile=/etc/flowstead/api.env
 WorkingDirectory=/opt/flowstead/current
 ExecStart=/opt/flowstead/venv/bin/uvicorn flowstead_api.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 Restart=on-failure
