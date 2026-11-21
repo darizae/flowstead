@@ -2,7 +2,37 @@
 
 **Status: read-only Console + Oracle Cost Estimator inspected by T-016;
 provisioning NOT performed (live zero-cost still unconfirmed). No VM, network,
-storage, budget or billing alert was created.** On 2026-11-20 the owner's
+storage, budget or billing alert was created.**
+
+> **Live re-verification receipt (2026-11-20, supervised OMP/DeepInfra worker
+> via OMP Brave Browser Relay; read-only; spend ≈ $0.0148 under the $0.03 cap;
+> no OCI resource created or submitted — tab URL unchanged).**
+>
+> - **VERIFIED — home region:** region menu reads "Germany Central (Frankfurt),
+>   home region, active" with a "Home region" label → `eu-frankfurt-1` is the
+>   home region. Tenancy `danarech99`, compartment `danarech99 (root)`.
+> - **VERIFIED — shape:** `VM.Standard.A1.Flex` carries an "Always Free-eligible"
+>   badge; info note "You can create Ampere A1 compute instances in any
+>   availability domain".
+> - **VERIFIED — boot volume estimate:** Create Instance estimate shows
+>   **Boot volume €1.85/month, total €1.85/month**, and states it "does not
+>   reflect any tier unit pricing". This is the **rate-card list price**; it does
+>   **not** subtract the Always Free 200 GB storage allowance.
+> - **VERIFIED — no free-tier toggle in this estimator:** the in-wizard
+>   "View estimated cost" panel exposes **no** "Apply 200 GB Free Tier discount"
+>   control. That toggle is offered by Oracle's **separate** Cost Estimator tool,
+>   not the Create Instance wizard.
+> - **NOT VERIFIED (not exposed on this page):** account type (Pay As You Go vs
+>   Always Free) and A1 OCPU/GB allocation limits are not shown on the Create
+>   Instance page; remaining 200 GB free storage in use is unconfirmed; the
+>   standalone Cost Estimator "Apply 200 GB Free Tier discount" checkbox state
+>   was not reached/navigated.
+>
+> **Conclusion:** €1.85/month is a raw list-price estimate that a strictly
+> Always-Free-eligible A1 compute + 50 GB boot would not reflect; zero-cost is
+> still **unconfirmed** until the standalone Cost Estimator free-tier discount
+> and the tenancy's consumed limits are verified. No VM/network/storage/budget
+> created; T-017 not started. On 2026-11-20 the owner's
 authenticated Oracle Console confirmed home region **eu-frankfurt-1**, tenancy
 `danarech99`, a **Free Tier / Free Trial** account, and **zero** existing
 instances. The Create Instance estimate reported **€1.85/month (boot volume)**,
