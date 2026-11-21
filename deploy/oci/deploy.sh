@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Flowstead public-demo deployment driver (T-016) — run ON the OCI A1 ARM64 VM.
+# Flowstead public-demo deployment driver (T-016) — run ON the OCI existing E2 micro AMD64 VM.
 #
-# Builds the ARM64 backend worker/API image from the committed uv.lock, then
+# Builds the AMD64 backend worker/API image from the committed uv.lock, then
 # brings the hosted stack (nats, api, worker, proxy) up. No local PostgreSQL is
 # started; the app uses the hosted Supabase DATABASE_URL from a host secret-file.
 #
@@ -23,7 +23,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 : "${HOSTED_ENV_FILE:=/etc/flowstead/hosted.env}"
-: "${HOSTED_IMAGE_TAG:=flowstead-backend:arm64-hosted}"
+: "${HOSTED_IMAGE_TAG:=flowstead-backend:amd64-hosted}"
 COMPOSE=(docker compose -f compose.hosted.yml -p flowstead-demo)
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -39,8 +39,8 @@ if grep -Eq '^[[:space:]]*(export[[:space:]]+)?MIGRATION_DATABASE_URL[[:space:]]
   exit 1
 fi
 
-echo "== Building ARM64 backend image ($HOSTED_IMAGE_TAG) =="
-docker build --platform linux/arm64 --load -f backend/Dockerfile -t "$HOSTED_IMAGE_TAG" backend
+echo "== Building AMD64 backend image ($HOSTED_IMAGE_TAG) =="
+docker build --platform linux/amd64 --load -f backend/Dockerfile -t "$HOSTED_IMAGE_TAG" backend
 
 echo "== Verifying image architecture =="
 docker image inspect --format 'os={{.Os}} arch={{.Architecture}}' "$HOSTED_IMAGE_TAG"

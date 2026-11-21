@@ -1,0 +1,21 @@
+[Unit]
+Description=Flowstead synthetic demo NATS JetStream (localhost only)
+After=network.target
+[Service]
+Type=simple
+User=flowstead
+Group=flowstead
+ExecStart=/usr/local/bin/nats-server -c /etc/flowstead/nats.conf
+WorkingDirectory=/var/lib/flowstead/nats
+Restart=on-failure
+RestartSec=5
+MemoryMax=80M
+MemorySwapMax=160M
+LimitNOFILE=8192
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/flowstead/nats
+[Install]
+WantedBy=multi-user.target

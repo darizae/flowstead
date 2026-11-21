@@ -1,146 +1,39 @@
-# Flowstead public-demo hosted deployment (T-016)
+# Flowstead — hosted deployment status and operator guide
 
-This runbook records the T-016 OCI read-only reconnaissance, the ARM64 hosted
-deployment artifacts verified locally, and the exact external gates that could
-not be executed during T-016 (each marked **UNVERIFIED**). It supplements the
-Always Free preflight in [OCI_ALWAYS_FREE.md](OCI_ALWAYS_FREE.md) and the
-host-neutral build/recovery runbook in [LOCAL_AND_RECOVERY.md](LOCAL_AND_RECOVERY.md).
+**Status as inspected 2026-11-21:** The owner selected the existing `flowstead-demo-instance` (`VM.Standard.E2.1.Micro`, Oracle Linux 9.8, x86_64, Frankfurt) as the **sole deployment host**. OCI reported **RUNNING** following a verified CLI start, and Oracle SSH ingress was narrowed to the owner's current IPv4 `/32`. SSH and sudo were verified. A later remote package-inspection command hung, SSH subsequently timed out, and a graceful `SOFTRESET` was accepted; the last observed lifecycle state was **STOPPING**. Host recovery and application deployment remain incomplete. No additional VM is authorized.
 
-> **Live-state correction (2026-11-21):** a stopped OCI VM `flowstead-demo-instance`
-> exists in `eu-frankfurt-1` as `VM.Standard.E2.1.Micro` (1 GB RAM, 47 GB boot,
-> x86_64). That is **not** the Always-Free `VM.Standard.A1.Flex` the hosted layout
-> targets and it was **not** booted, resized or touched. It is a blocker to
-> record, not the A1 host. See
-> [OCI_BOOT_SSH_RUNBOOK.md](OCI_BOOT_SSH_RUNBOOK.md) for safe boot/SSH steps
-> gated on an explicit owner decision.
+## Verified completed items
 
-## OCI reconnaissance (read-only, T-016 — recorded from the live Console)
+- Existing Oracle instance is running; no new machine or volume was created.
+- Existing Supabase project `flowstead-demo` was migrated using the checked-in 001/002/003 Alembic schema definitions; `app` contains 10 application tables. Five synthetic Plants and 43,800 immutable M1 hourly rows were imported and independently counted (8,760 each). Five ingest-completed events are queued in `app.message_outbox`.
+- Migration history is `003_jetstream_messages`; the synthetic telemetry source checksum is `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`.
+- A separate non-superuser `flowstead_runtime` role was created with app-schema DML privileges, not DDL or access to migration history; database-login provisioning and connection testing remain **UNVERIFIED**. Migration-owner credentials must never be injected into API/worker services.
+- Existing Vercel `flowstead` project has a READY production deployment. API URL, anonymous public presentation, live TLS and identity flows are not yet verified.
 
-Observed on the owner's authenticated Oracle Console via the browser relay
-(2026-11-20); read-only inspection only, no resource created.
+## Deployment design on the existing host
 
-| Fact | Value | Source |
-| --- | --- | --- |
-| Home region | **eu-frankfurt-1** (Germany Central, Frankfurt) | Console region menu: "Germany Central (Frankfurt), home region, active" |
-| Subscribed regions | 1 (Frankfurt only) | Region menu / Tenancy region picker |
-| Tenancy | `danarech99` | Console home header |
-| Account type | **Free Tier / Free Trial** | Console banner: "You are in a Free Trial. When your trial is over, your account is limited to Always Free resources." |
-| Existing compute instances | **0** ("No items to display") | Compute → Instances, root compartment |
-| A1 capacity | Ampere A1 available in any AD | Create Instance warning banner |
-| Default image | Oracle Linux 9 (build 2026.10.30-0) | Create Instance → Image |
-| Shape | `VM.Standard.A1.Flex`, marked **Always Free-eligible** | Create Instance → Shape |
-| **Create Instance estimate** | **Boot volume €1.85/month (no compute charge shown)** | Create Instance → "View estimated cost" |
-| **Cost Estimator (public, Oracle)** | A1 `VM.Standard.A1.Flex` 2 OCPU/12 GB + 50 GB boot with **"Apply 200 GB Free Tier Discount"** checked → **storage €0.00** | oracle.com/cloud/costestimator.html; toggle zeroes the boot volume |
-| **Live tenancy cost confirmation** | **UNVERIFIED** — in-console Cost Estimator/Limits unreachable (OCI session lapsed, owner re-auth required) | — |
+The existing x86_64 host has limited RAM (roughly 500 MiB guest memory with swap). Prefer minimum-footprint native processes or a demonstrated low-memory configuration for **FastAPI**, **NATS JetStream with persistent storage**, **dispatcher/worker**, and **a TLS reverse proxy**. The repository's `compose.hosted.yml` and `deploy/oci/deploy.sh` are optional **linux/amd64** Docker assets; they are not proof that Docker is installed or the full stack fits this host. Do not run multi-architecture builds or substitute ephemeral messaging for durable NATS.
 
-**Cost reconciliation (BLOCKED on live confirmation — nothing provisioned).**
-The Create Instance "€1.85/month boot volume" is the **rate-card list price**;
-that estimate does **not** subtract the Always Free 200 GB combined block+boot
-storage allowance, and it shows **no compute charge** at all (A1 2 OCPU/12 GB is
-Always Free). Oracle's official Always Free docs ([Always Free Resources,
-resourceref](https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm)) confirm "All tenancies receive a total of 200 GB of
-Block Volume storage … apply to both boot volumes and block volumes combined",
-and A1 Ampere 2 OCPU/12 GB is Always Free; this allowance applies to eligible
-**Free Trial** accounts. Oracle's **Cost Estimator offers an explicit "Apply
-200 GB Free Tier Discount"** control, which changed the boot volume estimate from
-≈€8.50 to **€0.00** (EUR: storage `€0.00`). Net: the €1.85 figure is **not proof
-of a billable charge**, and the target configuration (A1 + 50 GB boot in
-`eu-frankfurt-1`) is **supported as €0** by official docs + the estimator.
+- PostgreSQL/Auth stay in the existing `flowstead-demo` Supabase project. Never deploy local Postgres to the VM.
+- FastAPI binds to loopback or an isolated network; no public 8000. NATS 4222/8222 and database 5432/6543 must not be published on the host.
+- Caddy or equivalent proxy terminates TLS only for a verified authorized hostname. No public proxy until the actual domain resolves, certificates work, and origin/auth checks pass.
+- Use `deploy/oci/env.hosted.example` as a **non-secret** template. Place a restricted runtime connection in a host-protected secret file outside Git, not a migration/owner credential. `deploy/oci/env.migration.example` remains **offline-only** and must never enter the API/worker environment.
+- Keep existing `darizae.dev` apex and unrelated projects untouched. Configure only specifically intended Flowstead subdomains.
 
-**However**, that is estimator + documentation evidence, **not** a live-tenancy
-billing confirmation, and the OCI preflight forbids provisioning without
-confirmed zero-charge eligibility in the actual tenancy. Provisioning
-was **not** performed and remains gated on the live checks below. Post-trial a
-Free Tier account may bill or reclaim idle resources; trial credits are **not**
-proof of permanent free eligibility. **No VM, VCN, boot/block volume, budget or
-billing alert was created.**
+## Acceptance matrix
 
-Remaining prerequisites to provision (resumed live attempt, 2026-11-20):
-
-1. **OCI VM creation — one manual step.** The Create Instance form was prepared
-   via the live console (name `flowstead-demo`, Oracle Linux 9,
-   `VM.Standard.A1.Flex` Always Free 1 OCPU/6 GB, SSH public key pasted, default
-   public VCN/subnet/IP). OCI's `oj` form framework does not accept scripted
-   `value` insertion on the two **network name** fields (VCN/subnet), so they
-   remain uncommitted in the workbook; the owner types the two names (e.g.
-   `flowstead-demo-vcn` / `flowstead-demo-subnet`) and clicks **Create**. No VM
-   was created.
-2. **Owner SSH OpenSSH key — generated.** `~/.ssh/id_ed25519_flowstead_demo`
-   (private key stays on the Mac, `chmod 600`); public key pasted into the OCI
-   form.
-3. **Supabase `flowstead-demo` admin access — BLOCKED (no access).** The only
-   mounted Supabase connector is `flowstead-dev`, which must not be modified.
-   Live Alembic/import/Auth need a `flowstead-demo` admin path (owner opens the
-   `flowstead-demo` dashboard or supplies an admin connection outside chat).
-4. **Vercel frontend + DNS — BLOCKED (no access/token).** No Vercel tooling or
-   session is mounted; `flowstead.darizae.dev` / `api.flowstead.darizae.dev`
-   (proposals) and the Vercel project need owner access/session.
-5. **DNS approval** for the two subdomains (apex `darizae.dev` untouched).
-
-## Hosted deployment artifacts (this repo)
-
-| Artifact | Purpose |
+| Case | Current evidence |
 | --- | --- |
-| `compose.hosted.yml` | Hosted stack: `nats` (persistent JetStream), `api`, `worker`, `proxy`. **No local PostgreSQL**; only the proxy publishes 80/443; API 8000 and NATS 4222/8222 are never host-published. Secrets via `env_file` from a host secret-file (`HOSTED_ENV_FILE`). |
-| `deploy/oci/Caddyfile` | Production HTTPS proxy config. Site host is the proposed `api.flowstead.darizae.dev` — **must stay disabled until that DNS record is approved** (Caddy ACME would fail on an unassigned hostname). |
-| `deploy/oci/Caddyfile.test` | Local-only HTTP proxy config for the hosted smoke test (no DNS/TLS). |
-| `deploy/oci/env.hosted.example` | Server-only env template (no secrets): hosted `DATABASE_URL`, Supabase verifier, CORS origin, trusted-proxy CIDR. |
-| `deploy/oci/deploy.sh` | On-VM orchestrator: builds the arm64 image, validates/up starts the hosted stack, verifies only the proxy is public. |
-| `just build-backend-image-arm64` / `verify-hosted-arm64` / `hosted-config-validate` / `test-deploy-hosted` | Local recipes. |
+| `CLOUD-M16-RESOURCES` | PARTIAL existing VM identified and started, later graceful reset **STOPPING**; billing hard-cap/current invoice **UNVERIFIED** |
+| `OPS-M16-ARM` (historical case ID) | Host observed x86_64; application process architecture/startup **UNVERIFIED** |
+| `CLOUD-M16-DATA` | PASS migration 003 + five Plants + 43,800 validated rows |
+| `SEC-M16-NET` | SSH source restricted to Mac /32; HTTPS/host-firewall and public ingress **UNVERIFIED** |
+| `SEC-M16-AUTH` | Verified schema denies anonymous `app` access; live JWT identities **UNVERIFIED** |
+| `OPS-M16-QUEUE` | 5 pending ingest events persisted; hosted NATS/worker dispatch **UNVERIFIED** |
+| `OPS-M16-COST` | E2 micro is an Always Free-eligible target; actual billing **UNVERIFIED** |
+| `OPS-M16-TLS` | Actual TLS endpoint/custom API domain **UNVERIFIED** |
+| `OPS-M16-ROLLBACK` | No live app stack to roll back yet; preserve synthetic source and migration history |
 
-### Pinned images
+The earlier local disposable Compose recovery tests are useful engineering evidence, not a deployed-service pass. T-017 owns browser, authorization, TLS, broker recovery and cost verification **only after actual services exist**.
 
-| Image | Reference | arm64? |
-| --- | --- | --- |
-| NATS JetStream | `nats:2.12-alpine@sha256:b270f5e2428354c0335612694d7dd2fb588148e567a5757fdff325ef9c9332e6` | yes (manifest `a1f26b77…`) |
-| Caddy proxy | `caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d` | yes (manifest `8dbca352…`) |
-| FastAPI/worker | `flowstead-backend:arm64-hosted` (built `--platform linux/arm64` from `backend/Dockerfile` + `uv.lock`) | yes (image `os=linux arch=arm64`) |
-
-## Networking (host-side + NSG; intended only)
-
-Only the proxy terminates client traffic. Intended public ingress:
-
-| Port | Purpose | Rule |
-| --- | --- | --- |
-| 443 | HTTPS (prod) | public, TLS via approved DNS |
-| 80 | HTTP (cert issuance / redirect) | public, bounded |
-| 22 | SSH | **only** from the owner-approved source CIDR |
-
-Deny public ingress for FastAPI `8000`, NATS `4222`/`8222`, PostgreSQL
-`5432`/`6543`, Docker socket. In the hosted stack nothing but the proxy has a
-host port mapping, so a mis-set NSG cannot expose the app ports; `just
-test-deploy-hosted` asserts `5443/4222/8222/8000` are never published.
-
-## Local verification executed in T-016
-
-```sh
-just hosted-config-validate     # compose.hosted.yml parses; no local PostgreSQL
-just build-backend-image-arm64  # docker build --platform linux/arm64 --load
-just verify-hosted-arm64        # image linux/arm64; nats+caddy arm64 manifests
-just test-deploy-hosted         # queue/worker restart + proxy path + no-db hosted stack
-```
-
-`scripts/test_deploy_hosted.py` boots `compose.hosted.yml` with a disposable
-**external** PostgreSQL (standing in for Supabase), runs real Alembic to head,
-imports the exact M1 source, then proves: OPS-M16-ARM image arch; SEC-M16-NET
-(no host-published API/NATS ports); public reads + CORS + fail-closed auth
-through the proxy; OPS-M16-QUEUE — a forecast command completes, a second
-command enqueued while the worker is stopped survives, and the restarted worker
-replays it (durable JetStream + outbox recovery); and graceful SIGTERM exit 0.
-
-## Hosted acceptance status (T-016)
-
-| Gate | Status |
-| --- | --- |
-| `CLOUD-M16-RESOURCES` | PARTIAL/UNVERIFIED: home region/tenancy/shape recorded; zero-cost **supported** (docs + Cost Estimator "Apply 200 GB Free Tier discount" → storage €0.00) but **not confirmed live** (OCI session lapsed) → **NOT DEPLOYED** |
-| `OPS-M16-ARM` | **PASS (local)**: linux/arm64 backend image + nats/caddy arm64 manifests |
-| `SEC-M16-NET` | **PASS (config/local)**: compose hosts only proxy; live local containers expose no app/NATS ports |
-| `CLOUD-M16-DATA` | UNVERIFIED (no Supabase admin connection/DNS) |
-| `SEC-M16-AUTH` | UNVERIFIED (no real recipients / live Auth) |
-| `OPS-M16-QUEUE` | **PASS (local)**: durable queue survives worker restart (disposable external DB) |
-| `OPS-M16-COST` | BLOCKED on live confirmation: €1.85 shown is rate-card list price (no compute charge; storage €0.00 with the 200 GB Free Tier discount). No VM/budget created; in-console Cost/Limits confirmation pending owner re-auth |
-| `OPS-M16-ROLLBACK` | Local: image digest recorded; no live deployment to roll back |
-| `OPS-M16-TLS` | UNVERIFIED (no approved DNS / no deployed proxy) |
-
-T-017 owns the extended hosted browser/recovery/live-cost verification once a
-$0-eligible path and approved DNS/recipients/SSH key exist.
+Detailed start/access guide: [OCI_BOOT_SSH_RUNBOOK.md](OCI_BOOT_SSH_RUNBOOK.md). Provider and security restrictions: [OCI_ALWAYS_FREE.md](OCI_ALWAYS_FREE.md).

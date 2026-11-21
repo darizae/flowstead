@@ -179,9 +179,9 @@
 | `SEC-M16-AUTH` | only invited demo operators on private authenticated endpoints and all five fictional Plants on anonymous read-only public endpoints, cross-Plant HTTP+export negative checks; Auth open signup disabled. | UNVERIFIED until asserting test+run checked |
 | `OPS-M16-TLS` | public/frontend/API HTTPS, correct redirects/CORS/host connection mode and health, bounded rate and cold starts. | UNVERIFIED until asserting test+run checked |
 | `OPS-M16-ROLLBACK` | previous image/seed snapshot and safe teardown documented, not automatically destructive. | UNVERIFIED until asserting test+run checked |
-| `OPS-M16-ARM` | actual `linux/arm64` image architecture + local/VM container start for API, worker, NATS and TLS proxy; no x86-only dependency. | LOCAL PASS (`just test-deploy-hosted`); hosted VM UNVERIFIED |
+| `OPS-M16-ARM` | historical case ID: actual `linux/amd64` compatibility + bounded process memory on the existing x86_64 OCI host; no new VM. | historical local smoke only; existing x86_64 hosted runtime UNVERIFIED |
 | `OPS-M16-QUEUE` | post/dispatch/JetStream/worker reaches persisted twelve-hour forecast; worker stop/restart preserves queued message. | LOCAL PASS (`just test-deploy-hosted`, disposable external DB); hosted UNVERIFIED |
-| `OPS-M16-COST` | before/after true OCI cost/usage snapshot and budget-alert status with no-charge caveats and paid-resource stop gates. | BLOCKED on live confirmation: €1.85 shown is rate-card list price (storage €0.00 with the 200 GB Free Tier discount); no VM/budget created; in-console cost/limits pending owner re-auth |
+| `OPS-M16-COST` | before/after true OCI cost/usage snapshot and budget-alert status with no-charge caveats and paid-resource stop gates. | PARTIAL: existing E2 micro was started and SSH source restricted 2026-11-21; a later graceful reset was accepted and last observed state STOPPING; live cost/budget still UNVERIFIED |
 | `SEC-M16-NET` | OCI NSG + host firewall deny public 8000/4222/8222/SQL; allow only 80/443 and bounded SSH; TLS, strict origins, proxy headers. | CONFIG/LOCAL PASS (compose publishes only proxy); hosted UNVERIFIED |
 
 ### T-017 — [task source](../planning/tasks/017_public-demo-verification__codex-luna-5-6__high.md)
@@ -193,10 +193,10 @@
 | `UI-M17-LIVE` | actual 390px and desktop map/PDF/PNG/axis/keyboard parity; visible attribution and fail states. | UNVERIFIED until asserting test+run checked |
 | `OPS-M17-RECOVER` | documented reproducible seed and authorized backup/rollback drill with exact SHAs, no blind destructive DB reset. | UNVERIFIED until asserting test+run checked |
 | `OPS-M17-COST` | verified free tier/usage alerts and no unexpected paid service, with owner decision for any exception. | UNVERIFIED until asserting test+run checked |
-| `OPS-M17-OCI-ARM` | verify actual deployed linux/arm64 API/worker/NATS/proxy containers on the OCI VM. | UNVERIFIED (no VM deployed) |
-| `OPS-M17-OCI-COST` | verify live OCI cost/usage snapshot and budget-alert status after any deployment. | UNVERIFIED (no VM deployed) |
-| `OPS-M17-OCI-RECOVERY` | verify durable broker/worker recovery and DB backup/reseed/rollback on the live VM. | UNVERIFIED (no VM deployed) |
-| `SEC-M17-OCI-INGRESS` | verify from an external vantage that only 80/443 are reachable and 8000/4222/8222/SQL are denied. | UNVERIFIED (no VM deployed) |
+| `OPS-M17-OCI-ARM` | verify actual deployed x86_64 API/worker/NATS/proxy processes and memory on the existing OCI VM. | UNVERIFIED (existing VM RUNNING; hosted app stack not verified) |
+| `OPS-M17-OCI-COST` | verify live OCI cost/usage snapshot and budget-alert status after any deployment. | UNVERIFIED (existing VM RUNNING; hosted app stack not verified) |
+| `OPS-M17-OCI-RECOVERY` | verify durable broker/worker recovery and DB backup/reseed/rollback on the live VM. | UNVERIFIED (existing VM RUNNING; hosted app stack not verified) |
+| `SEC-M17-OCI-INGRESS` | verify from an external vantage that only 80/443 are reachable and 8000/4222/8222/SQL are denied. | UNVERIFIED (existing VM RUNNING; hosted app stack not verified) |
 
 ### T-018 — [task source](../planning/tasks/018_release-docs-and-routing-hygiene__omp-glm-5-3-flash__default.md)
 

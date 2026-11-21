@@ -5,7 +5,7 @@ Boots compose.hosted.yml — the OCI-hosted stack with NO local PostgreSQL servi
 standing in for the hosted Supabase), then proves the durable queue survives a
 worker restart and that only the proxy publishes host ports.
 
-Requires flowstead-backend:arm64-hosted already built (`just build-backend-image-arm64`).
+Requires flowstead-backend:amd64-hosted already built (`just build-backend-image-host`).
 Run via:  just test-deploy-hosted
 or:       uv run --project backend python scripts/test_deploy_hosted.py
 """
@@ -56,7 +56,7 @@ CONTAINER_DB_URL = (
     f"postgresql://{DB_USER}:{DB_PASSWORD}@host.docker.internal:{PORT_PG}/{DB}?sslmode=disable"
 )
 
-IMAGE = "flowstead-backend:arm64-hosted"
+IMAGE = "flowstead-backend:amd64-hosted"
 NATS_IMAGE = "nats:2.12-alpine@sha256:b270f5e2428354c0335612694d7dd2fb588148e567a5757fdff325ef9c9332e6"
 CADDY_IMAGE = "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d"
 
@@ -113,18 +113,18 @@ def main() -> int:
     print(f"== {PROJECT}: hosted-config (no local PostgreSQL) acceptance ==")
 
     # ---- OPS-M16-ARM ------------------------------------------------
-    print("OPS-M16-ARM: linux/arm64 images and manifests")
+    print("OPS-M16-ARM: linux/amd64 images and manifests")
     arch = sh("docker", "image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", IMAGE).strip()
-    assert_eq(arch, "linux/arm64", f"{IMAGE} is a linux/arm64 image")
+    assert_eq(arch, "linux/amd64", f"{IMAGE} is a linux/amd64 image")
     for ref in (NATS_IMAGE, CADDY_IMAGE):
         avail = sh("docker", "manifest", "inspect", ref, check=False)
         manifest = json.loads(avail)
-        has_arm64 = any(
+        has_amd64 = any(
             m.get("platform", {}).get("os") == "linux"
-            and m.get("platform", {}).get("architecture") == "arm64"
+            and m.get("platform", {}).get("architecture") == "amd64"
             for m in manifest.get("manifests", [])
         )
-        assert_true(has_arm64, f"{ref} publishes a linux/arm64 manifest")
+        assert_true(has_amd64, f"{ref} publishes a linux/amd64 manifest")
     image_env = sh("docker", "run", "--rm", "--entrypoint", "printenv", IMAGE)
     for secret in ("SUPABASE", "DATABASE_URL", "service-role", "flowstead_local"):
         assert_true(secret not in image_env, f"{IMAGE} does not bake {secret!r}")

@@ -1,0 +1,26 @@
+[Unit]
+Description=Flowstead reverse proxy (local readiness only until actual TLS is configured)
+After=network-online.target flowstead-api.service
+Wants=network-online.target
+Requires=flowstead-api.service
+[Service]
+Type=simple
+User=flowstead
+Group=flowstead
+ExecStart=/usr/local/bin/caddy run --config /etc/flowstead/Caddyfile --adapter caddyfile
+ExecReload=/usr/local/bin/caddy reload --config /etc/flowstead/Caddyfile --adapter caddyfile
+Restart=on-failure
+RestartSec=5
+MemoryMax=80M
+MemorySwapMax=120M
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/flowstead/caddy
+Environment=XDG_DATA_HOME=/var/lib/flowstead/caddy
+Environment=XDG_CONFIG_HOME=/var/lib/flowstead/caddy
+[Install]
+WantedBy=multi-user.target

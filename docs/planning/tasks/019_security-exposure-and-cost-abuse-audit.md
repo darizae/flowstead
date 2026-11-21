@@ -1,6 +1,6 @@
 # T-019 — Security exposure, abuse, and unexpected-charge audit
 
-**Repository:** darizae/flowstead. **Status:** specification only; execution and remediation not yet performed. **Created:** 2026-11-20. **Priority:** security and financial safety before any public launch.
+**Repository:** darizae/flowstead. **Status:** PARTIAL execution and remediation documented in [2026-11-21 report](../../security/2026-11-21-sec19-report.md) and [T-017 receipt](../../deployment/T017_LIVE_VERIFICATION_2026-11-21.md); complete hosted verification remains OPEN. **Created:** 2026-11-20. **Priority:** security and financial safety before any public launch.
 
 ## Goal
 

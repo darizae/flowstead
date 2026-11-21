@@ -1,94 +1,36 @@
-# OCI Always Free deployment preflight — Flowstead
+# Flowstead — existing OCI Always Free demo instance (operational preflight)
 
-**Status: read-only Console + Oracle Cost Estimator inspected by T-016;
-provisioning NOT performed (live zero-cost still unconfirmed). No VM, network,
-storage, budget or billing alert was created.**
+**Actual deployment target (owner decision, 2026-11-21):** reuse the **existing** `flowstead-demo-instance` in Oracle Cloud Frankfurt, shape `VM.Standard.E2.1.Micro` (x86_64), with a 47 GB boot volume. This is the **only** authorized compute host; do not propose or create a replacement VM. The instance was started on 2026-11-21 via the owner's configured OCI CLI and was verified **RUNNING**. After SSH became unresponsive, a graceful `SOFTRESET` was accepted and the **last observed state was STOPPING**; host recovery is pending. SSH ingress was narrowed from `0.0.0.0/0` to the owner's then-current public IPv4 `/32` before startup. The owner may have a changing public IP; update the narrow source range only after verifying the new address.
 
-> **Live re-verification receipt (2026-11-20, supervised OMP/DeepInfra worker
-> via OMP Brave Browser Relay; read-only; spend ≈ $0.0148 under the $0.03 cap;
-> no OCI resource created or submitted — tab URL unchanged).**
->
-> - **VERIFIED — home region:** region menu reads "Germany Central (Frankfurt),
->   home region, active" with a "Home region" label → `eu-frankfurt-1` is the
->   home region. Tenancy `danarech99`, compartment `danarech99 (root)`.
-> - **VERIFIED — shape:** `VM.Standard.A1.Flex` carries an "Always Free-eligible"
->   badge; info note "You can create Ampere A1 compute instances in any
->   availability domain".
-> - **VERIFIED — boot volume estimate:** Create Instance estimate shows
->   **Boot volume €1.85/month, total €1.85/month**, and states it "does not
->   reflect any tier unit pricing". This is the **rate-card list price**; it does
->   **not** subtract the Always Free 200 GB storage allowance.
-> - **VERIFIED — no free-tier toggle in this estimator:** the in-wizard
->   "View estimated cost" panel exposes **no** "Apply 200 GB Free Tier discount"
->   control. That toggle is offered by Oracle's **separate** Cost Estimator tool,
->   not the Create Instance wizard.
-> - **NOT VERIFIED (not exposed on this page):** account type (Pay As You Go vs
->   Always Free) and A1 OCPU/GB allocation limits are not shown on the Create
->   Instance page; remaining 200 GB free storage in use is unconfirmed; the
->   standalone Cost Estimator "Apply 200 GB Free Tier discount" checkbox state
->   was not reached/navigated.
->
-> **Conclusion:** €1.85/month is a raw list-price estimate that a strictly
-> Always-Free-eligible A1 compute + 50 GB boot would not reflect; zero-cost is
-> still **unconfirmed** until the standalone Cost Estimator free-tier discount
-> and the tenancy's consumed limits are verified. No VM/network/storage/budget
-> created; T-017 not started. On 2026-11-20 the owner's
-authenticated Oracle Console confirmed home region **eu-frankfurt-1**, tenancy
-`danarech99`, a **Free Tier / Free Trial** account, and **zero** existing
-instances. The Create Instance estimate reported **€1.85/month (boot volume)**,
-which is the **rate-card list price** — that estimate shows no compute charge
-(A1 2 OCPU/12 GB is Always Free) and does not subtract the Always Free 200 GB
-storage allowance. Oracle's **Cost Estimator offers an explicit "Apply 200 GB
-Free Tier Discount"** option, which zeroes the boot volume (storage €0.00, EUR).
-Zero-cost for `VM.Standard.A1.Flex` (2 OCPU/12 GB) + 50 GB boot in
-`eu-frankfurt-1` is therefore **supported by official Always Free docs + the
-estimator, but not yet confirmed against the live tenancy** (in-console
-Cost/Limits unreachable after the OCI session lapsed; owner re-auth required).
-A1 is available in any AD; the default platform image is Oracle Linux 9.
-Details and T-016 acceptance status are in
-[HOSTED_DEPLOYMENT.md](HOSTED_DEPLOYMENT.md).
+**Resource reality:** Oracle lists the E2 micro as an Always Free-eligible shape subject to the tenancy's Free Tier limits and capacity. The VM reports x86_64, Oracle Linux 9.8, roughly 500 MiB available to the guest in total and about 500 MiB swap; the OS root filesystem currently has ~25 GB free. Design the deployment to fit these limits; avoid concurrent Docker builds or unnecessary resident services. Do not claim that all containers have been deployed. **No new OCI resource, image, load balancer or attached volume is authorized.**
 
-## Approved technical destination and isolation
+## Verified account and state
 
-- Use the owner's existing Oracle Cloud account only if the Console establishes that **Frankfurt (`eu-frankfurt-1`) is the home region**, the selected compute/image/storage/networking are all eligible for Always Free, and the resource-specific estimated charge is **$0**. A zero-charge preflight is not proof of zero future billing. No trial-credit-funded, Pay As You Go, paid-reserved-capacity, or Marketplace-license alternative.
-- Proposed maximum **one** `VM.Standard.A1.Flex` Arm64 instance, **at most 2 OCPUs and 12 GB RAM total** across the account's existing A1 resources. Oracle's current Always Free allocation is 1,500 OCPU-hours and 9,000 GB-hours/month (equivalent to 2 OCPUs and 12 GB for a continuously running instance). Confirm remaining actual quota *in the tenancy*; do not assume it is untouched. If A1 is out of host capacity, try a different availability domain if offered, otherwise report BLOCKED; never upgrade or pick a paid shape.
-- All boot and block volumes together must stay within the current **200 GB Always Free** total, counting any other resources. Prefer a single 50 GB boot volume with an adequately bounded persistent JetStream directory; if a separate data volume is necessary, justify and recalculate the combined total **before** any creation. Check backup counts/retention, public IP and egress eligibility in the current account; never treat a free VM as making every attached service free.
-- Keep Flowstead PostgreSQL/Auth on the **existing, distinct** Supabase `flowstead-demo` project (`hkyobferqdfiicnsaupl`, `eu-west-1`), not on the Oracle VM. The existing `flowstead-dev` project (`jryvzjwsrxctjeawnkqo`) must not be modified for this demo. The demo project was created but its app migrations, synthetic import and Auth setup were **not performed** at the last read-only check.
-- The owner has an existing Vercel team/domain, but **no Flowstead Vercel app** had been provisioned at planning. A new Vercel static frontend is a separate target. Keep `darizae.dev` apex/personal site unchanged. `flowstead.darizae.dev` and `api.flowstead.darizae.dev` remain proposed names until specific DNS/project bindings are confirmed.
-- Scope: the VM hosts **separate FastAPI, NATS 2 JetStream, and dispatcher/forecast worker processes/containers**, plus a minimal HTTPS reverse proxy. Only the proxy is publicly accessible; PostgreSQL is external at Supabase. No AWS, object storage, second VM, managed broker, paid load balancer, or new repository.
+- Region/home: `eu-frankfurt-1` (the previously authenticated Console confirmed Frankfurt home region).
+- Existing instance: `flowstead-demo-instance` in the root compartment, shape `VM.Standard.E2.1.Micro`, boot volume 47 GB; last observed lifecycle `STOPPING` during recovery.
+- Network: existing `flowstead-demo-vcn` / `flowstead-demo-subnet`; SSH TCP/22 restricted to the owner's current IPv4 `/32`; application ports are not publicly open. Host firewall must be checked in addition to Oracle security lists.
+- SSH: owner-controlled private key `~/.ssh/id_ed25519_flowstead_demo` stays on the Mac; default Oracle Linux username `opc`.
+- Supabase: **only** `flowstead-demo` (`hkyobferqdfiicnsaupl`) is the backend database, not `flowstead-dev`. On 2026-11-21 it was migrated to Alembic head `003_jetstream_messages` and populated with 5 synthetic Plants and 43,800 M1 readings (8,760 per Plant); five ingest events await the broker. The runtime database credential still needs to be provisioned securely, separate from migration credentials.
+- Vercel: `flowstead` project exists and has a READY production build; live API binding, public access and custom DNS are not yet verified.
+- Billing: the existing instance is considered within the configured Free Tier target, but no live invoice or hard $0 spending cap was independently verified. A budget alert is not a hard cap.
 
-## Console and Brave relay inspection — no blind clicks
+## Safe operations
 
-1. On the owner's authenticated Brave session, discover the installed `brave-browser-relay` interface and its actual commands/schema from the runner's configured tools or read-only skill documentation. Confirm accessibility; **do not assume** the planner has browser-control access. Use a read-only snapshot/DOM inspection before every consequential navigation. UI labels may differ from the documentation.
-2. Open `https://cloud.oracle.com/?region=eu-frankfurt-1` in the existing authenticated session. If login, consent, MFA, CAPTCHA, or card verification is requested, stop and let the owner complete it privately; never copy cookies, passwords, recovery codes, OTPs, SSH private keys, or billing identifiers into chat, Git, screenshots, browser logs, or receipts. Never try to bypass provider challenges.
-3. Check **Tenancy Details** for actual *home region*, account type and tenancy limits, then **Billing & Cost Management → Cost Analysis / Budgets**, and **Governance/Administration → Limits, Quotas and Usage** for compute/block-volume usage. Capture redacted, non-sensitive evidence of the actual zero-charge eligibility and inventory. Region selected in the URL alone is insufficient.
-4. Check **Compute → Instances** (correct compartment/availability domain), block/boot volumes, networks, IP addresses, existing budgets and active resources for name collisions and consumed Always Free capacity. Do not replace an unknown resource. If permission is insufficient or costs are unclear, report the exact blocker and proceed with local engineering.
-5. For a later task-authorized free VM creation, use Oracle's **Create instance** workflow: Basic information (compartment and home-region AD) → compatible, explicitly *Always Free Eligible* Ubuntu LTS or Oracle Linux image and `VM.Standard.A1.Flex`, at most 2 OCPUs/12 GB remaining allowance → Security → Networking (new or approved VCN, regional public subnet, public IPv4 only if truly needed) → Storage (50 GB boot by default, within current shared free limit) → Review. Supply an owner-controlled **public** OpenSSH key; private key stays on the owner machine. Inspect shape/image/storage/license/cost fields before the final Create click. Do not launch any paid/preemptible/dedicated-host configuration or silently accept an account upgrade.
-6. A task assignment authorizes bounded engineering and inspection, not invented privileges. Execute **only** the explicitly authorized no-charge target operations; any paid offer, unclear eligibility, new destination, payment/account upgrade, non-demo resource, personal-site DNS rewrite, invitation recipient, or destructive migration requires a separate owner decision. State NOT PERFORMED rather than claiming the browser succeeded.
+Use the actual installed OCI CLI without printing account or resource OCIDs. Discover the instance ID privately by name, then inspect before performing a change:
 
-## OCI network and on-instance implementation
+```sh
+oci compute instance get --region eu-frankfurt-1 --instance-id "$INSTANCE_ID" --query 'data."lifecycle-state"'
+oci compute instance action --region eu-frankfurt-1 --instance-id "$INSTANCE_ID" --action START --wait-for-state RUNNING
+```
 
-- Use a dedicated network security group or minimal subnet rules **plus** the host firewall. Permit inbound TCP **443 and 80** (HTTPS and certificate issuance), and TCP **22 only from the owner's verified IP/CIDR** or an explicitly authorized secure access path. Deny public ingress for FastAPI `8000`, NATS client `4222`, NATS monitor `8222`, PostgreSQL `5432`/`6543`, Docker socket and VM administration ports. Avoid wildcard SSH access.
-- Keep API (port 8000), NATS/JetStream and worker on a private Docker network; expose only a reviewed TLS reverse proxy (e.g. pin a compatible Caddy image if selected). Enforce production exact HTTPS CORS origins, trusted reverse-proxy CIDRs, auth-fail-closed, rate limits, restrictive headers and reasonable timeouts. Confirm DNS and certificate issuance before public promotion.
-- Existing `backend/Dockerfile` uses an unprivileged Python 3.12 image; existing `compose.yml` is **local/staging only** because it starts its own PostgreSQL `db` and injects local database credentials. Create a **separate narrowly scoped deployment configuration** that uses Supabase `DATABASE_URL` via the appropriate compatible TLS/pooler connection, starts **no local PostgreSQL**, and runs distinct API/worker/NATS/proxy services with health checks, restart behavior, bounded storage and a persistent JetStream volume. Do not modify local tests to pretend hosted recovery is passing.
-- Prove build architecture (`linux/arm64`) for Python image, `uv`, native Python packages, NATS image and proxy before provisioning/publishing. Run `docker build --platform linux/arm64` or equivalent and verify image manifests and actual on-VM operation; a successful x86 laptop build does not establish ARM compatibility. Use pinned reviewed image versions/digests where available and record the exact deployed digest.
-- Secrets: keep Supabase DB connection, Auth verification, TLS key material and SSH private key **outside Git, browser bundles, task receipts and Docker images**. Inject runtime values using protected host files/secrets with least privilege; scrub command output. Frontend only receives `VITE_API_URL`, `VITE_SUPABASE_URL` and a **publishable** key. Never expose service-role/admin secrets.
-- Initialize demo Alembic and five-Plant M1 import only after recording an explicit reviewed schema/data/backup plan, confirming project ref, and verifying the immutable generator SHA (`ad5c94d1f46e79312a99cb9721f38700f24fdf6b`), schema `m1.v1`, seed `20250101`, telemetry digest `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`. Never run destructive downgrade or write to `flowstead-dev`. Invitation emails, Auth settings and subject→Plant grants need actual explicitly supplied recipient identities.
-- First local validation: `just build-backend-image`, `just frontend-build`, `just test-deploy-local`, `just docs-check` where commands genuinely exist; inspect the real `justfile` first. Then run minimal hosted health + queue/worker restart smoke. A missing Oracle or Brave session does not prevent building/locally testing these deployment assets.
+Do not start if already running, restart during active work, or automatically terminate/replace it. For the current approved setup, see [OCI_BOOT_SSH_RUNBOOK.md](OCI_BOOT_SSH_RUNBOOK.md). Only allow TCP 80/443 if a real HTTPS proxy and intended DNS are configured; keep FastAPI 8000, NATS 4222/8222 and database ports private. SSH must not be reopened to the world. Avoid installing infrastructure packages that cannot run within the instance's available memory.
 
-## Billing controls and no-charge gates
+## Delivery gates
 
-Oracle's **budget is a notification, not a spending ceiling**. Oracle's documented budget minimum is **1 unit of account currency**, so do **not** create a fictional $0 budget. For a permitted budget, review an approximately $1 monthly threshold with Actual Spend and (where supported) Forecast Spend alerts to an owner-supplied private recipient, plus Cost Analysis/actual billing and service-limit snapshots. Do not place the recipient email in the repository. Creating any budget or alert is an external write: do it only in the exact reviewed scope and record outcome. Alert delays and billing-report lag mean this is **not** zero-charge enforcement.
-Always Free VMs may be reclaimed after prolonged low utilization; **never** generate artificial load to defeat Oracle idle policies. Supabase Free projects can also pause for inactivity. No availability/SLA guarantee, automatic-paid fallback, hidden billing alert promise or automatic teardown. The owner separately scheduled a future billing recheck; that reminder does not verify current costs.
-At each relevant checkpoint record the non-secret tenancy/account-type assertion, verified home region, project/compartment/resource names, chosen AD, VM shape/OCPU/RAM, boot+block volume totals, network ingress and actual cost/budget findings, deployment SHA/image digest, and **PASS / FAIL / UNVERIFIED** state. Avoid storing sensitive tenant OCIDs, complete console screenshots with account data, secret values or invitation recipients in public Git.
+1. Confirm the instance responds over the owner-restricted SSH path and measure CPU/memory/disk and network egress. If unavailable, diagnose rather than guessing.
+2. Install or launch the smallest compatible **linux/amd64** FastAPI, persistent NATS and worker, and TLS proxy stack; validate memory under load and on restart. Native systemd services are acceptable on this existing host.
+3. Configure only a **restricted runtime** Supabase database connection using TLS certificate/hostname verification. Keep owner/migration credentials offline and out of process environments, Docker Compose, logs and frontend bundles.
+4. Validate TLS, public synthetic-only reads, deny-by-default authentication, queued forecast execution, persistence/restart, bounded requests, source and digest evidence.
+5. Record *actual* billing/cost and ingress observations separately; mark untested claims UNVERIFIED.
 
-## Official references (revalidate in the live UI at task execution)
-
-- [Always Free limits, home region, volume totals and reclaim policy](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
-- [Create a compute instance: Basic information, Security, Networking, Storage and Review](https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/launchinginstance.htm)
-- [View tenancy details and home region](https://docs.oracle.com/en-us/iaas/Content/General/tenancy/managingtenancy.htm)
-- [Network security lists](https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securitylists.htm)
-- [OCI budgets, minimum amount and alert recipients](https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/create-budget.htm)
-- [OCI budget alert rules](https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/create-alert-rule.htm)
-
-**Stop condition:** do not represent this runbook as evidence of actual Oracle project access, a provisioned VM, $0 future invoices, active cost alerts or hosted functionality. Each must be observed separately.
+Never modify `flowstead-dev`, create paid resources, expose a high-privilege secret, publish raw CLI logs or rely on a budget notification as a spending cap.

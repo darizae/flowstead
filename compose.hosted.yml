@@ -1,4 +1,4 @@
-# Flowstead public-demo hosted deployment (T-016) — Oracle Always Free A1 VM.
+# Flowstead public-demo hosted deployment (T-016) — Oracle Always Free existing micro VM.
 #
 # Distinct from compose.yml (local/staging): this stack starts NO local
 # PostgreSQL. The API and worker reach the existing Supabase `flowstead-demo`
@@ -12,7 +12,7 @@
 # ingress and allow only 80/443 plus restricted SSH (see
 # docs/deployment/HOSTED_DEPLOYMENT.md).
 #
-# Usage (on an ARM64 A1 VM):
+# Usage (on an AMD64 existing micro VM):
 #   HOSTED_ENV_FILE=/etc/flowstead/hosted.env \
 #     docker compose -f compose.hosted.yml -p flowstead-demo up -d --wait
 #
@@ -21,7 +21,7 @@
 # FLOWSTEAD_TRUSTED_PROXIES …). See deploy/oci/env.hosted.example.
 
 x-backend: &backend
-  image: flowstead-backend:arm64-hosted
+  image: flowstead-backend:amd64-hosted
   env_file:
     - ${HOSTED_ENV_FILE:-/etc/flowstead/hosted.env}
   environment:

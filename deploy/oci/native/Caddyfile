@@ -1,0 +1,12 @@
+# Default LOCAL-ONLY readiness proxy. This must not be exposed publicly.
+# Replace with an approved HTTPS hostname/certificate only after DNS and
+# intended public routing have been independently verified.
+http://127.0.0.1:8080 {
+  encode gzip
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    -Server
+  }
+  reverse_proxy 127.0.0.1:8000
+}
