@@ -41,6 +41,17 @@
 
 `deploy/oci/native/` includes low-footprint systemd units for the chosen host: non-root, memory-bounded NATS on loopback with persistent JetStream; FastAPI and worker configured to connect only over localhost; a loopback-only Caddy readiness route; and a separate example for a restricted runtime database credential. These artifacts were written/tested locally **without uploading or enabling them on the VM** because SSH was unresponsive. The optional Docker fallback was retargeted to `linux/amd64`, but Docker was not available on the host at initial inspection.
 
+## OCI recovery escalation attempted
+
+At approximately 22:41 Europe/Madrid (CET), after the existing host had remained
+in `STOPPING` following the accepted graceful `SOFTRESET`, a single OCI
+`RESET` attempt was made **on that same instance**. Oracle rejected the action
+with **HTTP 409 Conflict**, and a fresh instance-status query still reported
+`STOPPING`. No alternate or new instance was created. Do not repeatedly issue
+power actions while Oracle holds the instance in this transition; wait for the
+existing lifecycle operation to settle or use Oracle's supported instance
+recovery/support workflow. The public application has **not** been launched.
+
 ## Completion conditions
 
 Restore healthy SSH access to the existing host, verify swap/memory and whether any package operation remains stuck. Securely provision/verify a restricted Supabase runtime login without leaking credentials, and arrange actual invited identities if private tests are required. Install/start and monitor native service components on the existing VM; prove NATS persistence and queued→completed forecasts; configure DNS/certificate/front-end API binding; then run direct public/private browser tests and provider cost checks. Do not call T-017 completed until those observations exist.
