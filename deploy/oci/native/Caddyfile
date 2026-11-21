@@ -1,12 +1,21 @@
-# Default LOCAL-ONLY readiness proxy. This must not be exposed publicly.
-# Replace with an approved HTTPS hostname/certificate only after DNS and
-# intended public routing have been independently verified.
-http://127.0.0.1:8080 {
-  encode gzip
+# Flowstead real HTTPS origin on the already-provisioned OCI micro.
+# DNS: api.flowstead.darizae.dev -> existing flowstead-demo-instance
+# FastAPI remains bound ONLY to localhost 127.0.0.1:8000.
+# The proxy may return 502 until FastAPI's restricted DB login is configured;
+# never fake a successful application health response at this layer.
+api.flowstead.darizae.dev {
+  encode gzip zstd
   header {
-    X-Content-Type-Options nosniff
-    Referrer-Policy no-referrer
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
     -Server
   }
-  reverse_proxy 127.0.0.1:8000
+  reverse_proxy 127.0.0.1:8000 {
+    transport http {
+      dial_timeout 3s
+      response_header_timeout 15s
+    }
+  }
 }
