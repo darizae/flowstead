@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import ipaddress
+from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
+from backend.tests.auth_helpers import install_test_principal, principal_headers
 from fastapi.testclient import TestClient
 
 from flowstead_api.main import create_app
+from flowstead_api.message_store import ForecastJob
 from flowstead_api.security import SecurityConfig, SecurityConfigurationError
 
 
@@ -18,6 +22,8 @@ def _config(**updates: object) -> SecurityConfig:
         "max_target_bytes": 512,
         "trusted_proxies": (),
         "cors_origins": ("http://127.0.0.1:5173",),
+        "forecast_requests_per_window": 30,
+        "forecast_window_seconds": 60,
     }
     values.update(updates)
     return SecurityConfig(**values)  # type: ignore[arg-type]
@@ -104,3 +110,41 @@ def test_security_configuration_rejects_open_or_ambiguous_origins() -> None:
         SecurityConfig.from_env({"FLOWSTEAD_CORS_ORIGINS": "http://example.com"})
     with pytest.raises(SecurityConfigurationError):
         SecurityConfig.from_env({"FLOWSTEAD_RATE_LIMIT_REQUESTS": "0"})
+    with pytest.raises(SecurityConfigurationError):
+        SecurityConfig.from_env({"FLOWSTEAD_FORECAST_RATE_LIMIT_REQUESTS": "0"})
+
+
+def test_forecast_requests_rate_limited_per_principal_and_plant() -> None:
+    """Case: SEC19-03 — bounded per-principal+Plant forecast submission."""
+
+    def fake_enqueue(plant_id: str, *, subject_id: str) -> ForecastJob:
+        return ForecastJob(uuid4(), uuid4(), plant_id, "queued", datetime.now(UTC), None, None)
+
+    app = create_app(security_config=_config(forecast_requests_per_window=1))
+    install_test_principal(app)
+    app.state.database.enqueue_forecast = fake_enqueue  # type: ignore[method-assign]
+    client = TestClient(app)
+
+    ok = client.post(
+        "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-a")
+    )
+    assert ok.status_code == 202
+    denied = client.post(
+        "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-a")
+    )
+    assert denied.status_code == 429
+    assert denied.headers["retry-after"] == "60"
+    assert denied.json() == {
+        "detail": {
+            "code": "request_denied",
+            "message": "Forecast request rate limit exceeded",
+        }
+    }
+    # A different principal on the same Plant is not throttled by op-a's slot.
+    assert client.post(
+        "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-b")
+    ).status_code == 202
+    # A different Plant for the same principal is not throttled either.
+    assert client.post(
+        "/api/v1/plants/plant-02/forecast-requests", headers=principal_headers("op-a")
+    ).status_code == 202

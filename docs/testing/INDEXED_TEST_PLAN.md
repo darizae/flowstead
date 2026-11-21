@@ -207,6 +207,19 @@
 | `DOC-M18-PRIVATE` | no secret/private planner DHI material in repo/docs/output. | UNVERIFIED until asserting test+run checked |
 | `DOC-M18-GATE` | documented feature state matches actual source and test evidence. | UNVERIFIED until asserting test+run checked |
 
+### T-019 — [security exposure and unexpected-charge audit](../planning/tasks/019_security-exposure-and-cost-abuse-audit.md)
+
+| ID | Intended observable assertion (from task) | Evidence status |
+|---|---|---|
+| `SEC-M19-SECRETS` | full repo/history/build/artifact secret scan without disclosing values; verified leaks rotated privately. | PARTIAL — redacted local scan; no live deploy/history tool run yet (see docs/security/2026-11-21-sec19-report.md) |
+| `SEC-M19-AUTHZ` | anonymous/forged/revoked/cross-Plant/cross-requester direct API tests deny unauthorized data/writes; public result only approved synthetic content. | UNVERIFIED until live verifier + real recipients |
+| `SEC-M19-EDGE` | edge allowlist, headers, TLS/DNS, CORS, proxy identity, request-size handling, non-published service ports tested locally and externally if authorized. | PARTIAL — headers/CORS/limits unit coverage; live TLS/DNS UNVERIFIED |
+| `SEC-M19-JOBS` | repeated forecast submissions bounded by identity/Plant/time and storage with backpressure/idempotency or documented hard limits; no unbounded growth at allowed rates. | PARTIAL — per-principal+Plant submission bound added (unit test); `forecast_jobs`/outbox retention still requires a DB-backed cleanup (see report) |
+| `SEC-M19-RUNTIME` | server secrets never in frontend artifacts/logs; DB/CI/runtime roles least privilege; constrained network/containers. | PARTIAL — runtime-vs-migration DB role separation documented; role grants to be verified on live DB |
+| `SEC-M19-SUPPLY` | locked dependency and base-image scan findings triaged; high/critical exploitable items patched or blocked with rationale. | PARTIAL — Dockerfile base-image digest pinning not yet performed (tagged, per in-file shortcut) |
+| `OPS-M19-BILLING` | all real-provider costs/quotas/alerts/free eligibility observed provider-by-provider; no paid provisioning or tests. | PARTIAL — provider posture recorded; live inventory not re-observed |
+| `OPS-M19-INCIDENT` | reversible remediation/rotation/backup/rollback instructions tested in disposable environments; no destructive live steps. | PARTIAL — runbook drafted; disposable drill not executed |
+| `DOC-M19-TRUTH` | findings cite exact actual evidence, pass/fail/unknown status and tested SHA; no leak/$0 claims from code alone. | PARTIAL — report dated and evidence-cited |
 
 ### T-004b — [JetStream messaging](../planning/tasks/004b_nats-jetstream-message-flow__codex-luna-5-6__high.md)
 
@@ -223,4 +236,4 @@
 | `MSG-M4B-AUTH` | Private cross-Plant command denied; public read-only cannot queue arbitrary Plant work | PASS — real HTTP/SQL assertion in `test_command_is_authorized_transactional_and_observably_queued` |
 
 
-**Inventory:** 103 distinct indexed cases. Evidence status is intentionally mixed: historical PASS entries retain their cited accepted receipts, while every other case remains **UNVERIFIED** until its asserting test and observed run are checked. An index entry alone is never coverage evidence.
+**Inventory:** 112 distinct indexed cases. Evidence status is intentionally mixed: historical PASS entries retain their cited accepted receipts, while every other case remains **UNVERIFIED** until its asserting test and observed run are checked. An index entry alone is never coverage evidence.

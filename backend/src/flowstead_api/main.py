@@ -40,7 +40,7 @@ from .models import (
     RainfallMeasurement,
 )
 from .report import render_report, safe_report_filename
-from .security import HttpSecurityMiddleware, SecurityConfig
+from .security import ClientRateLimiter, HttpSecurityMiddleware, SecurityConfig
 
 MAX_HISTORY_HOURS = 168
 MAX_RESPONSE_BYTES = 512_000
@@ -70,6 +70,21 @@ def create_app(
         )
     app.add_middleware(HttpSecurityMiddleware, config=security)
     app.state.database = Database(database_url)
+    # Per-principal+Plant bound on forecast-request submission, independent of
+    # the shared per-IP HTTP limiter: an authenticated operator cannot amplify
+    # DB/outbox/JetStream work beyond this rate per Plant (SEC19-03).
+    forecast_limiter_config = SecurityConfig(
+        requests_per_window=security.forecast_requests_per_window,
+        window_seconds=security.forecast_window_seconds,
+        max_clients=security.max_clients,
+        max_body_bytes=security.max_body_bytes,
+        max_target_bytes=security.max_target_bytes,
+        trusted_proxies=security.trusted_proxies,
+        cors_origins=security.cors_origins,
+        forecast_requests_per_window=security.forecast_requests_per_window,
+        forecast_window_seconds=security.forecast_window_seconds,
+    )
+    app.state.forecast_limiter = ClientRateLimiter(forecast_limiter_config)
     if auth_verifier is not None:
         app.state.auth_verifier = auth_verifier
         app.state.auth_configuration_error = None
@@ -216,6 +231,15 @@ def create_app(
         plant_id: str,
         principal: Annotated[Principal, Depends(get_current_principal)],
     ) -> ForecastJobResponse:
+        allowed, _, retry_after = app.state.forecast_limiter.check(
+            f"{principal.sub}:{plant_id}"
+        )
+        if not allowed:
+            raise HTTPException(
+                status_code=429,
+                detail={"code": "request_denied", "message": "Forecast request rate limit exceeded"},
+                headers={"Retry-After": str(retry_after)},
+            )
         job = app.state.database.enqueue_forecast(plant_id, subject_id=principal.sub)
         if job is None:
             raise _not_found()

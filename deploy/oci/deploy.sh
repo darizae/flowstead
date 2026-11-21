@@ -12,6 +12,11 @@
 # settings (deploy/oci/env.hosted.example). This script never contacts OCI
 # beyond Docker running locally; VM/network/NSG provisioning is a separate,
 # manual, owner-approved OCI action.
+#
+# Least privilege (SEC19-04): `DATABASE_URL` injected into api/worker is a
+# runtime DML role with NO DDL/ownership. Schema migrations + the M1 import are
+# a separate one-shot step run against `MIGRATION_DATABASE_URL` (the owner role)
+# BEFORE this script is used; never run migrate/import with the runtime role.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 

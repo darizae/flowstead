@@ -41,6 +41,8 @@ class SecurityConfig:
     max_target_bytes: int
     trusted_proxies: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]
     cors_origins: tuple[str, ...]
+    forecast_requests_per_window: int
+    forecast_window_seconds: int
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> SecurityConfig:
@@ -53,6 +55,12 @@ class SecurityConfig:
             max_target_bytes=_bounded_int(values, "FLOWSTEAD_MAX_REQUEST_TARGET_BYTES", 8_192, 256, 65_536),
             trusted_proxies=_networks(values.get("FLOWSTEAD_TRUSTED_PROXIES", "")),
             cors_origins=_origins(values.get("FLOWSTEAD_CORS_ORIGINS", _DEFAULT_CORS_ORIGINS)),
+            forecast_requests_per_window=_bounded_int(
+                values, "FLOWSTEAD_FORECAST_RATE_LIMIT_REQUESTS", 30, 1, 100_000
+            ),
+            forecast_window_seconds=_bounded_int(
+                values, "FLOWSTEAD_FORECAST_RATE_LIMIT_WINDOW_SECONDS", 60, 1, 3_600
+            ),
         )
 
 

@@ -192,6 +192,8 @@ def main() -> int:
                     "FLOWSTEAD_RATE_LIMIT_MAX_CLIENTS=4096",
                     "FLOWSTEAD_MAX_REQUEST_BODY_BYTES=16384",
                     "FLOWSTEAD_MAX_REQUEST_TARGET_BYTES=8192",
+                    "FLOWSTEAD_FORECAST_RATE_LIMIT_REQUESTS=30",
+                    "FLOWSTEAD_FORECAST_RATE_LIMIT_WINDOW_SECONDS=60",
                 ]
             )
             + "\n",

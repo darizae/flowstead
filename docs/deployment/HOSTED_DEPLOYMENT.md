@@ -6,6 +6,14 @@ not be executed during T-016 (each marked **UNVERIFIED**). It supplements the
 Always Free preflight in [OCI_ALWAYS_FREE.md](OCI_ALWAYS_FREE.md) and the
 host-neutral build/recovery runbook in [LOCAL_AND_RECOVERY.md](LOCAL_AND_RECOVERY.md).
 
+> **Live-state correction (2026-11-21):** a stopped OCI VM `flowstead-demo-instance`
+> exists in `eu-frankfurt-1` as `VM.Standard.E2.1.Micro` (1 GB RAM, 47 GB boot,
+> x86_64). That is **not** the Always-Free `VM.Standard.A1.Flex` the hosted layout
+> targets and it was **not** booted, resized or touched. It is a blocker to
+> record, not the A1 host. See
+> [OCI_BOOT_SSH_RUNBOOK.md](OCI_BOOT_SSH_RUNBOOK.md) for safe boot/SSH steps
+> gated on an explicit owner decision.
+
 ## OCI reconnaissance (read-only, T-016 — recorded from the live Console)
 
 Observed on the owner's authenticated Oracle Console via the browser relay
