@@ -15,8 +15,10 @@
 #
 # Least privilege (SEC19-04): `DATABASE_URL` injected into api/worker is a
 # runtime DML role with NO DDL/ownership. Schema migrations + the M1 import are
-# a separate one-shot step run against `MIGRATION_DATABASE_URL` (the owner role)
-# BEFORE this script is used; never run migrate/import with the runtime role.
+# a separate one-shot step using an offline-only migration credential
+# (see deploy/oci/env.migration.example) BEFORE this script is used. NEVER
+# place MIGRATION_DATABASE_URL in HOSTED_ENV_FILE: Compose injects that file
+# wholesale into the API and worker containers.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -29,6 +31,12 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 if [[ ! -f "$HOSTED_ENV_FILE" ]]; then
   echo "ERROR: host secret-file '$HOSTED_ENV_FILE' missing (chmod 600). See deploy/oci/env.hosted.example." >&2; exit 1
+fi
+# Never allow a migration-owner credential into the Compose env_file. Do not
+# echo secret-bearing lines. This check is deliberately before Docker starts.
+if grep -Eq '^[[:space:]]*(export[[:space:]]+)?MIGRATION_DATABASE_URL[[:space:]]*=' "$HOSTED_ENV_FILE"; then
+  echo "ERROR: migration-owner credentials must not be present in HOSTED_ENV_FILE" >&2
+  exit 1
 fi
 
 echo "== Building ARM64 backend image ($HOSTED_IMAGE_TAG) =="
