@@ -51,6 +51,18 @@ describe('UT-M10-CSV', () => {
     expect(csv).toContain('"2025-01-01T01:00:00.000Z","influent_flow","gal/h","100","predicted","model,1"');
   });
 
+  it('SEC-M10-CSV neutralizes every spreadsheet formula-injection prefix', () => {
+    // Excel/LibreOffice/Sheets treat a leading = + - @ (optionally after C0
+    // controls / BOM) as a formula; the export must quote-prefix all of them.
+    const prefixes = ['=', '+', '-', '@'];
+    for (const prefix of prefixes) {
+      expect(serializeCsv(['name'], [[`${prefix}cmd()|A0`]])).toContain(`"\'${prefix}cmd()|A0"`);
+      expect(serializeCsv(['name'], [[` \t${prefix}cmd()`]])).toContain(`"\' \t${prefix}cmd()"`);
+    }
+    expect(serializeCsv(['name'], [['\r@x']])).toContain('"\'\r@x"');
+    expect(serializeCsv(['a', 'b', 'c'], [['normal', '1+1', '0=1']])).toContain('"normal","1+1","0=1"');
+  });
+
   it('rejects unbounded and malformed CSV rows', () => {
     expect(() => serializeCsv(['a'], Array.from({ length: 2 }, () => ['x']), 1)).toThrow(/limited/);
     expect(() => serializeCsv(['a'], [['x', 'y']])).toThrow(/header width/);
