@@ -52,6 +52,37 @@ power actions while Oracle holds the instance in this transition; wait for the
 existing lifecycle operation to settle or use Oracle's supported instance
 recovery/support workflow. The public application has **not** been launched.
 
+## Recovery verification (2026-11-21, ~22:47–22:52 CET)
+
+Browser relay (evaluated first, per owner direction): the user's Chrome had **no
+OCI Console tab and no authenticated OCI session**; opening
+`https://cloud.oracle.com/` redirected to `oracle.com/cloud/sign-in.html`, so
+console inspection would require MFA sign-in (forbidden). OCI CLI (configured,
+working) was therefore the diagnostic path.
+
+The stuck `STOPPING` resolved on its own: consecutive OCI lifecycle probes went
+`STOPPING` (22:47:08→22:49:52) then **`RUNNING` at 22:50:04** — roughly 9 minutes
+after the accepted `SOFTRESET`. No further power action was issued after the 409.
+Public IPv4 re-read from the attached VNIC; SSH (owner `/32` ingress, unchanged)
+re-established.
+
+Post-recovery host health (SSH as `opc`, Oracle Linux 9.8, `x86_64`):
+- `systemctl is-active sshd` = `active`; sshd listening on 0.0.0.0:22 and [::]:22.
+- Memory: 498 MiB total, ~268 MiB used, 230 MiB available; 497 MiB swap, ~19 MiB used.
+- Disk: root filesystem 30G, 5.4G used, 25G free (19%).
+- `systemctl --failed`: only benign `mcelog.service` (Machine Check Exception
+  Logging Daemon); no flowstead/nats/uvicorn/caddy processes or units present.
+- No `dmesg` OOM/kill entries in this boot; only non-fatal `auditd` sendmail note.
+- Listening sockets: 22, 111, and loopback-only control ports (44321, 4330);
+  no public app/broker/database port exposed.
+
+Status of key T-017 dependencies at this recovery: host **healthy and reachable**,
+but the restricted Supabase runtime LOGIN/password, verified TLS DB connection,
+real operator identities, and an authorized public TLS domain for the API remain
+**outstanding**. The prepared `deploy/oci/native/` systemd units were **not**
+uploaded/enabled in this recovery pass (memory-bounded install deferred until the
+runtime DB credential and DNS/TLS are provisioned).
+
 ## Completion conditions
 
 Restore healthy SSH access to the existing host, verify swap/memory and whether any package operation remains stuck. Securely provision/verify a restricted Supabase runtime login without leaking credentials, and arrange actual invited identities if private tests are required. Install/start and monitor native service components on the existing VM; prove NATS persistence and queued→completed forecasts; configure DNS/certificate/front-end API binding; then run direct public/private browser tests and provider cost checks. Do not call T-017 completed until those observations exist.
