@@ -358,7 +358,7 @@ def record_terminal_request_failure(
                 diagnostic = %s
             WHERE request_event_id = %s
             """,
-            (occurred_at, result_event.event_id, diagnostic[:512], request.event_id),
+            (occurred_at, result_event.event_id, _public_diagnostic(diagnostic), request.event_id),
         )
         connection.execute(
             """
@@ -500,6 +500,16 @@ async def run_service(database_url: str, nats_url: str) -> None:
 def _diagnostic(error: Exception) -> str:
     text = f"{type(error).__name__}: {error}".replace("\x00", "")
     return text[:512]
+
+
+def _public_diagnostic(raw: str) -> str:
+    """Keep a terminal-failure marker for the read API, never raw exception text.
+
+    The full diagnostic (which may embed DSN, host, schema or path detail) is
+    stored for operations in message_failures; only the exception class is safe
+    to surface through forecast_jobs.diagnostic to the requesting operator.
+    """
+    return (raw.split(":", 1)[0] or "failure")[:512]
 
 
 def _untrusted_event_id(payload: bytes) -> UUID | None:

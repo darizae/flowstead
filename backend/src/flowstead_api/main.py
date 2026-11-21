@@ -275,7 +275,14 @@ def parse_window(
         from_utc = _parse_utc_hour(from_)
         to_utc = _parse_utc_hour(to)
     except ValueError as error:
-        raise HTTPException(status_code=422, detail={"code": "invalid_window", "message": str(error)}) from error
+        # Never echo the ISO parser's internal exception text to the client.
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "invalid_window",
+                "message": "window timestamps must be hour-aligned UTC ISO-8601 values",
+            },
+        ) from error
     duration = to_utc - from_utc
     if duration < timedelta(hours=1) or duration > timedelta(hours=MAX_HISTORY_HOURS):
         raise HTTPException(

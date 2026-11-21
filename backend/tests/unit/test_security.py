@@ -102,6 +102,25 @@ def test_trusted_proxy_uses_closest_untrusted_forwarded_address() -> None:
     assert client.get("/api/v1/health", headers={"X-Forwarded-For": "not-an-ip"}).status_code == 400
 
 
+def test_malformed_window_leaks_no_parser_internals() -> None:
+    """Case: SEC-AUD-ERRLEAK — invalid windows return a fixed message, not parser internals."""
+    client = TestClient(create_app(security_config=_config()))
+    for query in (
+        "from=not-a-time&to=also-bad",
+        "from=2026-11-18T00:00:00+14:00&to=2026-11-18T03:00:00+14:00",
+        "from=2026-99-99T00:00:00Z&to=2026-99-99T03:00:00Z",
+    ):
+        response = client.get(f"/api/v1/public/plants/plant-01/history?{query}")
+        assert response.status_code == 422
+        body = response.json()["detail"]
+        assert body["code"] == "invalid_window"
+        assert body["message"] == "window timestamps must be hour-aligned UTC ISO-8601 values"
+        serialized = str(body)
+        assert "isoformat" not in serialized.lower()
+        assert "not-a-time" not in serialized
+        assert "month must be" not in serialized
+
+
 def test_security_configuration_rejects_open_or_ambiguous_origins() -> None:
     """Case: SEC-M12-RATE."""
     with pytest.raises(SecurityConfigurationError):

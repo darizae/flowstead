@@ -57,6 +57,23 @@ def test_poison_messages_are_rejected(change: dict[str, object]) -> None:
         decode_message(FORECAST_REQUESTED, json.dumps(raw).encode())
 
 
+def test_terminal_failure_diagnostic_is_redacted_for_read_api() -> None:
+    """Case: SEC-AUD-ERRLEAK — read-API diagnostics never embed raw exception text."""
+    from flowstead_api.messaging import _public_diagnostic
+
+    raw = (
+        "OperationalError: connection failed: server at 127.0.0.1, port 5433, "
+        "db flowstead_demo user runtime"
+    )
+    public = _public_diagnostic(raw)
+    assert public == "OperationalError"
+    assert "flowstead_demo" not in public
+    assert "5433" not in public
+    assert _public_diagnostic("ValueError: no valid source") == "ValueError"
+    assert _public_diagnostic(":no-type") == "failure"
+    assert len(_public_diagnostic("x" * 5_000)) <= 512
+
+
 def test_subject_and_payload_are_bounded() -> None:
     with pytest.raises(MessageError, match="subject"):
         decode_message("flowstead.v2.forecast.requested", encode_message(_request()))
