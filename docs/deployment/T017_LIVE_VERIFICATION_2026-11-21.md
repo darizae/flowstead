@@ -177,3 +177,23 @@ for remaining P1/P2 checks. **T-017 remains PARTIAL** until a real configured
 FastAPI/worker, invited-operator JWT authorization, NATS outbox delivery and
 HTTPS browser smoke have all been observed. The five initial outbox events
 remain awaiting a worker.
+
+## Additional external ingress verification
+
+A bounded single-connect external TCP probe from the owner's Mac against
+the existing OCI VM on 2026-11-21 showed port **22 reachable** (restricted by
+Oracle ingress to the owner's current public IPv4 /32), and ports
+**80, 443, 8000, 4222, 8222, 5432 not connectable** (TCP timeouts).
+This verifies the current no-public-API/queue exposure from this vantage
+only, not arbitrary remote source restrictions or complete host firewall
+correctness. Remote SSH confirmed `flowstead-nats active`, `enabled`, and
+localhost `/healthz` returned `{"status":"ok"}`; the API/worker Unix
+accounts exist, and broker auth and worker-token files have restrictive
+0640 permissions. A separate operator TLS API hostname still does not work.
+
+The new Vercel public Auth URL/publishable key settings were re-listed by
+provider API. Local source tests show the revised Vercel config excludes
+`/api` from SPA rewrites and adds HTTP CSP/anti-framing headers, but the
+deployed frontend is still an earlier commit, so these changes are
+**NOT live**. A source-controlled release is required; no GitHub push or
+Vercel production promotion was performed.

@@ -87,3 +87,12 @@ def test_vercel_frontend_security_headers_and_api_non_fallback() -> None:
     assert keys["x-frame-options"] == "DENY"
     assert keys["x-content-type-options"] == "nosniff"
     assert keys["referrer-policy"] == "no-referrer"
+
+
+def test_optional_docker_base_images_are_digest_pinned() -> None:
+    """Changing a hosted builder/runtime base image requires an explicit audit."""
+    text = (ROOT / "backend/Dockerfile").read_text()
+    assert text.count("FROM python:3.12-slim@sha256:") == 2
+    assert "FROM ghcr.io/astral-sh/uv:0.9.13@sha256:" in text
+    assert "FROM python:3.12-slim AS builder" not in text
+    assert "\nFROM python:3.12-slim\n" not in text

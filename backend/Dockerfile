@@ -5,11 +5,12 @@
 #   - worker:  python -m flowstead_api.messaging run
 # Non-root, no secrets baked in (secret env is injected at runtime only).
 #
-# shortcut: base images are tagged, not digest-pinned, so rebuild tooling can
-#   pick up security patches; pin digests before any public deployment.
+# Base image index digests are pinned to those verified from the official
+# registries on 2026-11-21. Update these intentionally after scanning and
+# rerunning the build/worker integration tests (do not float production tags).
 # syntax=docker/dockerfile:1
-FROM ghcr.io/astral-sh/uv:0.9.13 AS uv
-FROM python:3.12-slim AS builder
+FROM ghcr.io/astral-sh/uv:0.9.13@sha256:f07d1bf7b1fb4b983eed2b31320e25a2a76625bdf83d5ff0208fe105d4d8d2f5 AS uv
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS builder
 COPY --from=uv /uv /bin/uv
 WORKDIR /build
 COPY pyproject.toml uv.lock ./
@@ -18,7 +19,7 @@ COPY pyproject.toml uv.lock ./
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 RUN uv sync --frozen --no-dev --no-install-project
 
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app:/app/backend/src \

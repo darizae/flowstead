@@ -108,11 +108,15 @@ Connect panel** rather than inferred from its region.
    a bounded, auditable terminal-only retention job with a safe rollback and
    reconciliation of NATS/JWKS to prevent permanent database growth; don't
    delete pending or unresolved jobs.
-6. **P2 – dependencies / historic secrets.** Docker base images are currently
-   tags rather than reviewed immutable digests; native host avoids this specific
-   image risk. Re-run `pip-audit`, `npm audit` and a full Git history/ZIP/PDF/PNG
-   secret and PII scan before a public launch; basic secret-pattern checks
-   are not comprehensive.
+6. **P2 – dependencies / historic secrets.** The optional Docker builder and
+   Python runtime images are now pinned to verified registry manifest digests,
+   but have **not been rebuilt** or scanned in a live container due to the
+   missing local Docker daemon. Keep a reviewed rebuild/digest-refresh cadence.
+   `npm audit --omit=dev` found zero advisories, and an installed-distribution
+   Python audit found none in 38 distributions. A local Git-history scan
+   covered 656 reachable Git blobs with no matches for six high-signal
+   private-key/token formats; this **does not replace** ZIP/PDF/PNG forensic,
+   historical binary metadata, or generic PII reviews before public launch.
 7. **P2 – provider resource safety.** OCI billing/current spend and free
    quota have not been independently reconciled to a hard limit; alerts do
    not cap charges. No new VM, paid volume, load balancer, auth project or
