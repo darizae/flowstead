@@ -25,9 +25,12 @@ for observed state rather than assuming a service is installed.
   `flowstead_api` permits readonly Plant and source access and authorized
   forecast command enqueue; **cannot read broker tokens** or modify forecasts,
   source data, or operator assignments. No NATS_URL is configured for API.
-- **TLS proxy:** NOT YET STARTED; will run as distinct `flowstead-proxy`
+- **TLS proxy:** NOW RUNNING as distinct `flowstead-proxy`
   with no database or broker secrets; when allowed, serves a verified, approved
-  HTTPS API hostname only; default Caddyfile on 127.0.0.1:8080 is **local-only**.
+  HTTPS API hostname only. The current Caddyfile targets
+  `api.flowstead.darizae.dev` and proxies exclusively to
+  `127.0.0.1:8000`; it may return 502 until FastAPI is installed.
+  Caddy can obtain its certificate and start independently of FastAPI.
   Keep 8000, 4222, 8222, 5432 and 6543 off all public interfaces.
 - **Supabase:** existing `flowstead-demo` only. Role migration
   `deploy/supabase/005_least_privilege_runtime_roles.sql` has been **applied**.

@@ -39,7 +39,12 @@ def test_native_services_are_non_root_and_private_by_default() -> None:
     assert "Environment=NATS_URL=" not in api + worker
     assert "include ./nats-auth.conf" in nats
     proxy = (base / "Caddyfile").read_text()
-    assert "http://127.0.0.1:8080" in proxy
+    assert "api.flowstead.darizae.dev {" in proxy
+    assert "http://127.0.0.1:8080" not in proxy
+    proxy_unit = (base / "flowstead-proxy.service").read_text()
+    assert "User=flowstead-proxy\n" in proxy_unit
+    assert "Requires=flowstead-api.service" not in proxy_unit
+    assert "AmbientCapabilities=CAP_NET_BIND_SERVICE" in proxy_unit
     assert "reverse_proxy 127.0.0.1:8000" in proxy
 
 

@@ -197,3 +197,72 @@ provider API. Local source tests show the revised Vercel config excludes
 deployed frontend is still an earlier commit, so these changes are
 **NOT live**. A source-controlled release is required; no GitHub push or
 Vercel production promotion was performed.
+
+## Flowstead custom-domain and backend staging follow-up (November 2026)
+
+**Public frontend — PASS:** The existing Vercel project now owns the verified
+`flowstead.darizae.dev` custom domain, with a dedicated Vercel DNS CNAME.
+Production deployment `0554a10` serves HTTPS status 200 and a checked-in SVG
+favicon at `/favicon.svg` (image/svg+xml). SPA fallback correctly returns 404
+for missing `/api` paths. Vercel public build environment has exactly the
+expected public Supabase Auth URL/publishable key and
+`VITE_API_URL=https://api.flowstead.darizae.dev/api/v1`.
+
+**API DNS and TLS — PASS for transport, NOT the application:** Added explicit
+`api.flowstead` A record for the *existing* OCI micro. Existing OCI VCN and
+host firewall permit only SSH from the owner's /32 plus required ACME/HTTPS
+80/443; the NATS and database ports remain private. Official published
+Caddy v2.10.2 linux/amd64 release was checksum-verified and installed as the
+unprivileged `flowstead-proxy` systemd service. Caddy and NATS stay active.
+An external `curl` request to the live HTTPS health endpoint completed
+certificate verification but returned **502**, correctly indicating that the
+FastAPI upstream was not running. Do not mark T-017 API PASS on this basis.
+
+**Backend runtime staging — PASS for software, not service startup:** Installed
+an official digest-verified, standalone CPython 3.12.16 distribution and
+checksum-verified uv 0.9.13 on the existing x86_64 micro. Staged reviewed
+Flowstead backend source in `/opt/flowstead/current/backend`, installed
+committed `uv.lock` requirements in `/opt/flowstead/venv` using
+`uv sync --frozen --no-dev` with bounded concurrency, and successfully
+imported FastAPI, psycopg, NATS client, JWT, SQLAlchemy and report libraries.
+The broker and proxy remained active after installation; the host had >200 MiB
+memory available. API and worker systemd units are installed but remain
+**INACTIVE** pending restricted DB credentials.
+
+**Verified Supabase connection target — PASS (TLS, not DB login):** The
+authenticated project-specific Connect dialog identified session pooler
+`aws-1-eu-west-1.pooler.supabase.com:5432`, with username
+`postgres.hkyobferqdfiicnsaupl` for the owner. The server verified the
+pooler TLS 1.3 certificate, hostname and Supabase Root 2021 CA with
+`Verification: OK` and correct pinned fingerprint. The earlier guessed
+`aws-0` endpoint was **not** the confirmed host.
+
+**Remaining credential gate — user action required:** Connected provider SQL
+credential-setting actions were blocked by the execution safety checks.
+The restricted roles `flowstead_api` and `flowstead_worker` remain
+**NOLOGIN**; no database-owner password was copied into a service. The
+source-controlled `scripts/provision_demo_runtime.py` has a successful
+read-only `--preflight`. Run its `--apply` mode in the owner's **private,
+interactive Mac Terminal**, entering only the existing project's Postgres
+password via hidden prompt. It generates two independent high-entropy
+credentials, sends only SCRAM verifiers to Postgres over verified TLS, checks
+grants, transfers the two secrets by SSH stdin into root-owned 0640 role files,
+then starts worker/API and verifies live public HTTPS response. This stage is
+**NOT executed** and should not be described as deployed until it passes.
+
+**Test identities — BLOCKED by UI:** Auth Dashboard had a valid authenticated
+browser-relay session. Attempts to create two non-deliverable test identities
+at `flowstead-test-operator-a@example.invalid` and
+`flowstead-test-operator-b@example.invalid` were blocked by the owner's
+Chrome password-manager autofill extension intercepting the password input
+dialog. No users or grants were created (read-only `auth.users=0`).
+Close the autofill popup (Escape or click elsewhere), then retry through the
+Supabase Auth Admin Create User UI, without sending emails to unrelated
+real addresses or writing directly to `auth.users`. Assign distinct Plant
+grants only after obtaining actual Auth subject UUIDs.
+
+**Current release conclusion:** Frontend DOMAIN/TLS/FAVICON passed. Backend
+origin DOMAIN/TLS passed, but application HTTPS 200, outbox dispatch,
+auth journeys, forecasting, provider billing and full T-017 remain incomplete.
+No extra VM, load balancer, paid hosting or unrelated Supabase project was
+created or changed.

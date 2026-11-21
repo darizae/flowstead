@@ -1,8 +1,7 @@
 [Unit]
-Description=Flowstead reverse proxy (local readiness only until actual TLS is configured)
-After=network-online.target flowstead-api.service
+Description=Flowstead HTTPS API reverse proxy (real public TLS hostname)
+After=network-online.target
 Wants=network-online.target
-Requires=flowstead-api.service
 [Service]
 Type=simple
 User=flowstead-proxy

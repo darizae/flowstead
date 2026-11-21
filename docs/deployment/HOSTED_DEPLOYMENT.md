@@ -67,3 +67,55 @@ secret; the older `deploy/oci/env.hosted.example` is intentionally
 Supabase Auth URL and `sb_publishable_` key; new HTTP response headers and
 non-HTML /api routing are in the local source, not deployed to production.
 The actual public API/TLS/identity end-to-end status remains UNVERIFIED.
+
+## Actual public domains and low-memory runtime staging (latest verified)
+
+The custom frontend domain `https://flowstead.darizae.dev` is attached to the
+existing Vercel `flowstead` project and serves its current GitHub deployment
+with an SVG favicon. The API hostname `api.flowstead.darizae.dev` has a
+dedicated Vercel-managed A record for the **existing** Oracle E2 micro, and
+the VCN and guest firewall admit only public ACME/HTTPS 80/443 plus
+owner-limited SSH. Caddy v2.10.2 was installed from a checksum-verified
+linux/amd64 official release, runs as `flowstead-proxy`, and serves a valid
+public HTTPS certificate. The API upstream currently returns **HTTP 502**
+because FastAPI has not yet been started; this is NOT a deployment pass.
+
+The existing VM also has a checksum-verified standalone CPython 3.12.16
+and uv 0.9.13, committed backend source, and frozen production Python
+dependencies in `/opt/flowstead/venv`. Imports of the FastAPI, PostgreSQL,
+JWT, reporting, NATS and SQLAlchemy libraries passed. Caddy and
+authenticated NATS JetStream are both systemd-active. API/worker systemd
+units are installed but intentionally INACTIVE while their individual DB
+logins are still NOLOGIN.
+
+An authenticated Supabase Connect view confirmed the project session
+pooler is **`aws-1-eu-west-1.pooler.supabase.com:5432`**. The VM verified
+TLSv1.3, the hostname and the Supabase Root 2021 trust anchor. Templates
+for API and worker are updated to use that host, the real project ref,
+an ES256 Auth issuer, and the exact frontend CORS origin.
+
+### Only required private credential action
+
+In the owner's authenticated local Mac Terminal, use the read-only
+`scripts/provision_demo_runtime.py` preflight and then the interactive
+`--apply` mode. It prompts the owner **privately** for the existing
+`flowstead-demo` PostgreSQL administrator password, never storing or
+printing it. It creates or reuses two independent randomly generated
+local role passwords, sends only standard SCRAM verifiers to Postgres over
+certificate-validated TLS, verifies permission restrictions, installs
+two separate protected host env files over SSH stdin, then starts and
+smoke-tests worker/API. This is **prepared, not yet executed**. If the
+admin password is unknown, the owner must reset it in the project's
+Supabase Database Settings using their own authenticated session.
+No admin credential should be pasted in chat or committed.
+
+### Auth test-operator accounts
+
+No Auth test identities were created. The authenticated provider dashboard
+did reach Auth Users > Create new user, but the owner's Chrome password-manager
+extension's autofill overlay blocked browser automation. Owner needs only
+dismiss that overlay with Escape/click elsewhere in Chrome to retry.
+The proposed synthetic non-deliverable identifiers are
+`flowstead-test-operator-a@example.invalid` and
+`flowstead-test-operator-b@example.invalid`. No real recipient invitations
+may be sent; no direct SQL writes to managed `auth.users` are authorized.
