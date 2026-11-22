@@ -107,7 +107,7 @@ jobs:
       DATABASE_URL: postgresql://flowstead:flowstead_local@127.0.0.1:5432/flowstead
       NATS_URL: nats://127.0.0.1:4222
       FLOWSTEAD_ISOLATED_NATS_TEST: '1'
-      FLOWSTEAD_M1_MANIFEST: ${{ github.workspace }}/backend/tests/fixtures/m1/manifest.json
+      FLOWSTEAD_M1_MANIFEST: ${{ runner.temp }}/flowstead-m1/manifest.json
       FLOWSTEAD_M1_DATA: ${{ runner.temp }}/flowstead-m1/telemetry.csv
     steps:
       - uses: actions/checkout@v4

@@ -31,12 +31,19 @@ def main() -> int:
     ):
         raise ValueError("M1 source contract changed")
     output = args.output.resolve()
+    if output.name != "telemetry.csv":
+        raise ValueError("M1 fixture must be named telemetry.csv")
     output.parent.mkdir(parents=True, exist_ok=True)
-    if output.exists():
-        raise FileExistsError(f"refusing to overwrite existing fixture: {output}")
+    output_manifest = output.parent / "manifest.json"
+    if output.exists() or output_manifest.exists():
+        raise FileExistsError("refusing to overwrite existing M1 fixture files")
     digest = hashlib.sha256()
     size = 0
     try:
+        # Importer deliberately rejects telemetry files outside the manifest
+        # directory. Materialize the immutable contract alongside its CSV.
+        with output_manifest.open("xb") as target_manifest:
+            target_manifest.write((FIXTURES / "manifest.json").read_bytes())
         with (
             gzip.open(FIXTURES / "telemetry.csv.gz", "rb") as source,
             output.open("xb") as target,
@@ -51,6 +58,7 @@ def main() -> int:
             raise ValueError("M1 fixture digest or size mismatch")
     except BaseException:
         output.unlink(missing_ok=True)
+        output_manifest.unlink(missing_ok=True)
         raise
     print(f"verified synthetic M1 fixture: {size} bytes, sha256 {digest.hexdigest()}")
     return 0
