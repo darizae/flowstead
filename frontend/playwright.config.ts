@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+
+const evidenceDirectory = path.resolve(
+  process.env.FLOWSTEAD_EVIDENCE_DIR || "../docs/design/evidence",
+);
 
 /** Optional executable override for local runs; empty/whitespace/unset keeps `channel: 'chromium'`. */
 const chromiumExecutablePath =
@@ -10,18 +15,24 @@ const chromiumLaunch = chromiumExecutablePath
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
-  outputDir: "../docs/design/evidence/playwright-test-results",
+  outputDir: path.join(evidenceDirectory, "playwright-test-results"),
   reporter: [
     [
       "html",
       {
-        outputFolder: "../docs/design/evidence/playwright-report",
+        outputFolder: path.join(evidenceDirectory, "playwright-report"),
         open: "never",
       },
     ],
     [
       "json",
-      { outputFile: "../docs/design/evidence/playwright-report/results.json" },
+      {
+        outputFile: path.join(
+          evidenceDirectory,
+          "playwright-report",
+          "results.json",
+        ),
+      },
     ],
   ],
   use: {

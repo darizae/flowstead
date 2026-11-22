@@ -168,7 +168,11 @@ def main() -> int:
         env["FLOWSTEAD_TEST_ASSIGNMENTS"] = json.dumps(auth_setup["assignments"])
         worker_process = start_worker(env)
         api_process = start_api(env)
-        evidence_directory = ROOT / "docs/design/evidence"
+        # New browser runs write into an isolated artifact directory when
+        # provided, instead of overwriting previously accepted Git evidence.
+        evidence_directory = Path(
+            os.environ.get("FLOWSTEAD_EVIDENCE_DIR") or ROOT / "docs/design/evidence"
+        ).resolve()
         evidence_directory.mkdir(parents=True, exist_ok=True)
         e2e_env = env | {
             "PLAYWRIGHT_BASE_URL": "http://127.0.0.1:5173",

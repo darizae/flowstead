@@ -132,3 +132,51 @@ jobs:
         run: python3 scripts/prepare_m1_fixture.py --output "$FLOWSTEAD_M1_DATA"
       - run: uv sync --project backend --frozen
       - run: uv run --project backend --frozen pytest -q backend/tests/integration
+
+  frontend-e2e:
+    name: Desktop and mobile Playwright acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: flowstead
+          POSTGRES_PASSWORD: flowstead_local
+          POSTGRES_DB: flowstead
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flowstead -d flowstead"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://flowstead:flowstead_local@127.0.0.1:5432/flowstead
+      FLOWSTEAD_M1_MANIFEST: ${{ runner.temp }}/flowstead-m1/manifest.json
+      FLOWSTEAD_M1_DATA: ${{ runner.temp }}/flowstead-m1/telemetry.csv
+      FLOWSTEAD_EVIDENCE_DIR: ${{ runner.temp }}/flowstead-browser-evidence
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --project backend --frozen
+      - run: npm ci
+        working-directory: frontend
+      - name: Install Chromium and its OS dependencies
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Verify pinned synthetic M1 fixture
+        run: python3 scripts/prepare_m1_fixture.py --output "$FLOWSTEAD_M1_DATA"
+      - name: Run disposable PostgreSQL, NATS and browser acceptance
+        run: uv run --project backend --frozen python frontend/e2e/run_local.py
+      - name: Upload browser evidence without committing generated binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flowstead-browser-evidence
+          path: ${{ runner.temp }}/flowstead-browser-evidence/
+          if-no-files-found: ignore
+          retention-days: 14
