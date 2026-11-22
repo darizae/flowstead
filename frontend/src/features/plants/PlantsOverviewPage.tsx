@@ -26,7 +26,9 @@ export function PlantsOverviewPage({ plants, loading, error, retry, onSelect, mo
       </Card>
       <Card className="panel map-panel" aria-labelledby="map-title">
         <div className="panel-head"><h2 id="map-title">Florida map</h2></div>
-        {mock ? <MockPlantMap plants={plants} onSelect={onSelect} /> : <Suspense fallback={<p className="small-muted">Preparing map…</p>}><PlantMap plants={plants} onSelect={onSelect} /></Suspense>}
+        <Suspense fallback={mock ? <MockPlantMap plants={plants} onSelect={onSelect} /> : <p className="small-muted">Preparing map…</p>}>
+          <PlantMap plants={plants} onSelect={onSelect} fallback={mock ? <MockPlantMap plants={plants} onSelect={onSelect} /> : undefined} />
+        </Suspense>
       </Card>
     </div>}
   </>;
