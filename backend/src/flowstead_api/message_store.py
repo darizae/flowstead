@@ -150,6 +150,8 @@ def read_forecast_job(
     correlation_id: UUID,
     subject_id: str,
 ) -> ForecastJob | None:
+    # Status is requester-scoped: same-Plant operators must not observe a
+    # requester they do not match. Both requested_by and the Plant grant gate.
     with psycopg.connect(database_url) as connection:
         row = connection.execute(
             """
@@ -157,8 +159,10 @@ def read_forecast_job(
                    j.requested_at, j.completed_at, j.diagnostic
             FROM app.forecast_jobs AS j
             JOIN app.operator_plant_access AS access ON access.plant_id = j.plant_id
-            WHERE j.correlation_id = %s AND access.subject_id = %s
+            WHERE j.correlation_id = %s
+              AND j.requested_by = %s
+              AND access.subject_id = %s
             """,
-            (correlation_id, subject_id),
+            (correlation_id, subject_id, subject_id),
         ).fetchone()
     return None if row is None else ForecastJob(*row)
