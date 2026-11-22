@@ -220,6 +220,51 @@ def test_command_is_authorized_transactional_and_observably_queued(
         ).fetchone() == (0,)
 
 
+def test_forecast_status_is_requester_scoped_across_shared_plant_reads(
+    seeded_url: str,
+) -> None:
+    """Case: SEC-M19-AUTHZ — same-Plant, different requester must not read a job."""
+    with psycopg.connect(seeded_url) as connection, connection.transaction():
+        connection.execute(
+            "INSERT INTO app.operator_plant_access (subject_id, plant_id) "
+            "VALUES (%s, %s)",
+            ("operator-shared", "plant-01"),
+        )
+    client = _client(seeded_url)
+
+    owner = client.post(
+        "/api/v1/plants/plant-01/forecast-requests", headers=_headers()
+    )
+    assert owner.status_code == 202
+    owner_correlation = owner.json()["correlation_id"]
+
+    # Shared-Plant but non-requester: uniform 404, identical to an unknown ID.
+    leaked = client.get(
+        f"/api/v1/forecast-requests/{owner_correlation}",
+        headers=principal_headers("operator-shared"),
+    )
+    unknown = client.get(
+        f"/api/v1/forecast-requests/{uuid4()}",
+        headers=principal_headers("operator-shared"),
+    )
+    assert leaked.status_code == 404
+    assert leaked.json() == unknown.json()
+    assert "operator" not in json.dumps(leaked.json())
+
+    # The requester still reads their own job; the shared user reads their own.
+    assert client.get(
+        f"/api/v1/forecast-requests/{owner_correlation}", headers=_headers()
+    ).status_code == 200
+    own = client.post(
+        "/api/v1/plants/plant-01/forecast-requests",
+        headers=principal_headers("operator-shared"),
+    ).json()
+    assert client.get(
+        f"/api/v1/forecast-requests/{own['correlation_id']}",
+        headers=principal_headers("operator-shared"),
+    ).status_code == 200
+
+
 async def _reset_isolated_broker() -> None:
     assert os.environ.get("FLOWSTEAD_ISOLATED_NATS_TEST") == "1"
     client = await connect(NATS_URL)
