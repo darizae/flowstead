@@ -9,7 +9,7 @@ forecast+outbox+job+inbox step back.
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -90,13 +90,21 @@ def test_list_accessible_plants_respects_public_and_operator_scope() -> None:
 def test_get_plant_history_returns_bounded_readings_under_scope() -> None:
     _grant("operator-a", "plant-01")
     plants = PlantRepository()
+    with psycopg.connect(DATABASE_URL) as connection:
+        latest_timestamp = connection.execute(
+            "SELECT MAX(timestamp_utc) FROM app.hourly_readings WHERE plant_id = %s",
+            ("plant-01",),
+        ).fetchone()[0]
+    assert latest_timestamp is not None
+    from_utc = latest_timestamp - timedelta(hours=167)
+    to_utc = latest_timestamp + timedelta(hours=1)
 
     visible = get_plant_history(
         DATABASE_URL,
         plants,
         "plant-01",
-        datetime(2024, 1, 1, tzinfo=UTC),
-        datetime(2025, 1, 1, tzinfo=UTC),
+        from_utc,
+        to_utc,
         subject_id="operator-a",
         public=False,
     )
@@ -107,8 +115,8 @@ def test_get_plant_history_returns_bounded_readings_under_scope() -> None:
             DATABASE_URL,
             plants,
             "plant-02",
-            datetime(2024, 1, 1, tzinfo=UTC),
-            datetime(2025, 1, 1, tzinfo=UTC),
+            from_utc,
+            to_utc,
             subject_id="operator-a",
             public=False,
         )

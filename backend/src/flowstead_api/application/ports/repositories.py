@@ -9,6 +9,7 @@ authorization stays in the repository; every read takes the same
 
 from __future__ import annotations
 
+import builtins
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -27,7 +28,7 @@ class PlantRepository(Protocol):
         *,
         subject_id: str | None,
         public: bool,
-    ) -> list[PlantRow]: ...
+    ) -> builtins.list[PlantRow]: ...
     def get(
         self,
         connection: Any,
@@ -53,7 +54,7 @@ class PlantRepository(Protocol):
         *,
         subject_id: str | None,
         public: bool,
-    ) -> tuple[PlantRow, list[ReadingRow]] | None: ...
+    ) -> tuple[PlantRow, builtins.list[ReadingRow]] | None: ...
 
 
 class ForecastRepository(Protocol):
