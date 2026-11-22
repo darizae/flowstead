@@ -7,6 +7,8 @@ import { preferences } from '../lib/cache/preferences';
 import { TestAuthProvider, type AuthSession } from '../lib/auth/provider';
 import FlowsteadApp from './App';
 
+const anonymousFetcher = () => makeFetcher({ 'principal-a': ['a'] });
+
 const plant = (id: string, name: string) => ({ plant_id: id, name, location: { city: 'Test City', state_code: 'FL' as const, latitude: 27, longitude: -81 }, timezone: 'America/New_York', links: { latest: '', history: '', forecast: '' } });
 const latest = (id: string) => ({ latest: true as const, plant: plant(id, 'Alpha Plant'), reading: { plant_id: id, timestamp_utc: '2025-01-01T00:00:00Z', latest: true as const, measurements: { influent_flow: { value: 10, quality: 'valid' as const, units: 'gal/h' as const }, rainfall: { value: null, quality: 'missing' as const, units: 'in/h' as const }, dissolved_oxygen: { value: 2, quality: 'invalid' as const, units: 'mg/L' as const }, effluent_ph: { value: 7, quality: 'valid' as const, units: 'unitless' as const } } } });
 
@@ -175,5 +177,56 @@ describe('SEC-M9-CACHE', () => {
     });
     expect(JSON.stringify(rows)).not.toContain('TOKEN-principal-a');
     expect(JSON.stringify(rows)).not.toContain('secret');
+  });
+});
+
+describe('SIGN-IN FORM', () => {
+  const openSignInModal = () => userEvent.click(screen.getByTestId('sign-in-entry'));
+
+  it('successful sign-in passes credentials, closes the modal, and shows the private principal', async () => {
+    const fetcher = anonymousFetcher();
+    const auth = new TestAuthProvider(null, { email: 'op@example.com', password: 's3cret', principalId: 'principal-a' });
+    render(<FlowsteadApp client={new ApiClient({ fetcher })} auth={auth} />);
+    await screen.findByTestId('sign-in-entry');
+    const signIn = vi.spyOn(auth, 'signIn');
+    await openSignInModal();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleName('Sign in');
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveFocus(); // Radix moves focus on open
+    await userEvent.type(screen.getByLabelText('Email'), 'op@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 's3cret');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(signIn).toHaveBeenCalledWith('op@example.com', 's3cret');
+    await waitFor(() => expect(screen.getByTestId('session-identity')).toHaveTextContent('principal-a'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByText('Plant a')).toBeInTheDocument();
+  });
+
+  it('rejects bad credentials with an inline error and keeps the public signed-out view', async () => {
+    const fetcher = anonymousFetcher();
+    const auth = new TestAuthProvider(); // reject-all (fail closed)
+    render(<FlowsteadApp client={new ApiClient({ fetcher })} auth={auth} />);
+    await screen.findByTestId('sign-in-entry');
+    await openSignInModal();
+    await userEvent.type(screen.getByLabelText('Email'), 'op@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'wrong');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(screen.getByTestId('sign-in-error')).toBeInTheDocument());
+    expect(screen.queryByTestId('session-identity')).not.toBeInTheDocument();
+    // password input never leaks stored values into the DOM
+    expect(screen.getByLabelText('Password')).toHaveValue('');
+  });
+
+  it('Escape closes the modal and password field is of type password with no signup links', async () => {
+    const fetcher = anonymousFetcher();
+    render(<FlowsteadApp client={new ApiClient({ fetcher })} auth={new TestAuthProvider()} />);
+    await screen.findByTestId('sign-in-entry');
+    await openSignInModal();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // native `type=password` so the value is a secret input, never plaintext
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password');
+    expect(screen.queryByText(/Sign up|Create account|Register/i)).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
