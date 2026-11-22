@@ -1,0 +1,130 @@
+{
+  "schema_version": "m1.v1",
+  "generator_version": "0.2.0",
+  "seed": 20250101,
+  "parameters": {
+    "profile": "m1",
+    "plants": [
+      "plant-01",
+      "plant-02",
+      "plant-03",
+      "plant-04",
+      "plant-05"
+    ],
+    "plant_timezones": {
+      "plant-01": "America/New_York",
+      "plant-02": "America/New_York",
+      "plant-03": "America/New_York",
+      "plant-04": "America/Chicago",
+      "plant-05": "America/Chicago"
+    },
+    "plant_region": "Florida",
+    "plant_type": "small domestic",
+    "start_utc": "2025-01-01T00:00:00+00:00",
+    "end_utc_exclusive": "2026-01-01T00:00:00+00:00",
+    "hours": 8760,
+    "frequency": "1h",
+    "max_rows": 43800,
+    "max_bytes": 20000000
+  },
+  "plant_metadata": [
+    {
+      "plant_id": "plant-01",
+      "timezone": "America/New_York",
+      "capacity_gal_per_h": 620.0
+    },
+    {
+      "plant_id": "plant-02",
+      "timezone": "America/New_York",
+      "capacity_gal_per_h": 710.0
+    },
+    {
+      "plant_id": "plant-03",
+      "timezone": "America/New_York",
+      "capacity_gal_per_h": 780.0
+    },
+    {
+      "plant_id": "plant-04",
+      "timezone": "America/Chicago",
+      "capacity_gal_per_h": 665.0
+    },
+    {
+      "plant_id": "plant-05",
+      "timezone": "America/Chicago",
+      "capacity_gal_per_h": 745.0
+    }
+  ],
+  "schema": {
+    "version": "m1.v1",
+    "format": "wide_csv",
+    "timestamp_column": "timestamp_utc",
+    "channels": {
+      "influent_flow": {
+        "unit": "gal/h",
+        "value_column": "influent_flow",
+        "quality_column": "influent_flow_quality",
+        "valid_range": [
+          0.0,
+          1500.0
+        ]
+      },
+      "rainfall": {
+        "unit": "in/h",
+        "value_column": "rainfall",
+        "quality_column": "rainfall_quality",
+        "valid_range": [
+          0.0,
+          3.0
+        ]
+      },
+      "dissolved_oxygen": {
+        "unit": "mg/L",
+        "value_column": "dissolved_oxygen",
+        "quality_column": "dissolved_oxygen_quality",
+        "valid_range": [
+          0.0,
+          15.0
+        ]
+      },
+      "effluent_ph": {
+        "unit": "unitless",
+        "value_column": "effluent_ph",
+        "quality_column": "effluent_ph_quality",
+        "valid_range": [
+          5.5,
+          9.5
+        ]
+      }
+    }
+  },
+  "counts": {
+    "plants": 5,
+    "hours": 8760,
+    "rows": 43800,
+    "channels": 4,
+    "readings": 175200,
+    "quality": {
+      "valid": 173481,
+      "missing": 681,
+      "invalid": 1038
+    }
+  },
+  "utc_policy": "timestamps are timezone-aware ISO-8601 UTC hourly buckets",
+  "quality_vocabulary": [
+    "valid",
+    "missing",
+    "invalid"
+  ],
+  "files": {
+    "telemetry.csv": {
+      "sha256": "e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e",
+      "bytes": 4247080
+    }
+  },
+  "provenance": {
+    "kind": "synthetic",
+    "source": "deterministic local generator",
+    "observed_data": false
+  },
+  "source_sha": "ad5c94d1f46e79312a99cb9721f38700f24fdf6b"
+}

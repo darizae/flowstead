@@ -107,10 +107,14 @@ jobs:
       DATABASE_URL: postgresql://flowstead:flowstead_local@127.0.0.1:5432/flowstead
       NATS_URL: nats://127.0.0.1:4222
       FLOWSTEAD_ISOLATED_NATS_TEST: '1'
+      FLOWSTEAD_M1_MANIFEST: ${{ github.workspace }}/backend/tests/fixtures/m1/manifest.json
+      FLOWSTEAD_M1_DATA: ${{ runner.temp }}/flowstead-m1/telemetry.csv
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - name: Start JetStream-enabled NATS
         run: docker run --detach --name flowstead-ci-nats -p 4222:4222 nats:2.12-alpine -js
+      - name: Verify and unpack the pinned synthetic M1 fixture
+        run: python3 scripts/prepare_m1_fixture.py --output "$FLOWSTEAD_M1_DATA"
       - run: uv sync --project backend --frozen
       - run: uv run --project backend --frozen pytest -q backend/tests/integration
