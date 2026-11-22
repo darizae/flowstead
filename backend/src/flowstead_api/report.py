@@ -22,7 +22,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from .database import ForecastRead, PlantRow, ReadingRow
+from .infrastructure.persistence.records import ForecastRead, PlantRow, ReadingRow
 
 MAX_REPORT_BYTES = 256_000
 SYNTHETIC_SOURCE = "Synthetic source: Flowstead M1 dataset (fictional demonstration data)"
@@ -79,23 +79,48 @@ def render_report(
     buffer = BytesIO()
     styles = getSampleStyleSheet()
     title = ParagraphStyle(
-        "ReportTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=20,
-        leading=24, textColor=colors.HexColor("#123b36"), alignment=TA_LEFT, spaceAfter=6,
+        "ReportTitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=20,
+        leading=24,
+        textColor=colors.HexColor("#123b36"),
+        alignment=TA_LEFT,
+        spaceAfter=6,
     )
     subtitle = ParagraphStyle(
-        "ReportSubtitle", parent=styles["Normal"], fontName="Helvetica", fontSize=9,
-        leading=13, textColor=colors.HexColor("#49625e"), spaceAfter=14,
+        "ReportSubtitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#49625e"),
+        spaceAfter=14,
     )
     section = ParagraphStyle(
-        "ReportSection", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=12,
-        leading=15, textColor=colors.HexColor("#123b36"), spaceBefore=12, spaceAfter=6,
+        "ReportSection",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        leading=15,
+        textColor=colors.HexColor("#123b36"),
+        spaceBefore=12,
+        spaceAfter=6,
     )
     body = ParagraphStyle(
-        "ReportBody", parent=styles["BodyText"], fontName="Helvetica", fontSize=9,
-        leading=13, textColor=colors.HexColor("#243a37"),
+        "ReportBody",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#243a37"),
     )
     small = ParagraphStyle(
-        "ReportSmall", parent=body, fontSize=8, leading=11, textColor=colors.HexColor("#49625e"),
+        "ReportSmall",
+        parent=body,
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor("#49625e"),
     )
     head = ParagraphStyle("ReportTableHead", parent=small, textColor=colors.white)
     right = ParagraphStyle("ReportRight", parent=body, alignment=TA_RIGHT)
@@ -113,21 +138,35 @@ def render_report(
     story: list[object] = []
     name = _safe_text(plant.name)
     story.append(Paragraph("Flowstead Plant report", title))
-    story.append(Paragraph(f"{name}<br/>{_safe_text(plant.city)}, {_safe_text(plant.state_code)} | {_safe_text(plant.timezone)}", subtitle))
+    story.append(
+        Paragraph(
+            f"{name}<br/>{_safe_text(plant.city)}, {_safe_text(plant.state_code)} | {_safe_text(plant.timezone)}",
+            subtitle,
+        )
+    )
     identity = [
         [Paragraph("Plant ID", small), Paragraph(_safe_text(plant.plant_id), body)],
-        [Paragraph("Generated (UTC)", small), Paragraph(generated.strftime("%Y-%m-%d %H:%M UTC"), body)],
+        [
+            Paragraph("Generated (UTC)", small),
+            Paragraph(generated.strftime("%Y-%m-%d %H:%M UTC"), body),
+        ],
         [Paragraph("Plant-local date", small), Paragraph(_date(generated, plant.timezone), body)],
     ]
     table = Table(identity, colWidths=[1.35 * inch, 5.85 * inch])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#e8f2ee")),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfd8ce")),
-        ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d6e6df")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-        ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#e8f2ee")),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfd8ce")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d6e6df")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
     story.extend([table, Spacer(1, 8), Paragraph("Latest readings", section)])
     channels = (
         ("Influent flow", "gal/h"),
@@ -135,49 +174,105 @@ def render_report(
         ("Dissolved oxygen", "mg/L"),
         ("Effluent pH", "unitless"),
     )
-    rows = [[Paragraph("Measurement", head), Paragraph("Value", head), Paragraph("Quality", head), Paragraph("Units", head)]]
+    rows = [
+        [
+            Paragraph("Measurement", head),
+            Paragraph("Value", head),
+            Paragraph("Quality", head),
+            Paragraph("Units", head),
+        ]
+    ]
     values = reading.values if reading is not None else (None,) * 4
     qualities = reading.qualities if reading is not None else ("missing",) * 4
     for index, (label, units) in enumerate(channels):
-        rows.append([Paragraph(label, body), Paragraph(_number(values[index]), right), Paragraph(_safe_text(qualities[index]), body), Paragraph(units, body)])
-    latest_table = Table(rows, colWidths=[2.35 * inch, 1.35 * inch, 1.25 * inch, 2.25 * inch], repeatRows=1)
-    latest_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123b36")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c8ddd4")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5faf7")]),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
+        rows.append(
+            [
+                Paragraph(label, body),
+                Paragraph(_number(values[index]), right),
+                Paragraph(_safe_text(qualities[index]), body),
+                Paragraph(units, body),
+            ]
+        )
+    latest_table = Table(
+        rows, colWidths=[2.35 * inch, 1.35 * inch, 1.25 * inch, 2.25 * inch], repeatRows=1
+    )
+    latest_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123b36")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c8ddd4")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5faf7")]),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
     story.append(latest_table)
 
     story.append(Paragraph("12-hour forecast", section))
     build = forecast.build if forecast is not None else None
     if build is None or not build.available or len(build.points) != 12:
-        reason = _safe_text(build.unavailable_reason if build is not None and build.unavailable_reason else "unavailable")
+        reason = _safe_text(
+            build.unavailable_reason
+            if build is not None and build.unavailable_reason
+            else "unavailable"
+        )
         story.append(Paragraph(f"Forecast unavailable: {reason}.", body))
     else:
-        issued = build.issued_at_utc.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC") if build.issued_at_utc else "Not issued"
-        story.append(Paragraph(f"Issued: {issued} | Model: {_safe_text(build.model_version)}", small))
-        forecast_rows = [[Paragraph("Target", head), Paragraph("Time (UTC)", head), Paragraph("Predicted flow", head), Paragraph("Units", head)]]
+        issued = (
+            build.issued_at_utc.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
+            if build.issued_at_utc
+            else "Not issued"
+        )
+        story.append(
+            Paragraph(f"Issued: {issued} | Model: {_safe_text(build.model_version)}", small)
+        )
+        forecast_rows = [
+            [
+                Paragraph("Target", head),
+                Paragraph("Time (UTC)", head),
+                Paragraph("Predicted flow", head),
+                Paragraph("Units", head),
+            ]
+        ]
         for point in build.points:
-            forecast_rows.append([
-                Paragraph(str(point.hour_number), body),
-                Paragraph(point.target_time_utc.astimezone(UTC).strftime("%Y-%m-%d %H:%M"), body),
-                Paragraph(_number(point.predicted_flow_gal_h), right),
-                Paragraph("gal/h", body),
-            ])
-        forecast_table = Table(forecast_rows, colWidths=[0.7 * inch, 2.5 * inch, 2.0 * inch, 2.0 * inch], repeatRows=1)
-        forecast_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2b6f67")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c8ddd4")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5faf7")]),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
+            forecast_rows.append(
+                [
+                    Paragraph(str(point.hour_number), body),
+                    Paragraph(
+                        point.target_time_utc.astimezone(UTC).strftime("%Y-%m-%d %H:%M"), body
+                    ),
+                    Paragraph(_number(point.predicted_flow_gal_h), right),
+                    Paragraph("gal/h", body),
+                ]
+            )
+        forecast_table = Table(
+            forecast_rows, colWidths=[0.7 * inch, 2.5 * inch, 2.0 * inch, 2.0 * inch], repeatRows=1
+        )
+        forecast_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2b6f67")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c8ddd4")),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#f5faf7")],
+                    ),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         story.append(forecast_table)
         if build.source_revision:
             story.append(Paragraph(f"Source revision: {_safe_text(build.source_revision)}", small))

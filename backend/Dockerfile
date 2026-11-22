@@ -29,8 +29,9 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# backend.importer / backend.migrate are imported at runtime (flowstead_api
-# references backend.importer), so the backend package must be importable.
+# backend.importer / backend.migrate are maintained as repo-root entrypoint
+# modules (`python -m backend.importer`); flowstead_api itself is standalone
+# and never imports the backend package.
 COPY __init__.py ./backend/__init__.py
 COPY importer.py migrate.py ./backend/
 COPY src/flowstead_api ./backend/src/flowstead_api/

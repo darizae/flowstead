@@ -9,90 +9,33 @@ import json
 import math
 import os
 import re
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 import psycopg
 
-SOURCE_SHA = "ad5c94d1f46e79312a99cb9721f38700f24fdf6b"
-SCHEMA_VERSION = "m1.v1"
-SEED = 20250101
-MAX_ROWS = 43_800
-MAX_READINGS = 175_200
-MAX_BYTES = 4_247_080
-EXPECTED_UNITS = {
-    "influent_flow": "gal/h",
-    "rainfall": "in/h",
-    "dissolved_oxygen": "mg/L",
-    "effluent_ph": "unitless",
-}
-CHANNELS = tuple(EXPECTED_UNITS)
-CSV_COLUMNS = (
-    "plant_id",
-    "timestamp_utc",
-    "influent_flow",
-    "influent_flow_quality",
-    "rainfall",
-    "rainfall_quality",
-    "dissolved_oxygen",
-    "dissolved_oxygen_quality",
-    "effluent_ph",
-    "effluent_ph_quality",
+# Immutable M1 contract and app-owned Plant metadata are domain-owned
+# (flowstead_api.domain.m1). This module re-exports them so the long-standing
+# `from backend.importer import APPROVED_PLANT_IDS, ...` contract keeps working
+# while `flowstead_api` no longer depends on the repository root on PYTHONPATH.
+from flowstead_api.domain.m1 import (
+    APPROVED_PLANT_IDS,
+    APPROVED_PLANTS,
+    CHANNELS,
+    CSV_COLUMNS,
+    EXPECTED_UNITS,
+    MAX_BYTES,
+    MAX_READINGS,
+    MAX_ROWS,
+    QUALITY_VALUES,
+    SCHEMA_VERSION,
+    SEED,
+    SOURCE_SHA,
 )
-QUALITY_VALUES = frozenset({"valid", "invalid", "missing"})
-
-# App-owned deterministic metadata. The importer never turns arbitrary manifest IDs into public Plants.
-APPROVED_PLANTS: dict[str, dict[str, Any]] = {
-    "plant-01": {
-        "name": "Cypress Ridge Water Reclamation",
-        "city": "Gainesville",
-        "state_code": "FL",
-        "timezone": "America/New_York",
-        "latitude": Decimal("29.6516"),
-        "longitude": Decimal("-82.3248"),
-        "hydraulic_capacity_gal_h": Decimal("620.00"),
-    },
-    "plant-02": {
-        "name": "Gulf Palms Water Reclamation",
-        "city": "Tampa",
-        "state_code": "FL",
-        "timezone": "America/New_York",
-        "latitude": Decimal("27.9506"),
-        "longitude": Decimal("-82.4572"),
-        "hydraulic_capacity_gal_h": Decimal("710.00"),
-    },
-    "plant-03": {
-        "name": "Lake Osprey Water Reclamation",
-        "city": "Orlando",
-        "state_code": "FL",
-        "timezone": "America/New_York",
-        "latitude": Decimal("28.5383"),
-        "longitude": Decimal("-81.3792"),
-        "hydraulic_capacity_gal_h": Decimal("780.00"),
-    },
-    "plant-04": {
-        "name": "Orange Hammock Water Reclamation",
-        "city": "Miami",
-        "state_code": "FL",
-        "timezone": "America/Chicago",
-        "latitude": Decimal("25.7617"),
-        "longitude": Decimal("-80.1918"),
-        "hydraulic_capacity_gal_h": Decimal("665.00"),
-    },
-    "plant-05": {
-        "name": "Pine Harbor Water Reclamation",
-        "city": "Pensacola",
-        "state_code": "FL",
-        "timezone": "America/Chicago",
-        "latitude": Decimal("30.4213"),
-        "longitude": Decimal("-87.2169"),
-        "hydraulic_capacity_gal_h": Decimal("745.00"),
-    },
-}
-APPROVED_PLANT_IDS = frozenset(APPROVED_PLANTS)
 
 
 class ImportValidationError(ValueError):
@@ -322,11 +265,11 @@ def _parse_timestamp(value: str, row_number: int) -> datetime:
         parsed = datetime.fromisoformat(normalized)
     except ValueError as exc:
         raise _fail(f"row {row_number}: invalid timestamp") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() != timezone.utc.utcoffset(parsed):
+    if parsed.tzinfo is None or parsed.utcoffset() != UTC.utcoffset(parsed):
         raise _fail(f"row {row_number}: timestamp must have an explicit UTC offset")
     if any((parsed.minute, parsed.second, parsed.microsecond)):
         raise _fail(f"row {row_number}: timestamp must be aligned to an hour")
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _parse_decimal(value: str, row_number: int, channel: str) -> Decimal:
@@ -423,97 +366,96 @@ def _reading_values(reading: Reading) -> tuple[Any, ...]:
 def import_m1(database_url: str, manifest_path: Path, data_path: Path, source_sha: str) -> bool:
     manifest, readings = validate_source(manifest_path, data_path, source_sha)
     content_sha = manifest.expected_sha256
-    with psycopg.connect(database_url) as connection:
-        with connection.transaction():
-            with connection.cursor() as cursor:
+    with psycopg.connect(database_url) as connection, connection.transaction():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, source_sha, schema_version, generator_version, seed, "
+                "manifest_sha256, row_count FROM app.ingest_batches "
+                "WHERE content_sha256 = %s",
+                (content_sha,),
+            )
+            existing = cursor.fetchone()
+            if existing is not None:
+                if tuple(existing[1:]) != (
+                    source_sha,
+                    manifest.schema_version,
+                    manifest.generator_version,
+                    manifest.seed,
+                    manifest.digest,
+                    len(readings),
+                ):
+                    raise _fail("existing content digest has incompatible provenance")
                 cursor.execute(
-                    "SELECT id, source_sha, schema_version, generator_version, seed, "
-                    "manifest_sha256, row_count FROM app.ingest_batches "
-                    "WHERE content_sha256 = %s",
-                    (content_sha,),
+                    "SELECT count(*) FROM app.hourly_readings WHERE source_batch_id = %s",
+                    (existing[0],),
                 )
-                existing = cursor.fetchone()
-                if existing is not None:
-                    if tuple(existing[1:]) != (
-                        source_sha,
-                        manifest.schema_version,
-                        manifest.generator_version,
-                        manifest.seed,
-                        manifest.digest,
-                        len(readings),
-                    ):
-                        raise _fail("existing content digest has incompatible provenance")
-                    cursor.execute(
-                        "SELECT count(*) FROM app.hourly_readings WHERE source_batch_id = %s",
-                        (existing[0],),
-                    )
-                    if cursor.fetchone()[0] != len(readings):
-                        raise _fail("existing ingest batch is incomplete")
-                    return False
-                cursor.execute("SELECT count(*) FROM app.ingest_batches")
-                if cursor.fetchone()[0]:
-                    raise _fail("a different M1 content digest is already imported")
-                for plant_id in sorted(APPROVED_PLANT_IDS):
-                    plant = APPROVED_PLANTS[plant_id]
-                    cursor.execute(
-                        """INSERT INTO app.plants
+                if cursor.fetchone()[0] != len(readings):
+                    raise _fail("existing ingest batch is incomplete")
+                return False
+            cursor.execute("SELECT count(*) FROM app.ingest_batches")
+            if cursor.fetchone()[0]:
+                raise _fail("a different M1 content digest is already imported")
+            for plant_id in sorted(APPROVED_PLANT_IDS):
+                plant = APPROVED_PLANTS[plant_id]
+                cursor.execute(
+                    """INSERT INTO app.plants
                         (plant_id, name, city, state_code, timezone, latitude, longitude,
                          hydraulic_capacity_gal_h, public_demo)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, true)""",
-                        (
-                            plant_id,
-                            plant["name"],
-                            plant["city"],
-                            plant["state_code"],
-                            plant["timezone"],
-                            plant["latitude"],
-                            plant["longitude"],
-                            plant["hydraulic_capacity_gal_h"],
-                        ),
-                    )
-                cursor.execute(
-                    """INSERT INTO app.ingest_batches
+                    (
+                        plant_id,
+                        plant["name"],
+                        plant["city"],
+                        plant["state_code"],
+                        plant["timezone"],
+                        plant["latitude"],
+                        plant["longitude"],
+                        plant["hydraulic_capacity_gal_h"],
+                    ),
+                )
+            cursor.execute(
+                """INSERT INTO app.ingest_batches
                     (content_sha256, source_sha, schema_version, generator_version, seed,
                      manifest_sha256, row_count, content_bytes)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id""",
-                    (
-                        content_sha,
-                        source_sha,
-                        manifest.schema_version,
-                        manifest.generator_version,
-                        manifest.seed,
-                        manifest.digest,
-                        len(readings),
-                        manifest.expected_bytes,
-                    ),
-                )
-                batch_id = cursor.fetchone()[0]
-                cursor.executemany(
-                    """INSERT INTO app.hourly_readings
+                (
+                    content_sha,
+                    source_sha,
+                    manifest.schema_version,
+                    manifest.generator_version,
+                    manifest.seed,
+                    manifest.digest,
+                    len(readings),
+                    manifest.expected_bytes,
+                ),
+            )
+            batch_id = cursor.fetchone()[0]
+            cursor.executemany(
+                """INSERT INTO app.hourly_readings
                     (plant_id, timestamp_utc, influent_flow, influent_flow_quality,
                      rainfall, rainfall_quality, dissolved_oxygen, dissolved_oxygen_quality,
                      effluent_ph, effluent_ph_quality, source_batch_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    ((*_reading_values(reading), batch_id) for reading in readings),
-                )
-                # Import locally to keep the source validator independent from
-                # the runtime messaging package while sharing this transaction.
-                from flowstead_api.message_store import emit_ingest_completed
+                ((*_reading_values(reading), batch_id) for reading in readings),
+            )
+            # Import locally to keep the source validator independent from
+            # the runtime messaging package while sharing this transaction.
+            from flowstead_api.message_store import emit_ingest_completed
 
-                # Historical 001/002 databases remain stampable without
-                # fabricating events for imports that predate the outbox.
-                if cursor.execute(
-                    "SELECT to_regclass('app.message_outbox')"
-                ).fetchone()[0] is not None:
-                    emit_ingest_completed(
-                        connection,
-                        batch_id=batch_id,
-                        plant_ids=list(manifest.plants),
-                        source_sha=source_sha,
-                        content_sha256=content_sha,
-                        reading_count=len(readings),
-                    )
+            # Historical 001/002 databases remain stampable without
+            # fabricating events for imports that predate the outbox.
+            if cursor.execute(
+                "SELECT to_regclass('app.message_outbox')"
+            ).fetchone()[0] is not None:
+                emit_ingest_completed(
+                    connection,
+                    batch_id=batch_id,
+                    plant_ids=list(manifest.plants),
+                    source_sha=source_sha,
+                    content_sha256=content_sha,
+                    reading_count=len(readings),
+                )
     return True
 
 

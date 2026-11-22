@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
-from typing import Iterable
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 
 HORIZON_HOURS = 12
 SEASONAL_LAG = timedelta(hours=24)
@@ -46,7 +46,6 @@ class ForecastBuild:
         return not self.unavailable_reason
 
 
-
 @dataclass(frozen=True)
 class BacktestReceipt:
     holdout_start_utc: datetime | None
@@ -61,7 +60,7 @@ class BacktestReceipt:
 def _utc_hour(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() != timedelta(0):
         raise ValueError("forecast timestamps must include UTC timezone information")
-    normalized = value.astimezone(timezone.utc)
+    normalized = value.astimezone(UTC)
     if normalized.minute or normalized.second or normalized.microsecond:
         raise ValueError("forecast timestamps must be aligned to UTC hours")
     return normalized
@@ -72,7 +71,7 @@ def _valid_value(observation: FlowObservation | None) -> Decimal | None:
         return None
     try:
         value = Decimal(str(observation.value))
-    except Exception:
+    except (InvalidOperation, ValueError, TypeError):
         return None
     if not value.is_finite():
         return None
@@ -108,7 +107,7 @@ def _latest_valid(
 
 
 def _bounded(value: Decimal) -> Decimal:
-    return max(value, Decimal("0"))
+    return max(value, Decimal(0))
 
 
 def forecast_for_issuance(
@@ -184,8 +183,7 @@ def backtest(
         raise ValueError("holdout_hours must be positive")
     ordered = sorted(
         {
-            _utc_hour(observation.timestamp_utc): observation
-            for observation in observations
+            _utc_hour(observation.timestamp_utc): observation for observation in observations
         }.values(),
         key=lambda observation: observation.timestamp_utc,
     )
@@ -217,37 +215,17 @@ def backtest(
         model_mae_gal_h=(float(sum(errors) / len(errors)) if errors else None),
         model_eligible_count=len(errors),
         persistence_mae_gal_h=(
-            float(sum(persistence_errors) / len(persistence_errors))
-            if persistence_errors
-            else None
+            float(sum(persistence_errors) / len(persistence_errors)) if persistence_errors else None
         ),
         persistence_eligible_count=len(persistence_errors),
     )
 
 
 def main() -> int:
-    """Run the local build for every approved Plant; no network or scheduler is used."""
-    from .database import Database
+    """Local build CLI; implemented in :mod:`cli.forecast` to keep this module pure."""
+    from .cli.forecast import main as cli_main
 
-    database = Database()
-    print(f"backtest_notice={SYNTHETIC_BACKTEST_NOTICE}")
-    for plant_id in sorted(database.public_plant_ids):
-        result = database.build_forecast(plant_id)
-        state = "available" if result.available else f"unavailable:{result.unavailable_reason}"
-        issued_at = (
-            result.issued_at_utc.isoformat()
-            if result.issued_at_utc is not None
-            else "none"
-        )
-        receipt = backtest(database.flow_observations(plant_id))
-        print(
-            f"{plant_id} {state} issued_at={issued_at} "
-            f"mae_gal_h={receipt.model_mae_gal_h} "
-            f"eligible={receipt.model_eligible_count} "
-            f"persistence_mae_gal_h={receipt.persistence_mae_gal_h} "
-            f"persistence_eligible={receipt.persistence_eligible_count}"
-        )
-    return 0
+    return cli_main()
 
 
 if __name__ == "__main__":

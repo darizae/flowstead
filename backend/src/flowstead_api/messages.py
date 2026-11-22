@@ -7,8 +7,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, ClassVar, Literal
 from uuid import UUID
 
-from backend.importer import APPROVED_PLANT_IDS
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+
+from .domain.m1 import APPROVED_PLANT_IDS
 
 INGEST_COMPLETED = "flowstead.v1.ingest.completed"
 FORECAST_REQUESTED = "flowstead.v1.forecast.requested"
@@ -68,7 +69,9 @@ class IngestCompleted(Event):
 
 class ForecastRequested(Event):
     subject: ClassVar[str] = FORECAST_REQUESTED
-    requested_by: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    requested_by: str = Field(
+        min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    )
     model_version: str = Field(min_length=1, max_length=128)
 
 
