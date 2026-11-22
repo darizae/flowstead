@@ -11,6 +11,8 @@ import { chromium } from 'playwright';
 
 const HOME = process.env.FLOWSTEAD_TEST_PASSWORD_DIR || path.join(os.homedir(), 'Downloads');
 const ORIGIN = 'https://flowstead.darizae.dev';
+const AUTH_ONLY = process.argv.includes('--auth-only');
+let stage = 'initialize';
 const ACCOUNTS = [
   { email: 'flowstead-test-operator-a@example.invalid', count: 2 },
   { email: 'flowstead-test-operator-b@example.invalid', count: 3 },
@@ -34,28 +36,42 @@ async function smoke(browser, account) {
   try {
     const page = await context.newPage();
     page.setDefaultTimeout(20000);
+    stage = 'navigate';
     await page.goto(ORIGIN + '/plants', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    stage = 'open-form';
     await page.getByTestId('sign-in-entry').click();
     const dialog = page.getByRole('dialog', { name: 'Sign in' });
+    stage = 'fill-email';
     await dialog.getByRole('textbox', { name: 'Email' }).fill(account.email);
+    stage = 'fill-password';
     await dialog.getByLabel('Password').fill(ownerPassword(account.email));
+    stage = 'submit';
     await dialog.getByRole('button', { name: 'Sign in' }).click();
+    stage = 'await-session';
     await page.getByTestId('session-identity').waitFor({ state: 'visible', timeout: 30000 });
-    await page.locator('.plant-row').first().waitFor({ state: 'visible', timeout: 30000 });
+    console.log('PASS', account.email.endsWith('-a@example.invalid') ? 'operator A' : 'operator B', 'real browser Supabase sign-in');
+    if (!AUTH_ONLY) {
+      await page.locator('.plant-row').first().waitFor({ state: 'visible', timeout: 30000 });
     const actual = await page.locator('.plant-row').count();
     if (actual !== account.count) {
       throw new Error('Incorrect authorized Plant count after browser sign-in');
     }
-    console.log('PASS', account.email.endsWith('-a@example.invalid') ? 'operator A' : 'operator B',
-      'browser sign-in and scoped Plant count:', actual);
+    console.log('PASS browser scoped Plant count:', actual);
+    }
+    stage = 'signout';
     await page.getByTestId('sign-out').click();
+    stage = 'await-anonymous';
     await page.getByTestId('sign-in-entry').waitFor({ state: 'visible' });
+    if (!AUTH_ONLY) {
     const publicCount = await page.locator('.plant-row').count();
     if (publicCount !== 5) {
       // Public state may still be fetching after token switch.
       await page.waitForFunction(() => document.querySelectorAll('.plant-row').length === 5, undefined, { timeout: 15000 });
     }
     console.log('PASS signed out, public Plant list restored');
+    } else {
+      console.log('PASS browser sign-out returned to anonymous state');
+    }
   } finally {
     await context.close(); // ephemeral context, no persistent browser cookies
   }
@@ -64,16 +80,20 @@ async function smoke(browser, account) {
 async function main() {
   let browser;
   try {
-    browser = await chromium.launch({ channel: 'chrome', headless: true });
+    stage = 'launch-playwright-headless';
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?.trim();
+    browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
     for (const account of ACCOUNTS) {
       await smoke(browser, account);
     }
-    console.log('PASS live browser E2E for two operators (no screenshots or credentials saved)');
+    console.log(AUTH_ONLY
+      ? 'PASS real browser Supabase sign-in/sign-out for two operators; API Plant E2E not checked'
+      : 'PASS live browser E2E for two operators (no screenshots or credentials saved)');
   } catch (error) {
     // Do NOT print playwright error details/stack, as those can contain
     // entered text, DOM snapshots, Authorization headers and user metadata.
     console.error('BLOCKED live browser smoke:', error?.name || 'UnknownError',
-      '— check deployed frontend/API readiness without logging secrets');
+      'at stage', stage, '— no credential or browser snapshot logged');
     process.exitCode = 1;
   } finally {
     if (browser) await browser.close();

@@ -305,3 +305,19 @@ def test_es256_signed_jwt_is_accepted_from_configured_jwks() -> None:
         headers={"kid": "ec-key", "typ": "JWT"},
     )
     assert verifier.verify(token) == Principal(sub="operator-a")
+
+    # The real flowstead-demo Supabase ES256 token omits the optional nbf claim.
+    # Signature, issuer, audience, issued-at and expiry are still mandatory.
+    without_nbf = _claims()
+    without_nbf.pop("nbf")
+    token_without_nbf = jwt.encode(without_nbf, private_key, algorithm="ES256", headers={"kid": "ec-key"})
+    assert verifier.verify(token_without_nbf) == Principal(sub="operator-a")
+
+    future_nbf = _claims(nbf=int((datetime.now(UTC) + timedelta(minutes=10)).timestamp()))
+    future_token = jwt.encode(future_nbf, private_key, algorithm="ES256", headers={"kid": "ec-key"})
+    _rejected(verifier, future_token)
+
+    without_exp = dict(without_nbf)
+    without_exp.pop("exp")
+    bad_exp_token = jwt.encode(without_exp, private_key, algorithm="ES256", headers={"kid": "ec-key"})
+    _rejected(verifier, bad_exp_token)

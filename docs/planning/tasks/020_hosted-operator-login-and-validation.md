@@ -28,8 +28,10 @@ and the checked-in deploy commits on local `main`:
 in [T-020 progress](../../deployment/T020_PROGRESS_2026-11-22.md).
 A real Supabase password grant succeeded for each test account using protected,
 owner-local files without exposing the passwords/JWTs. The React login UI is
-implemented and locally tested. Production API/GUI browser E2E is blocked by
-an Oracle guest timeout/restart and is **not** a PASS. The remaining T-017
+implemented and locally tested. Production API and browser E2E **subsequently passed** after guest recovery
+and a Supabase optional-nbf JWT fix (see the later dated section of the
+[T-020 progress receipt](../../deployment/T020_PROGRESS_2026-11-22.md)).
+The earlier outage and blocked result remain historical evidence. The remaining T-017
 scope below is still required.
 
 ## Scope

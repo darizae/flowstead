@@ -166,3 +166,31 @@ and forecast generation flows have **not** been verified. See
 retention checks are still open under T-017. Earlier passages that
 describe the worker/API as not installed or the roles as NOLOGIN are
 historical; this section is the latest verified state.
+
+## Successful live authenticated forecast acceptance — 2026-11-22
+
+The current approved Oracle E2 micro runs all four services, and both API
+and worker have been explicitly `systemctl enable`d for reboot persistence.
+A real Supabase JWT verification defect was corrected: tokens may omit
+`nbf`; the API now verifies that claim when present rather than
+requiring it. The signature, issuer, audience, issued-at and expiry still
+receive strict checks. Both operators signed into the Vercel frontend in
+ephemeral Playwright browser contexts and their scoped Plant lists (2 and 3)
+matched the grants. Owner-local password files remained private.
+
+Actual authenticated HTTP testing submitted **one** forecast request,
+observed **completed** status, and read 12 persisted hourly forecast points.
+DB independently showed one forecast job completed, one forecast issuance,
+seven published outbox events, no pending events and zero message failures.
+Same-Plant request status now also requires the original requester; a
+dedicated integration regression has been added but requires a DB fixture
+run before that specific condition can be called independently proven.
+
+A bounded broker/worker/Caddy restart preserved one JetStream stream,
+one consumer and seven events, with readiness becoming HTTP 200 after a short
+initial startup race. OCI cost and hard-cap status, long-term 498MiB guest
+reliability, authorized backup/restore and complete security/revocation
+cases are still **UNVERIFIED**. See
+[T-020 verified results](T020_PROGRESS_2026-11-22.md). GitHub Actions
+is blocked from starting runners by an account billing/spending-limit notice;
+local tests pass and billing was not changed.

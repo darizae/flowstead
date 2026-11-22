@@ -331,3 +331,19 @@ created or changed.
   OCI charges and retention controls remain to be independently tested.
   This is a **LIVE API/WORKER deployment PASS, overall T-017 PARTIAL**.
   No new VM or paid cloud resource was created in this cutover.
+
+## Cross-task acceptance update — real operator forecast and browser
+
+See the [latest T-020 receipt](T020_PROGRESS_2026-11-22.md):
+both real Supabase operator sessions and their private Plant
+authorization are now verified; the first live forecast job completed
+with 12 persisted predictions; browser sign-in/sign-out and bounded
+NATS/worker/Caddy restart recovery were also observed. All tests used
+the existing E2 micro, Supabase project and two synthetic identities.
+The original 2026-11-21 BLOCKED and zero-job entries remain historical;
+this entry supersedes them for the corresponding cases.
+
+**T-017 remains PARTIAL** pending full JWT/revocation cases, terminal-only
+retention/storage bounds, safe backup/reseed on a disposable copy, OCI
+cost/hard cap status and prolonged host stability. GitHub Actions runner
+startup is blocked by an account billing/spending-limit error.

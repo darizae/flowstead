@@ -155,7 +155,9 @@ class JWKSVerifier:
                 audience=self.config.audience,
                 issuer=self.config.issuer,
                 options={
-                    "require": ["sub", "iss", "aud", "exp", "nbf", "iat"],
+                    "require": ["sub", "iss", "aud", "exp", "iat"],
+                    # Supabase ES256 Auth tokens do not necessarily include nbf.
+                    # verify_nbf=True below still rejects future nbf when sent.
                     "verify_signature": True,
                     "verify_exp": True,
                     "verify_nbf": True,
