@@ -1,8 +1,9 @@
-"""Thin database facade coordinating persistence repositories.
+"""Thin database facade delegating to application use cases.
 
-SQL lives in ``infrastructure.persistence`` repositories; this facade keeps the
-historical ``flowstead_api.database.Database`` API for the routes, worker, and
-test suite while delegating reads and forecast builds to focused repositories.
+The application layer (``application.plants``, ``application.forecasts``) owns
+the read and command workflows and their transactions; this facade keeps the
+historical ``flowstead_api.database.Database`` API for the routes and test
+suite while delegating every operation to a real application use case.
 """
 
 from __future__ import annotations
@@ -16,7 +17,19 @@ from uuid import UUID
 
 import psycopg
 
-from .forecast import MODEL_VERSION, PHYSICAL_BOUND_RULE, ForecastBuild
+from .application.forecasts import (
+    build_forecast_for_plant,
+    read_forecast_status,
+    request_forecast,
+)
+from .application.plants import (
+    get_plant,
+    get_plant_forecast,
+    get_plant_history,
+    latest_reading,
+    list_accessible_plants,
+)
+from .forecast import MODEL_VERSION, ForecastBuild
 from .infrastructure.persistence.forecast_repository import ForecastRepository
 from .infrastructure.persistence.plant_repository import PlantRepository
 from .infrastructure.persistence.records import (
@@ -25,7 +38,7 @@ from .infrastructure.persistence.records import (
     PlantRow,
     ReadingRow,
 )
-from .message_store import ForecastJob, enqueue_forecast, read_forecast_job
+from .message_store import ForecastJob
 
 __all__ = [
     "PUBLIC_PLANT_IDS",
@@ -37,6 +50,8 @@ __all__ = [
 
 
 class Database:
+    """Adapter exposing the historical facade API over application use cases."""
+
     def __init__(self, database_url: str | None = None) -> None:
         self.database_url = database_url
         self._plants = PlantRepository()
@@ -58,27 +73,30 @@ class Database:
         return database_url
 
     def enqueue_forecast(self, plant_id: str, *, subject_id: str) -> ForecastJob | None:
-        return enqueue_forecast(self.resolved_url(), plant_id=plant_id, subject_id=subject_id)
+        return request_forecast(self.resolved_url(), plant_id=plant_id, subject_id=subject_id)
 
     def forecast_job(self, correlation_id: UUID, *, subject_id: str) -> ForecastJob | None:
-        return read_forecast_job(
+        return read_forecast_status(
             self.resolved_url(), correlation_id=correlation_id, subject_id=subject_id
         )
 
     def plant(self, plant_id: str, *, subject_id: str | None, public: bool) -> PlantRow | None:
         """Read one Plant through the same public/private access predicate."""
-        with self.connect() as connection:
-            return self._plants.get(connection, plant_id, subject_id=subject_id, public=public)
+        return get_plant(
+            self.resolved_url(), self._plants, plant_id, subject_id=subject_id, public=public
+        )
 
     def list_plants(self, *, subject_id: str | None, public: bool) -> list[PlantRow]:
-        with self.connect() as connection:
-            return self._plants.list(connection, subject_id=subject_id, public=public)
+        return list_accessible_plants(
+            self.resolved_url(), self._plants, subject_id=subject_id, public=public
+        )
 
     def latest(
         self, plant_id: str, *, subject_id: str | None, public: bool
     ) -> tuple[PlantRow, ReadingRow] | None:
-        with self.connect() as connection:
-            return self._plants.latest(connection, plant_id, subject_id=subject_id, public=public)
+        return latest_reading(
+            self.resolved_url(), self._plants, plant_id, subject_id=subject_id, public=public
+        )
 
     def history(
         self,
@@ -89,10 +107,15 @@ class Database:
         subject_id: str | None,
         public: bool,
     ) -> tuple[PlantRow, list[ReadingRow]] | None:
-        with self.connect() as connection:
-            return self._plants.history(
-                connection, plant_id, from_utc, to_utc, subject_id=subject_id, public=public
-            )
+        return get_plant_history(
+            self.resolved_url(),
+            self._plants,
+            plant_id,
+            from_utc,
+            to_utc,
+            subject_id=subject_id,
+            public=public,
+        )
 
     def build_forecast(
         self,
@@ -101,21 +124,8 @@ class Database:
         model_version: str = MODEL_VERSION,
     ) -> ForecastBuild:
         """Build and atomically persist the latest forecast for one Plant."""
-        with self.connect() as connection, connection.transaction():
-            return self._forecasts.build_in_transaction(
-                connection, plant_id, model_version=model_version
-            )
-
-    def build_forecast_in_transaction(
-        self,
-        connection: psycopg.Connection[Any],
-        plant_id: str,
-        *,
-        model_version: str = MODEL_VERSION,
-    ) -> ForecastBuild:
-        """Persist a forecast inside a caller-owned transaction."""
-        return self._forecasts.build_in_transaction(
-            connection, plant_id, model_version=model_version
+        return build_forecast_for_plant(
+            self.resolved_url(), self._forecasts, plant_id, model_version=model_version
         )
 
     def forecast(
@@ -126,26 +136,13 @@ class Database:
         public: bool,
     ) -> ForecastRead | None:
         """Read a stored forecast or an explicit unavailable result."""
-        with self.connect() as connection:
-            forecast = self._forecasts.read(
-                connection, plant_id, subject_id=subject_id, public=public
-            )
-            if forecast is not None:
-                return forecast
-            latest = self._plants.latest(connection, plant_id, subject_id=subject_id, public=public)
-        if latest is None:
-            return None
-        plant, latest_reading = latest
-        return ForecastRead(
-            plant,
-            ForecastBuild(
-                issued_at_utc=latest_reading.timestamp_utc,
-                model_version=MODEL_VERSION,
-                source_revision=None,
-                physical_bound_rule=PHYSICAL_BOUND_RULE,
-                points=(),
-                unavailable_reason="not_issued",
-            ),
+        return get_plant_forecast(
+            self.resolved_url(),
+            self._plants,
+            self._forecasts,
+            plant_id,
+            subject_id=subject_id,
+            public=public,
         )
 
     def flow_observations(self, plant_id: str) -> list[Any]:

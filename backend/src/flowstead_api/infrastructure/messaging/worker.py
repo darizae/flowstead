@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -16,16 +15,16 @@ import psycopg
 from nats.aio.msg import Msg
 from nats.errors import TimeoutError as NatsTimeoutError
 
-from ...database import Database
+from ...application.forecasts import ProcessResult, process_forecast_request
 from ...message_store import insert_outbox
 from ...messages import (
-    ForecastCompleted,
     ForecastFailed,
     ForecastRequested,
     MessageError,
     decode_message,
     utc_now,
 )
+from ..persistence.forecast_repository import ForecastRepository
 from .transport import (
     FORECAST_DURABLE,
     FORECAST_REQUESTED,
@@ -35,114 +34,10 @@ from .transport import (
     _diagnostic,
 )
 
+# ``process_forecast_request`` now lives in the application layer and owns the
+# transactional workflow; this module exports it through the messaging boundary.
 
-@dataclass(frozen=True)
-class ProcessResult:
-    state: str
-    diagnostic: str | None = None
-
-
-def process_forecast_request(
-    database_url: str,
-    request: ForecastRequested,
-    *,
-    delivery_count: int,
-) -> ProcessResult:
-    """Commit forecast, dedupe receipt, job state, and result event atomically."""
-    database = Database(database_url)
-    with psycopg.connect(database_url) as connection, connection.transaction():
-        receipt = connection.execute(
-            "SELECT status, diagnostic FROM app.message_inbox WHERE event_id = %s",
-            (request.event_id,),
-        ).fetchone()
-        if receipt is not None:
-            return ProcessResult("duplicate", receipt[1])
-
-        job = connection.execute(
-            """
-            SELECT status
-            FROM app.forecast_jobs
-            WHERE request_event_id = %s AND correlation_id = %s
-              AND plant_id = %s AND requested_by = %s AND source_sha = %s
-            FOR UPDATE
-            """,
-            (
-                request.event_id,
-                request.correlation_id,
-                request.plant_id,
-                request.requested_by,
-                request.source_sha,
-            ),
-        ).fetchone()
-        if job is None:
-            return ProcessResult("rejected", "request has no authorized database command")
-
-        connection.execute(
-            """
-            UPDATE app.forecast_jobs
-            SET status = 'processing', started_at = COALESCE(started_at, now())
-            WHERE request_event_id = %s
-            """,
-            (request.event_id,),
-        )
-        build = database.build_forecast_in_transaction(
-            connection, request.plant_id, model_version=request.model_version
-        )
-        occurred_at = utc_now()
-        if build.available:
-            assert build.issued_at_utc is not None and len(build.points) == 12
-            result_event = ForecastCompleted(
-                event_id=uuid4(),
-                correlation_id=request.correlation_id,
-                plant_id=request.plant_id,
-                source_sha=request.source_sha,
-                occurred_at_utc=occurred_at,
-                request_event_id=request.event_id,
-                issued_at_utc=build.issued_at_utc,
-                model_version=build.model_version,
-            )
-            state = "completed"
-            diagnostic = None
-        else:
-            diagnostic = (build.unavailable_reason or "forecast unavailable")[:512]
-            result_event = ForecastFailed(
-                event_id=uuid4(),
-                correlation_id=request.correlation_id,
-                plant_id=request.plant_id,
-                source_sha=request.source_sha,
-                occurred_at_utc=occurred_at,
-                request_event_id=request.event_id,
-                error_code="forecast_unavailable",
-                diagnostic=diagnostic,
-            )
-            state = "failed"
-        insert_outbox(connection, result_event)
-        connection.execute(
-            """
-            UPDATE app.forecast_jobs
-            SET status = %s, completed_at = %s, result_event_id = %s, diagnostic = %s
-            WHERE request_event_id = %s
-            """,
-            (state, occurred_at, result_event.event_id, diagnostic, request.event_id),
-        )
-        connection.execute(
-            """
-            INSERT INTO app.message_inbox
-                (event_id, subject, correlation_id, plant_id, delivery_count,
-                 status, diagnostic)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                request.event_id,
-                request.subject,
-                request.correlation_id,
-                request.plant_id,
-                min(delivery_count, 100),
-                state,
-                diagnostic,
-            ),
-        )
-        return ProcessResult(state, diagnostic)
+_FORECASTS = ForecastRepository()
 
 
 def record_failure(
@@ -277,7 +172,9 @@ async def consume_one(database_url: str, message: Msg) -> ProcessResult:
         return ProcessResult("dead_lettered", str(error))
 
     try:
-        result = process_forecast_request(database_url, decoded, delivery_count=delivery_count)
+        result = process_forecast_request(
+            database_url, decoded, _FORECASTS, delivery_count=delivery_count
+        )
         if result.state == "rejected":
             record_failure(
                 database_url,

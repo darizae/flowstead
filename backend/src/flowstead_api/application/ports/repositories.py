@@ -1,40 +1,75 @@
-"""Narrow persistence contracts for application workflows."""
+"""Narrow persistence contracts consumed by application use cases.
+
+These Protocols are structural: each method signature matches the concrete
+repository in ``infrastructure.persistence`` that the application passes in
+(a layered monolith wires real adapters directly, no DI container). SQL-scoped
+authorization stays in the repository; every read takes the same
+``subject_id``/``public`` access scope the routes receive.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Protocol
-from uuid import UUID
+from typing import Any, Protocol
 
-from ...domain.models import Plant, TelemetryReading
-from ...forecast import FlowObservation, ForecastBuild
-from ...message_store import ForecastJob
-from .access import AccessScope
+from ...forecast import MODEL_VERSION, FlowObservation, ForecastBuild
+from ...infrastructure.persistence.records import (
+    ForecastRead,
+    PlantRow,
+    ReadingRow,
+)
 
 
 class PlantRepository(Protocol):
-    def list(self, scope: AccessScope) -> list[Plant]: ...
-    def get(self, plant_id: str, scope: AccessScope) -> Plant | None: ...
+    def list(
+        self,
+        connection: Any,
+        *,
+        subject_id: str | None,
+        public: bool,
+    ) -> list[PlantRow]: ...
+    def get(
+        self,
+        connection: Any,
+        plant_id: str,
+        *,
+        subject_id: str | None,
+        public: bool,
+    ) -> PlantRow | None: ...
     def latest(
-        self, plant_id: str, scope: AccessScope
-    ) -> tuple[Plant, TelemetryReading] | None: ...
+        self,
+        connection: Any,
+        plant_id: str,
+        *,
+        subject_id: str | None,
+        public: bool,
+    ) -> tuple[PlantRow, ReadingRow] | None: ...
     def history(
-        self, plant_id: str, from_utc: datetime, to_utc: datetime, scope: AccessScope
-    ) -> tuple[Plant, list[TelemetryReading]] | None: ...
-
-
-class TelemetryRepository(Protocol):
-    def flow_observations(self, plant_id: str) -> list[FlowObservation]: ...
+        self,
+        connection: Any,
+        plant_id: str,
+        from_utc: datetime,
+        to_utc: datetime,
+        *,
+        subject_id: str | None,
+        public: bool,
+    ) -> tuple[PlantRow, list[ReadingRow]] | None: ...
 
 
 class ForecastRepository(Protocol):
-    def build(self, plant_id: str, *, model_version: str) -> ForecastBuild: ...
     def build_in_transaction(
-        self, connection: object, plant_id: str, *, model_version: str
+        self,
+        connection: Any,
+        plant_id: str,
+        *,
+        model_version: str = MODEL_VERSION,
     ) -> ForecastBuild: ...
-    def get(self, plant_id: str, scope: AccessScope) -> tuple[Plant, ForecastBuild] | None: ...
-
-
-class JobRepository(Protocol):
-    def enqueue(self, plant_id: str, *, subject_id: str) -> ForecastJob | None: ...
-    def read(self, correlation_id: UUID, *, subject_id: str) -> ForecastJob | None: ...
+    def read(
+        self,
+        connection: Any,
+        plant_id: str,
+        *,
+        subject_id: str | None,
+        public: bool,
+    ) -> ForecastRead | None: ...
+    def flow_observations(self, connection: Any, plant_id: str) -> list[FlowObservation]: ...
