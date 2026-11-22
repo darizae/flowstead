@@ -1,0 +1,7 @@
+packages:
+  - .
+
+# The OpenAPI parser pins vulnerable js-yaml@4.2.0; preserve its API but
+# resolve the patched v4 release until upstream relaxes that exact pin.
+overrides:
+  js-yaml: 4.3.2

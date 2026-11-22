@@ -30,7 +30,7 @@ import type {
 /**
  * Audit #29: the hand-authored app-facing types in `./types` must not drift
  * from the backend OpenAPI contract. `generated/types.gen.ts` is produced from
- * the FastAPI Pydantic schemas (`npm run api:types`); these type-level
+ * the FastAPI Pydantic schemas (`pnpm run api:types`); these type-level
  * assertions fail the typecheck whenever the two contracts fall out of
  * structural compatibility — e.g. a renamed/removed field or a retyped property
  * breaks assignability in both directions, while deliberate width (branded

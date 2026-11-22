@@ -4,7 +4,7 @@
 Regenerates ``frontend/openapi.json`` from the live application so the
 checked-in snapshot can never silently drift from the backend routes/schemas.
 Run via the backend venv (``uv run --project backend python scripts/generate_openapi.py``)
-or the ``frontend`` npm recipe ``api:types``.
+or the ``frontend`` pnpm recipe ``api:types``.
 """
 
 from __future__ import annotations

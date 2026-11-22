@@ -72,6 +72,34 @@ dispatch/forecast worker, and the Vite frontend (`127.0.0.1:5173`, proxying `/ap
 API). It requires loopback `DATABASE_URL`/`NATS_URL` access and fails safely when either
 `8000` or `5173` is already occupied. `just dev-down` stops the Docker Compose services.
 
+### Frontend dependencies and security checks
+
+The React/Vite frontend uses **pnpm 11.1.3**, pinned in `frontend/package.json`,
+with **Node 26.13.1** pinned in `frontend/.node-version`. If pnpm is not yet
+installed, bootstrap it once with `npm install --global pnpm@11.1.3` (not from
+inside the project). Run the following from
+the repository root (or `cd frontend` and omit `--dir frontend`):
+
+```sh
+pnpm --dir frontend install --frozen-lockfile
+pnpm --dir frontend run dev
+pnpm --dir frontend run lint
+pnpm --dir frontend run typecheck
+pnpm --dir frontend run test:coverage
+pnpm --dir frontend run api:types:check
+pnpm --dir frontend run build
+pnpm --dir frontend audit --audit-level=moderate
+pnpm --dir frontend audit --prod --audit-level=moderate
+```
+
+`frontend/pnpm-lock.yaml` is the **only supported frontend lockfile**; do not run
+`npm install` or generate `package-lock.json`. The pnpm 11 resolution override
+for patched `js-yaml@4.3.2` is in `frontend/pnpm-workspace.yaml`. For the original
+development-only advisories, migration rationale, and verification commands,
+see [the frontend dependency audit](docs/security/2026-11-22-frontend-dependency-audit.md).
+The historical task notes still mention the npm setup used when those tasks ran;
+they are not current setup instructions.
+
 The import recipe requires independent generator output at the pinned source revision; it never supplies a default manifest, source commit, or CSV. The importer validates the pinned source/schema/seed and verifies CSV checksum, size and rows against the supplied manifest. Before invoking it, independently confirm that manifest's telemetry checksum is the canonical `e670271d3d725051229adc844f4025033221a8599b49edb93ba08f3214814d3e`; the importer does not pin that digest. See [the implementation contract](docs/planning/IMPLEMENTATION_SPEC.md) for the complete immutable source contract.
 
 `just test-e2e-local` is a real API/browser gate, not a mocked Playwright server. It starts the owned local PostgreSQL preflight and requires `FLOWSTEAD_M1_MANIFEST` and `FLOWSTEAD_M1_DATA` pointing to the adjacent verified M1 manifest/`telemetry.csv`. The runner verifies the pinned digests, creates and drops only a unique `flowstead_test_<uuid>` database, runs Alembic/import, builds the deterministic forecast, starts an isolated pinned NATS 2 JetStream container and durable worker, and starts a throwaway local Supabase-compatible JWKS authority with disjoint principals. Chromium then exercises public/private authorization, queued-to-completed forecast work, cache clearing, maps, exports, responsive views and 200% page scale through the real FastAPI and Vite proxy. The locally inspectable Playwright HTML report and generated indexed Markdown/JSON receipts live under `docs/design/evidence/`. Hosted Supabase identity remains UNVERIFIED.
@@ -84,8 +112,12 @@ The canonical [current backend HTTP route list](docs/planning/IMPLEMENTATION_SPE
 
 `.github/workflows/ci.yml` runs on pushes to `main` and pull requests with a
 read-only checkout token: the backend `unit` test suite (locked `uv` sync), frontend
-typecheck/unit tests/production build (locked `npm ci`), and `docs-check`. No
-secrets are used; deployments are manual and outside CI.
+typecheck/unit tests/production build (locked `pnpm install --frozen-lockfile`), and `docs-check`. No
+secrets are used; deployments are manual and outside CI. **GitHub Actions CI is
+explicitly paused for investigation until December 1, 2026** because GitHub
+previously refused to start jobs owing to account billing/spending-limit
+restrictions. Agents must not investigate or re-run remote CI before then;
+local checks continue. Consult [AGENTS.md](AGENTS.md) for the pause instructions.
 
 ## Supabase Auth verification
 

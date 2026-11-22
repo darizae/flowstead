@@ -186,7 +186,7 @@ def main() -> int:
             if chromium_executable:
                 e2e_env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"] = chromium_executable
         if (
-            run(["npm", "--prefix", "frontend", "run", "e2e"], e2e_env, timeout=300)
+            run(["pnpm", "--dir", "frontend", "run", "e2e"], e2e_env, timeout=300)
             != 0
         ):
             raise RunnerError("Playwright E2E failed")

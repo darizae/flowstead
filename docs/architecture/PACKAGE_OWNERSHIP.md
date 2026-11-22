@@ -41,7 +41,7 @@ The import-direction check is `python3 scripts/check_architecture.py`. Real data
 | `frontend/src/shared/` | Chart primitives, UTC conversion, state hooks and UI components |
 | `frontend/e2e/` | Guarded local Playwright runner and browser acceptance tests |
 
-`npm --prefix frontend run api:types:check` verifies that the checked-in OpenAPI schema and generated TypeScript declarations match the backend. `npm --prefix frontend run typecheck`, `lint`, and `format:check` validate frontend code.
+`pnpm --dir frontend run api:types:check` verifies that the checked-in OpenAPI schema and generated TypeScript declarations match the backend. `pnpm --dir frontend run typecheck`, `lint`, and `format:check` validate frontend code.
 
 ## Architectural non-goals
 

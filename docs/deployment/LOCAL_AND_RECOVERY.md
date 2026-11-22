@@ -46,7 +46,7 @@ just test-deploy-local     # image + bundle + isolated container acceptance (bel
 
 `build-backend-image` is a multi-stage image (uv → lock install under
 `/opt/venv` → runtime) that serves both the API and the worker via the Compose
-`command`. `just build` runs `npm run build` with `VITE_API_URL`
+`command`. `just build` runs `pnpm run build` with `VITE_API_URL`
 (`https://api.flowstead.darizae.dev/api/v1` by default; override for a real
 target). Neither build embeds secrets.
 

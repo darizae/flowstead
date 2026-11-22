@@ -3,7 +3,7 @@
 //   2. `src/lib/api/generated/*` must match a fresh run of the generator over
 //      that committed OpenAPI document.
 // Runs only read-only comparisons into a throwaway directory and never mutates
-// the working tree. Invoked via `npm run api:types:check`.
+// the working tree. Invoked via `pnpm run api:types:check`.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -63,7 +63,7 @@ try {
     console.log("API contract is up to date.");
   } else {
     console.error(
-      "API contract is stale. Run `npm run api:types` and commit the changes.",
+      "API contract is stale. Run `pnpm run api:types` and commit the changes.",
     );
     for (const [label] of stale) console.error(`  - ${label}`);
     process.exitCode = 1;

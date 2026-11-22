@@ -47,37 +47,42 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+          run_install: false
       - name: Install Node
         uses: actions/setup-node@v4
         with:
           node-version-file: frontend/.node-version
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
       - name: Install locked dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         working-directory: frontend
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
         working-directory: frontend
       - name: API contract types (regenerate + diff)
         run: |
           uv sync --project backend --frozen
-          npm run api:types:check
+          pnpm run api:types:check
         working-directory: frontend
       - name: Lint and formatting
         run: |
-          npm run lint
-          npm run format:check
+          pnpm run lint
+          pnpm run format:check
         working-directory: frontend
       - name: Unit tests
-        run: npm test -- --run
+        run: pnpm run test --run
         working-directory: frontend
       - name: Frontend coverage thresholds
-        run: npm run test:coverage
+        run: pnpm run test:coverage
         working-directory: frontend
       - name: Publish coverage artifact
         uses: actions/upload-artifact@v4
@@ -88,7 +93,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
       - name: Build
-        run: npm run build
+        run: pnpm run build
         working-directory: frontend
 
   docs:
@@ -159,16 +164,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version-file: frontend/.node-version
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - run: uv sync --project backend --frozen
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
         working-directory: frontend
       - name: Install Chromium and its OS dependencies
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
         working-directory: frontend
       - name: Verify pinned synthetic M1 fixture
         run: python3 scripts/prepare_m1_fixture.py --output "$FLOWSTEAD_M1_DATA"

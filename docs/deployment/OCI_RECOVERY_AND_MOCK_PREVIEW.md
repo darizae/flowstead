@@ -50,9 +50,9 @@ The preview contains five fictional Florida sites; latest readings, at most **16
 Verify locally:
 
 ```sh
-npm --prefix frontend run typecheck
-npm --prefix frontend test -- --run
-npm --prefix frontend run build
+pnpm --dir frontend run typecheck
+pnpm --dir frontend run test --run
+pnpm --dir frontend run build
 python3 -m py_compile scripts/recover_oci_demo.py
 ```
 

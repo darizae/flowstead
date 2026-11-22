@@ -32,7 +32,7 @@ repos:
         files: ^backend/.*\.py$
       - id: frontend-lint
         name: Frontend lint and formatting
-        entry: sh -c 'npm --prefix frontend run lint && npm --prefix frontend run format:check'
+        entry: sh -c 'pnpm --dir frontend run lint && pnpm --dir frontend run format:check'
         language: system
         pass_filenames: false
         files: ^frontend/.*\.(tsx?|css|json)$

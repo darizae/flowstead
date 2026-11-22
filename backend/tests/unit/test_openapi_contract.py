@@ -18,7 +18,7 @@ SNAPSHOT = REPO_ROOT / "frontend" / "openapi.json"
 
 
 def test_checked_in_openapi_contract_matches_live_app() -> None:
-    assert SNAPSHOT.is_file(), "frontend/openapi.json missing; run `npm run api:types`"
+    assert SNAPSHOT.is_file(), "frontend/openapi.json missing; run `pnpm run api:types`"
     snapshot = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
     assert snapshot == app.openapi()
 

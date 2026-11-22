@@ -63,17 +63,17 @@ format-backend:
     uv run --project backend ruff format backend/src backend/importer.py backend/migrate.py backend/tests
 
 lint: check-backend
-    npm --prefix frontend run lint
-    npm --prefix frontend run format:check
+    pnpm --dir frontend run lint
+    pnpm --dir frontend run format:check
 
 format: format-backend
-    npm --prefix frontend run format
+    pnpm --dir frontend run format
 
 test: test-backend-unit test-frontend-unit
 
 coverage:
     uv run --project backend pytest --cov=flowstead_api.domain --cov-fail-under=60 --cov-report=term-missing backend/tests/unit
-    npm --prefix frontend run test:coverage
+    pnpm --dir frontend run test:coverage
 
 check: lint typecheck-backend frontend-typecheck test docs-check
 
@@ -125,20 +125,20 @@ dev-smoke:
     uv run --project backend pytest -q backend/tests/integration/test_auth.py
 
 frontend-dev:
-    npm --prefix frontend run dev -- --host 127.0.0.1
+    pnpm --dir frontend run dev --host 127.0.0.1
 
 test-frontend-unit:
-    npm --prefix frontend test -- --run
+    pnpm --dir frontend run test --run
 
 frontend-typecheck:
-    npm --prefix frontend run typecheck
+    pnpm --dir frontend run typecheck
 
 # Audit #45: strict static typing over the pure domain/application modules.
 typecheck-backend:
     cd backend && uv run mypy
 
 frontend-build:
-    npm --prefix frontend run build
+    pnpm --dir frontend run build
 
 # Production backend+worker image from the committed uv.lock; non-root, no
 # secrets baked in. Build context is backend/ (Dockerfile + .dockerignore there).
@@ -149,7 +149,7 @@ build-backend-image:
 # Default is the proposed (NOT assigned) host-separated API; override with
 # VITE_API_URL for a real target.
 build:
-    VITE_API_URL=$${VITE_API_URL:-https://api.flowstead.darizae.dev/api/v1} npm --prefix frontend run build
+    VITE_API_URL=$${VITE_API_URL:-https://api.flowstead.darizae.dev/api/v1} pnpm --dir frontend run build
 
 # Local staging-like container acceptance (OPS-M15-BUILD, IT-M15-START,
 # SEC-M15-CONFIG, OPS-M15-RECOVER): real PostgreSQL + NATS/JetStream, Alembic
@@ -189,7 +189,7 @@ test-deploy-hosted: build-backend-image-host
     uv run --project backend python scripts/test_deploy_hosted.py
 
 audit-frontend:
-    npm --prefix frontend audit --audit-level=moderate
+    pnpm --dir frontend audit --audit-level=moderate
 
 test-e2e-local:
     #!/usr/bin/env zsh
@@ -219,11 +219,9 @@ dev:
     done
 
     echo "== Frontend dependencies =="
-    if [ ! -d frontend/node_modules ]; then
-        npm --prefix frontend install
-    else
-        echo "frontend/node_modules present, skipping npm install"
-    fi
+    # Reconcile any old npm-installed node_modules with the only supported
+    # pnpm lockfile; a warm frozen install is fast and does not re-resolve.
+    pnpm --dir frontend install --frozen-lockfile
 
     echo "== Docker PostgreSQL + NATS =="
     just message-up

@@ -13,7 +13,7 @@
 | Real browser | `frontend/e2e/plants.spec.ts`, `frontend/playwright.config.ts` and `frontend/e2e/run_local.py` | Existing Playwright evidence and owner-approved isolated browser setup. Do not invent a new backend or run external resources merely for this animation. |
 | UI contract | `docs/design/UI_UX_BASELINE.md`, `docs/design/UI_UX_PARITY_MATRIX.md` | Brand is a real navbar link; light, calm, accessible coastal typography and no mobile clipping. |
 
-**Dependency boundary:** Flowstead currently consumes the **published** `@darizae/marisma@0.2.0`. The new Marisma motion tokens and `marisma-motion-bounce` utility proposed in [Marisma PR #8](https://github.com/darizae/marisma/pull/8) are **not yet published**. Do not install an unpublished/local source package or change `frontend/package.json`, `package-lock.json` or lockfiles to implement this plan. The implementation task must verify the exact approved published Marisma version first and decide whether to reuse its utility or implement a small Flowstead-owned keyframe respecting the same timing.
+**Dependency boundary:** Flowstead currently consumes the **published** `@darizae/marisma@0.2.0`. The new Marisma motion tokens and `marisma-motion-bounce` utility proposed in [Marisma PR #8](https://github.com/darizae/marisma/pull/8) are **not yet published**. Do not install an unpublished/local source package or change `frontend/package.json`, `frontend/pnpm-lock.yaml` or other lockfiles to implement this plan. The implementation task must verify the exact approved published Marisma version first and decide whether to reuse its utility or implement a small Flowstead-owned keyframe respecting the same timing.
 
 ## 2. Observable behavior (acceptance contract)
 
@@ -66,11 +66,11 @@ just frontend-build
 just test-e2e-local
 ```
 
-For a focused unit rerun from `frontend/`: `npm test -- --run src/app/App.test.tsx`. Do not claim E2E PASS without actually running the isolated fixture harness and reviewing its screenshots. Save any new synthetic screenshots only to the established evidence location; do not overwrite unrelated evidence files.
+For a focused unit rerun from `frontend/`: `pnpm run test --run src/app/App.test.tsx`. Do not claim E2E PASS without actually running the isolated fixture harness and reviewing its screenshots. Save any new synthetic screenshots only to the established evidence location; do not overwrite unrelated evidence files.
 
 ## 5. Integration/order, risks and boundaries
 
-The current checkout has four *active, unrelated* refactor worktrees. This is not permission to delete them, checkout their branches, reset local main or touch their work. At implementation time, check `git status --short --branch` and `git worktree list`, pick an approved isolated worktree/branch without conflicting ownership, and run relevant local tests. The owner may authorize a merge separately; follow the then-current Flowstead project conventions. **No change to Flowstead frontend code is made as part of this plan.**
+When this plan was originally recorded, the checkout had four *active, unrelated* refactor worktrees; that is historical context, **not a statement about worktrees currently present**. At implementation time, check `git status --short --branch` and `git worktree list`, pick an approved isolated worktree/branch without conflicting ownership, and run relevant local tests. The owner may authorize a merge separately; follow the then-current Flowstead project conventions. **No change to Flowstead frontend code is made as part of this plan.**
 
 **Risk ledger:** CSS animation could override the existing rotated pose; compensate by retaining the tilt in every keyframe. Delaying `goBack` could break route/auth state; keep navigation synchronous. Transforming the anchor could shift a focus ring/hitbox; animate only the decorative mark. Remounting the header could drop the animation; keep the existing `AppNavbar` structure. Repeated clicks could accumulate animations; explicitly restart/clean. Reduced motion must not suppress navigation. A Marisma dependency bump before owner release would violate release boundaries; use only an approved published version.
 

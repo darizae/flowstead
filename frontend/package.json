@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@11.1.3",
   "engines": {
     "node": "26.13.1"
   },
@@ -10,7 +11,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
-    "api:types": "npm run api:types:openapi && npm run api:types:gen",
+    "api:types": "pnpm run api:types:openapi && pnpm run api:types:gen",
     "api:types:openapi": "uv run --project ../backend python ../scripts/generate_openapi.py",
     "api:types:gen": "openapi-ts -i openapi.json -o src/lib/api/generated --plugins '@hey-api/typescript' --no-log-file",
     "api:types:check": "node scripts/check-api-types.mjs",
@@ -19,7 +20,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx,css}' '*.{ts,js,json}'",
     "test:coverage": "vitest --config vitest.config.ts run --coverage",
     "test": "vitest --config vitest.config.ts",
-    "audit": "npm audit --audit-level=moderate",
+    "audit": "pnpm audit --audit-level=moderate",
     "e2e": "playwright test"
   },
   "dependencies": {

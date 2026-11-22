@@ -24,7 +24,7 @@ Keep this as a **single backend Python distribution**, not a microservice fleet.
 
 Use `just lint`, `just test`, `just check`, `just coverage`, `just docs-check`. For PostgreSQL/NATS integration tests use local disposable services and `just test-db-integration` / `just test-message-integration`. Browser end-to-end tests use `just test-e2e-local`.
 
-CI validates backend Ruff lint/format and unit tests, frontend ESLint/Prettier/typecheck/unit/build, documentation, and PostgreSQL/JetStream integration. Do not weaken the acceptance rules when restructuring the code.
+The configured CI checks backend Ruff lint/format and unit tests, frontend ESLint/Prettier/typecheck/unit/build with frozen pnpm dependencies, documentation, and PostgreSQL/JetStream integration. **Remote CI investigation is paused until December 1, 2026** because of GitHub billing restrictions; run the corresponding local gates instead. See [agent instructions](../../AGENTS.md) and the [frontend dependency audit](../security/2026-11-22-frontend-dependency-audit.md). Do not weaken the acceptance rules when restructuring the code.
 
 ## Decisions
 
