@@ -16,6 +16,9 @@ export interface HistoryReading { plant_id: string; timestamp_utc: string; lates
 export interface HistoryResponse { plant: PlantSummary; from_utc: string; to_utc: string; readings: HistoryReading[] }
 
 export type ForecastStatus = 'available' | 'unavailable';
+/** Nominal type for the forecast model identifier so callers treat it as a version token, not free text (#70). */
+export type ModelVersion = string & { readonly __brand: 'ModelVersion' };
+export function asModelVersion(value: string): ModelVersion { return value as ModelVersion; }
 export interface ForecastHour {
   hour_number: number;
   target_time_utc: string;
@@ -27,7 +30,7 @@ export interface ForecastResponse {
   plant: PlantSummary;
   status: ForecastStatus;
   issued_at_utc: string | null;
-  model_version: string;
+  model_version: ModelVersion;
   source_revision: string | null;
   physical_bound_rule: string;
   forecasts: ForecastHour[];

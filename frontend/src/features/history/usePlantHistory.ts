@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../../lib/api/client';
-import { ApiError, type HistoryResponse } from '../../lib/api/types';
+import type { HistoryResponse } from '../../lib/api/types';
 import { useRequestState } from '../../shared/hooks/useRequestState';
 import { historyWindow, type HistoryRange } from './transforms';
 
@@ -26,7 +26,6 @@ export function usePlantHistory(client: ApiClient, plantId: string | undefined, 
     await run(async () => {
       const { from, to } = historyWindow(range, latestTimestampUtc);
       const result = await client.historyPlant(plantId, from, to);
-      if (!Array.isArray(result.readings)) throw new ApiError('invalid_response', 'Flowstead returned an unreadable history response.');
       setHistory(result);
     });
   }, [client, latestTimestampUtc, plantId, range, reset, run]);

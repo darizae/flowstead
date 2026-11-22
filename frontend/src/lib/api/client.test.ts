@@ -32,6 +32,35 @@ describe('ApiClient', () => {
     await expect(new ApiClient({ fetcher: missing }).latestPlant('not-a-real-id')).rejects.toMatchObject({ code: 'plant_not_found', status: 404 });
   });
 
+  it('#32 notifies the auth handler on 401/403 but not on an ordinary 404', async () => {
+    const handler = vi.fn();
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : String(input);
+      const status = url.includes('/latest') ? 404 : url.includes('/forecast') ? 403 : 401;
+      return new Response(JSON.stringify({ detail: {} }), { status });
+    });
+    const client = new ApiClient({ basePath: '/api/v1', fetcher });
+    client.setAuthFailureHandler(handler);
+    // 404 is a missing resource, not an authorization failure: no handler, no cache invalidation.
+    await expect(client.latestPlant('p1')).rejects.toMatchObject({ code: 'plant_not_found' });
+    expect(handler).not.toHaveBeenCalled();
+    // 403 is a revoked/denied Plant: handler fires so the app can clear private rows.
+    await expect(client.forecastPlant('p1')).rejects.toMatchObject({ code: 'plant_not_found' });
+    expect(handler).toHaveBeenCalledWith(403);
+    // 401 is an expired session: handler fires.
+    await expect(client.listPlants()).rejects.toMatchObject({ code: 'unauthorized' });
+    expect(handler).toHaveBeenCalledWith(401);
+  });
+
+  it('#30 rejects structurally-invalid responses as invalid_response instead of trusting them', async () => {
+    const badList = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ plants: 'not-an-array' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    await expect(new ApiClient({ fetcher: badList }).listPlants()).rejects.toMatchObject({ code: 'invalid_response' });
+    const badForecast = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ status: 'available', forecasts: 'not-an-array' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    await expect(new ApiClient({ fetcher: badForecast }).forecastPlant('p1')).rejects.toMatchObject({ code: 'invalid_response' });
+    const badLatest = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ reading: { plant_id: 7 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    await expect(new ApiClient({ fetcher: badLatest }).latestPlant('p1')).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
   it('UT-M8-HISTORY requests the selected Plant-scoped half-open UTC window', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ plant: {}, from_utc: '', to_utc: '', readings: [] }), { status: 200 }));
     await new ApiClient({ basePath: '/api/v1', fetcher }).historyPlant('p1', '2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z');

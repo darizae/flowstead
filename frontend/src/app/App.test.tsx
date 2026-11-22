@@ -3,7 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '../lib/api/client';
-import { preferences } from '../lib/cache/preferences';
+import { asModelVersion } from '../lib/api/types';
+import { CACHE_SCHEMA_VERSION, preferences } from '../lib/cache/preferences';
 import { TestAuthProvider, type AuthSession } from '../lib/auth/provider';
 import FlowsteadApp from './App';
 
@@ -69,8 +70,24 @@ describe('Plants navigation', () => {
   });
 });
 
+describe('#32 404 vs auth failure', () => {
+  it('a 404 missing-resource neither ends the session nor clears the private cache', async () => {
+    window.history.replaceState({}, '', '/plants');
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ detail: { message: 'Plant not found' } }), { status: 404, headers: { 'Content-Type': 'application/json' } }));
+    const client = new ApiClient({ fetcher });
+    const auth = new TestAuthProvider({ token: 'TOKEN-principal-a', principalId: 'principal-a', expiresAt: Date.now() + 60_000 });
+    await preferences.save({ plantId: 'a' }, 'principal-a');
+    render(<FlowsteadApp client={client} auth={auth} />);
+    expect(await screen.findByText('Plants unavailable')).toBeInTheDocument();
+    // Not an auth failure: identity stays, no "Session expired" notice, private rows intact.
+    expect(screen.getByTestId('session-identity')).toHaveTextContent('principal-a');
+    expect(screen.queryByTestId('session-notice')).not.toBeInTheDocument();
+    expect(await preferences.load('principal-a')).toEqual({ plantId: 'a' });
+  });
+});
+
 function forecastResponse(id: string) {
-  return { plant: plant(id, 'Alpha Plant'), status: 'available', issued_at_utc: '2025-01-01T00:00:00.000Z', model_version: 'seasonal-naive-24h', source_revision: 'abc', physical_bound_rule: 'non-negative', forecasts: Array.from({ length: 12 }, (_, i) => ({ hour_number: i + 1, target_time_utc: new Date(Date.UTC(2025, 0, 1, i + 1)).toISOString(), predicted_flow_gal_h: 100 + i, units: 'gal/h', source: 'seasonal_naive_24h' })), unavailable_reason: null };
+  return { plant: plant(id, 'Alpha Plant'), status: 'available', issued_at_utc: '2025-01-01T00:00:00.000Z', model_version: asModelVersion('seasonal-naive-24h'), source_revision: 'abc', physical_bound_rule: 'non-negative', forecasts: Array.from({ length: 12 }, (_, i) => ({ hour_number: i + 1, target_time_utc: new Date(Date.UTC(2025, 0, 1, i + 1)).toISOString(), predicted_flow_gal_h: 100 + i, units: 'gal/h', source: 'seasonal_naive_24h' })), unavailable_reason: null };
 }
 function historyResponse() { return { plant: plant('a', 'Alpha Plant'), from_utc: '2024-12-31T00:00:00.000Z', to_utc: '2025-01-01T00:00:00.000Z', readings: [] }; }
 
@@ -149,12 +166,12 @@ describe('UT-M9-SESSIONS', () => {
     });
     const client = new ApiClient({ fetcher });
     const auth = new TestAuthProvider({ token: 'TOKEN-principal-a', principalId: 'principal-a', expiresAt: Date.now() + 60_000 });
-    await preferences.saveForecast('a', forecastResponse('a') as never, 'principal-a');
+    await preferences.save({ plantId: 'a' }, 'principal-a');
     render(<FlowsteadApp client={client} auth={auth} />);
     expect(await screen.findByTestId('session-notice')).toHaveTextContent('Session expired');
     await waitFor(() => expect(screen.queryByTestId('session-identity')).not.toBeInTheDocument());
     expect(await screen.findByText('Alpha Plant')).toBeInTheDocument();
-    expect(await preferences.loadForecast('a', 'principal-a')).toBeUndefined();
+    expect(await preferences.load('principal-a')).toBeUndefined();
   });
 
   it('zero-Plant principal sees No plants assigned', async () => {
@@ -172,15 +189,15 @@ describe('SEC-M9-CACHE', () => {
     const auth = new TestAuthProvider({ token: 'TOKEN-principal-a', principalId: 'principal-a', expiresAt: Date.now() + 60_000 });
     render(<FlowsteadApp client={client} auth={auth} />);
     expect(await screen.findByText('Plant a')).toBeInTheDocument();
-    await preferences.saveForecast('a', forecastResponse('a') as never, 'principal-a');
-    expect(await preferences.loadForecast('a', 'principal-a')).toBeTruthy();
+    await preferences.save({ plantId: 'a' }, 'principal-a');
+    expect(await preferences.load('principal-a')).toEqual({ plantId: 'a' });
 
     // switch principal on the same mounted provider (account switch)
     auth.setSession({ token: 'TOKEN-principal-b', principalId: 'principal-b', expiresAt: Date.now() + 60_000 });
     expect(await screen.findByText('Plant b')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText('Plant a')).not.toBeInTheDocument());
-    // prior principal's private forecast snapshot cleared from IndexedDB and memory
-    expect(await preferences.loadForecast('a', 'principal-a')).toBeUndefined();
+    // prior principal's private preference row cleared from IndexedDB and memory
+    expect(await preferences.load('principal-a')).toBeUndefined();
   });
 
   it('never stores tokens or secret claims in IndexedDB rows', async () => {
@@ -192,7 +209,7 @@ describe('SEC-M9-CACHE', () => {
     await userEvent.click(screen.getByTestId('sign-out'));
     await waitFor(() => expect(screen.getByTestId('sign-in-entry')).toBeInTheDocument());
     const rows = await new Promise<Array<Record<string, unknown>>>((resolve) => {
-      const open = indexedDB.open('flowstead-preferences', 2);
+      const open = indexedDB.open('flowstead-preferences', CACHE_SCHEMA_VERSION);
       open.onsuccess = () => {
         const req = open.result.transaction('entries', 'readonly').objectStore('entries').getAll();
         req.onsuccess = () => { resolve(req.result as Array<Record<string, unknown>>); };

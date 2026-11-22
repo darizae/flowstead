@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ForecastResponse, HistoryResponse } from '../api/types';
+import { asModelVersion, type ForecastResponse, type HistoryResponse } from '../api/types';
 import { serializeCsv, serializeForecastCsv, serializeHistoryCsv } from './csv';
 
 const plant = { plant_id: 'plant-01', name: '=Unsafe, "Plant"', location: { city: 'Test', state_code: 'FL' as const, latitude: 27, longitude: -81 }, timezone: 'America/New_York', links: { latest: '', history: '', forecast: '' } };
@@ -25,7 +25,7 @@ const forecast = {
   plant,
   status: 'available' as const,
   issued_at_utc: '2025-01-01T00:00:00-05:00',
-  model_version: 'model,1',
+  model_version: asModelVersion('model,1'),
   source_revision: 'revision',
   physical_bound_rule: 'non-negative',
   forecasts: Array.from({ length: 12 }, (_, index) => ({ hour_number: index + 1, target_time_utc: new Date(Date.UTC(2025, 0, 1, index + 1)).toISOString(), predicted_flow_gal_h: 100 + index, units: 'gal/h' as const, source: 'api' })),

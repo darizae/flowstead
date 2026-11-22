@@ -1,6 +1,7 @@
 import { Button, Card } from '@darizae/marisma';
 import { useMemo } from 'react';
 import type { ForecastResponse } from '../../lib/api/types';
+import { tryParseUtc } from '../../shared/domain/utc';
 import { downloadBlob } from '../../lib/exports/download';
 import { serializeForecastCsv } from '../../lib/exports/csv';
 import { forecastCsvFileName, forecastPngFileName } from '../../lib/exports/fileNames';
@@ -20,7 +21,7 @@ export interface ForecastChartProps {
   observed: ForecastObservedPoint[];
 }
 
-export function visibleForecastAxisTicks(ticks: readonly string[], chartWidth: number): string[] {
+export function visibleForecastAxisTicks<T>(ticks: readonly T[], chartWidth: number): T[] {
   if (chartWidth > MOBILE_BREAKPOINT || ticks.length <= 3) return [...ticks];
   const middle = Math.floor(ticks.length / 2);
   return [ticks[0], ticks[middle], ticks[ticks.length - 1]];
@@ -37,9 +38,9 @@ export function ForecastChart({ forecast, observed }: ForecastChartProps) {
   const predictedPoints = points.filter((point) => point.source === 'predicted');
   const [min, max] = useMemo(() => niceDomain(points.map((point) => point.value)), [points]);
 
-  const fromTime = points.length > 0 ? Date.parse(points[0].timestampUtc) : Date.parse(forecast.issued_at_utc ?? '');
-  const toTime = points.length > 0 ? Date.parse(points[points.length - 1].timestampUtc) : fromTime + FORECAST_HOURS * 60 * 60 * 1000;
-  const x = (timestamp: string) => xPosition(timestamp, fromTime, toTime, chartWidth, padding);
+  const fromTime = points.length > 0 ? points[0].timestampUtc.getTime() : (forecast.issued_at_utc ? tryParseUtc(forecast.issued_at_utc)?.getTime() ?? Number.NaN : Number.NaN);
+  const toTime = points.length > 0 ? points[points.length - 1].timestampUtc.getTime() : fromTime + FORECAST_HOURS * 60 * 60 * 1000;
+  const x = (timestamp: Date) => xPosition(timestamp, fromTime, toTime, chartWidth, padding);
   const y = (value: number) => yPosition(value, min, max, padding);
 
   // Boundary is the first predicted point.
@@ -48,7 +49,7 @@ export function ForecastChart({ forecast, observed }: ForecastChartProps) {
     const anchor = Number.isFinite(fromTime) ? fromTime : Date.now();
     const end = Number.isFinite(toTime) ? toTime : anchor + FORECAST_HOURS * 60 * 60 * 1000;
     const step = (end - anchor) / 4;
-    return Array.from({ length: 5 }, (_, index) => new Date(anchor + step * index).toISOString());
+    return Array.from({ length: 5 }, (_, index) => new Date(anchor + step * index));
   }, [fromTime, toTime]);
   const axisTicks = useMemo(() => visibleForecastAxisTicks(allAxisTicks, chartWidth), [allAxisTicks, chartWidth]);
 
@@ -90,10 +91,10 @@ export function ForecastChart({ forecast, observed }: ForecastChartProps) {
         {yTicks.map(({ fraction, value }) => <g key={fraction}><line className="chart-grid" x1={padding.left} y1={padding.top + fraction * (CHART_HEIGHT - padding.top - padding.bottom)} x2={chartWidth - padding.right} y2={padding.top + fraction * (CHART_HEIGHT - padding.top - padding.bottom)} /><text className="chart-label" x={padding.left - 10} y={padding.top + fraction * (CHART_HEIGHT - padding.top - padding.bottom) + 4} textAnchor="end">{formatNumber(value)}</text></g>)}
         {observedPoints.length > 1 && <polyline className="chart-line" points={observedPoints.map((point) => `${x(point.timestampUtc)},${y(point.value)}`).join(' ')} />}
         {predictedPoints.length > 1 && <polyline className="chart-line forecast-predicted" points={predictedPoints.map((point) => `${x(point.timestampUtc)},${y(point.value)}`).join(' ')} />}
-        {observedPoints.map((point) => <circle key={point.timestampUtc} className="chart-point forecast-observed-point" cx={x(point.timestampUtc)} cy={y(point.value)} r="2.5" aria-label={`Observed: ${point.timestampUtc}`}><title>{point.timestampUtc}</title></circle>)}
-        {predictedPoints.map((point) => <circle key={point.timestampUtc} className="chart-point forecast-target" cx={x(point.timestampUtc)} cy={y(point.value)} r="3" data-testid="forecast-target" aria-label={`Predicted ${point.value} gal/h`}><title>{point.value} gal/h</title></circle>)}
+        {observedPoints.map((point) => <circle key={point.timestampUtc.toISOString()} className="chart-point forecast-observed-point" cx={x(point.timestampUtc)} cy={y(point.value)} r="2.5" aria-label={`Observed: ${point.timestampUtc.toISOString()}`}><title>{point.timestampUtc.toISOString()}</title></circle>)}
+        {predictedPoints.map((point) => <circle key={point.timestampUtc.toISOString()} className="chart-point forecast-target" cx={x(point.timestampUtc)} cy={y(point.value)} r="3" data-testid="forecast-target" aria-label={`Predicted ${point.value} gal/h`}><title>{point.value} gal/h</title></circle>)}
         {boundary && <line className="chart-boundary" x1={x(boundary.timestampUtc)} y1={padding.top} x2={x(boundary.timestampUtc)} y2={CHART_HEIGHT - padding.bottom} />}
-        {axisTicks.map((tick, index) => { const anchor = index === 0 ? 'start' : index === axisTicks.length - 1 ? 'end' : 'middle'; const tickX = xPosition(tick, fromTime, toTime, chartWidth, padding); return <g key={tick}><line className="chart-tick" x1={tickX} y1={CHART_HEIGHT - padding.bottom} x2={tickX} y2={CHART_HEIGHT - padding.bottom + 5} /><text className="chart-label chart-tick-label" x={tickX} y={CHART_HEIGHT - padding.bottom + 20} textAnchor={anchor}>{localTickLabel(tick, plant.timezone)}</text></g>; })}
+        {axisTicks.map((tick, index) => { const anchor = index === 0 ? 'start' : index === axisTicks.length - 1 ? 'end' : 'middle'; const tickX = xPosition(tick, fromTime, toTime, chartWidth, padding); return <g key={tick.toISOString()}><line className="chart-tick" x1={tickX} y1={CHART_HEIGHT - padding.bottom} x2={tickX} y2={CHART_HEIGHT - padding.bottom + 5} /><text className="chart-label chart-tick-label" x={tickX} y={CHART_HEIGHT - padding.bottom + 20} textAnchor={anchor}>{localTickLabel(tick, plant.timezone)}</text></g>; })}
         <text className="chart-axis-title" x={chartWidth / 2} y={CHART_HEIGHT - 10} textAnchor="middle">Plant-local time</text>
         <text className="chart-axis-title" transform={`translate(16 ${CHART_HEIGHT / 2}) rotate(-90)`} textAnchor="middle">Influent flow (gal/h)</text>
       </svg></div>
@@ -103,7 +104,7 @@ export function ForecastChart({ forecast, observed }: ForecastChartProps) {
   </section>;
 }
 
-function localTickLabel(timestamp: string, timeZone: string): string {
+function localTickLabel(timestamp: Date, timeZone: string): string {
   const labeled = labelForecastPoints([{ timestampUtc: timestamp, value: 0, source: 'observed' }], timeZone)[0];
   return labeled.label.split(' ').slice(0, 2).join(' ');
 }

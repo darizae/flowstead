@@ -1,4 +1,5 @@
 import { ApiError, type ForecastJobResponse, type ForecastResponse, type HistoryResponse, type LatestResponse, type PlantListResponse, type ErrorDetail } from './types';
+import { validateForecast, validateForecastJob, validateHistory, validateLatest, validatePlantList } from './validate';
 
 export interface ApiClientOptions { basePath?: string; fetcher?: typeof fetch; token?: string }
 
@@ -53,15 +54,15 @@ export class ApiClient {
     }
     throw new ApiError('http', detail.message ?? 'Flowstead returned an error.', response.status);
   }
-  private async get<T>(resource: string): Promise<T> {
+  private async get<T>(resource: string, validate: (value: unknown) => T): Promise<T> {
     const response = await this.request(resource, { method: 'GET', headers: new Headers({ Accept: 'application/json' }) });
-    try { return await response.json() as T; }
-    catch { throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
+    try { return validate(await response.json() as unknown); }
+    catch (cause) { if (cause instanceof ApiError) throw cause; throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
   }
-  private async post<T>(resource: string): Promise<T> {
+  private async post<T>(resource: string, validate: (value: unknown) => T): Promise<T> {
     const response = await this.request(resource, { method: 'POST', headers: new Headers({ Accept: 'application/json' }) });
-    try { return await response.json() as T; }
-    catch { throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
+    try { return validate(await response.json() as unknown); }
+    catch (cause) { if (cause instanceof ApiError) throw cause; throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
   }
   async downloadReport(plantId: string): Promise<{ blob: Blob; fileName: string }> {
     const resource = `${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/report.pdf`;
@@ -71,22 +72,22 @@ export class ApiClient {
     const match = disposition.match(/filename=\"([A-Za-z0-9._-]+)\"/i);
     return { blob, fileName: match?.[1] ?? 'flowstead-plant-report.pdf' };
   }
-  listPlants(): Promise<PlantListResponse> { return this.get<PlantListResponse>(this.hasPrincipal ? '/plants' : '/public/plants'); }
+  listPlants(): Promise<PlantListResponse> { return this.get(this.hasPrincipal ? '/plants' : '/public/plants', validatePlantList); }
   latestPlant(plantId: string): Promise<LatestResponse> {
-    return this.get<LatestResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/latest`);
+    return this.get(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/latest`, validateLatest);
   }
   historyPlant(plantId: string, from: string, to: string): Promise<HistoryResponse> {
     const params = new URLSearchParams({ from, to });
-    return this.get<HistoryResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/history?${params.toString()}`);
+    return this.get(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/history?${params.toString()}`, validateHistory);
   }
   forecastPlant(plantId: string): Promise<ForecastResponse> {
-    return this.get<ForecastResponse>(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/forecast`);
+    return this.get(`${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/forecast`, validateForecast);
   }
   requestForecast(plantId: string): Promise<ForecastJobResponse> {
-    return this.post<ForecastJobResponse>(`/plants/${encodeURIComponent(plantId)}/forecast-requests`);
+    return this.post(`/plants/${encodeURIComponent(plantId)}/forecast-requests`, validateForecastJob);
   }
   forecastRequest(correlationId: string): Promise<ForecastJobResponse> {
-    return this.get<ForecastJobResponse>(`/forecast-requests/${encodeURIComponent(correlationId)}`);
+    return this.get(`/forecast-requests/${encodeURIComponent(correlationId)}`, validateForecastJob);
   }
 }
 

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { ForecastResponse } from '../../lib/api/types';
+import { asModelVersion, type ForecastResponse } from '../../lib/api/types';
 import { ForecastChart, visibleForecastAxisTicks } from './ForecastChart';
 import { forecastPoints } from './transforms';
 
@@ -10,7 +10,7 @@ const availableForecast = (): ForecastResponse => ({
   plant: plant(),
   status: 'available',
   issued_at_utc: '2025-01-01T00:00:00.000Z',
-  model_version: 'seasonal-naive-24h',
+  model_version: asModelVersion('seasonal-naive-24h'),
   source_revision: 'abc123',
   physical_bound_rule: 'non-negative',
   forecasts: Array.from({ length: 12 }, (_, index) => ({ hour_number: index + 1, target_time_utc: new Date(Date.UTC(2025, 0, 1, index + 1)).toISOString(), predicted_flow_gal_h: 100 + index, units: 'gal/h', source: 'seasonal_naive_24h' })),
@@ -32,7 +32,7 @@ describe('UT-M9-FORECAST', () => {
 
   it('shows the observed-to-predicted boundary from history plus predicted points', () => {
     const forecast = availableForecast();
-    const observed = Array.from({ length: 6 }, (_, index) => ({ timestampUtc: new Date(Date.UTC(2024, 11, 31, 18 + index)).toISOString(), value: 80 + index }));
+    const observed = Array.from({ length: 6 }, (_, index) => ({ timestampUtc: new Date(Date.UTC(2024, 11, 31, 18 + index)), value: 80 + index }));
     const points = forecastPoints(forecast, observed);
     expect(points.filter((point) => point.source === 'observed')).toHaveLength(6);
     expect(points.filter((point) => point.source === 'predicted')).toHaveLength(12);
@@ -44,7 +44,7 @@ describe('UT-M9-FORECAST', () => {
   });
 
   it('shows an explicit unavailable state and never invents predicted points', () => {
-    const forecast: ForecastResponse = { plant: plant(), status: 'unavailable', issued_at_utc: null, model_version: 'seasonal-naive-24h', source_revision: null, physical_bound_rule: 'non-negative', forecasts: [], unavailable_reason: 'No persisted forecast yet' };
+    const forecast: ForecastResponse = { plant: plant(), status: 'unavailable', issued_at_utc: null, model_version: asModelVersion('seasonal-naive-24h'), source_revision: null, physical_bound_rule: 'non-negative', forecasts: [], unavailable_reason: 'No persisted forecast yet' };
     render(<ForecastChart forecast={forecast} observed={[]} />);
     const unavailable = screen.getByTestId('forecast-unavailable');
     expect(within(unavailable).getByText('Forecast unavailable')).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe('UT-M9-FORECAST', () => {
   });
 
   it('shows an empty state when forecast lacks targets', () => {
-    const forecast: ForecastResponse = { plant: plant(), status: 'available', issued_at_utc: '2025-01-01T00:00:00.000Z', model_version: 'm', source_revision: null, physical_bound_rule: 'non-negative', forecasts: [], unavailable_reason: null };
+    const forecast: ForecastResponse = { plant: plant(), status: 'available', issued_at_utc: '2025-01-01T00:00:00.000Z', model_version: asModelVersion('m'), source_revision: null, physical_bound_rule: 'non-negative', forecasts: [], unavailable_reason: null };
     render(<ForecastChart forecast={forecast} observed={[]} />);
     expect(screen.getByText('No forecast targets are available for this Plant.')).toBeInTheDocument();
     expect(screen.queryAllByTestId('forecast-target')).toHaveLength(0);

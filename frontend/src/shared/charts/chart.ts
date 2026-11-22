@@ -19,8 +19,8 @@ export function niceDomain(values: number[]): [number, number] {
 
 export function formatNumber(value: number): string { return Number.isInteger(value) ? String(value) : value.toFixed(2); }
 
-export function xPosition(timestamp: string, fromMs: number, toMs: number, width: number, padding: typeof CHART_PADDING): number {
-  return padding.left + ((Date.parse(timestamp) - fromMs) / Math.max(1, toMs - fromMs)) * (width - padding.left - padding.right);
+export function xPosition(timestamp: Date, fromMs: number, toMs: number, width: number, padding: typeof CHART_PADDING): number {
+  return padding.left + ((timestamp.getTime() - fromMs) / Math.max(1, toMs - fromMs)) * (width - padding.left - padding.right);
 }
 
 export function yPosition(value: number, min: number, max: number, padding: typeof CHART_PADDING): number {

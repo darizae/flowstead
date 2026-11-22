@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Button, Select } from '@darizae/marisma';
 import type { HistoryResponse } from '../../lib/api/types';
+import { parseUtcTimestamp } from '../../shared/domain/utc';
 import { downloadBlob } from '../../lib/exports/download';
 import { serializeHistoryCsv } from '../../lib/exports/csv';
 import { historyCsvFileName, historyPngFileName } from '../../lib/exports/fileNames';
@@ -23,7 +24,7 @@ export interface HistoryChartProps {
   onChannelChange: (channel: ChannelKey) => void;
 }
 
-function tickLabel(timestamp: string, history: HistoryResponse): { local: string; zone: string } {
+function tickLabel(timestamp: Date, history: HistoryResponse): { local: string; zone: string } {
   const label = labelHistoryPoints([{ timestampUtc: timestamp, value: 0, quality: 'valid' }], history.plant)[0];
   return {
     local: label.label.split(' ').slice(0, 2).join(' '),
@@ -40,10 +41,10 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
   const { svgRef, exportKeyRef, pngDownloading, downloadPng } = usePngExport();
   const from = history.from_utc;
   const to = history.to_utc;
-  const fromMs = Date.parse(from);
-  const toMs = Date.parse(to);
+  const fromMs = parseUtcTimestamp(from, 'window start').getTime();
+  const toMs = parseUtcTimestamp(to, 'window end').getTime();
   const padding = chartWidth <= MOBILE_BREAKPOINT ? MOBILE_PADDING : PADDING;
-  const x = (timestamp: string) => xPosition(timestamp, fromMs, toMs, chartWidth, padding);
+  const x = (timestamp: Date) => xPosition(timestamp, fromMs, toMs, chartWidth, padding);
   const y = (value: number) => yPosition(value, min, max, padding);
   const allTicks = useMemo(() => chartTicks(range, from, to), [range, from, to]);
   const ticks = useMemo(() => {
@@ -85,8 +86,8 @@ export function HistoryChart({ history, range, channel, onRangeChange, onChannel
       <line className="chart-axis" x1={padding.left} y1={padding.top} x2={padding.left} y2={CHART_HEIGHT - padding.bottom} />
       {yTicks.map(({ fraction, value }) => <g key={fraction}><line className="chart-grid" x1={padding.left} y1={padding.top + fraction * (CHART_HEIGHT - padding.top - padding.bottom)} x2={chartWidth - padding.right} y2={padding.top + fraction * (CHART_HEIGHT - padding.top - padding.bottom)} /><text className="chart-label" x={padding.left - 10} y={padding.top + fraction * (CHART_HEIGHT - padding.top - padding.bottom) + 4} textAnchor="end">{formatNumber(value)}</text></g>)}
       {segments.map((segment, index) => <polyline key={index} className="chart-line" points={segment.map((point) => `${x(point.timestampUtc)},${y(point.value)}`).join(' ')} />)}
-      {labels.map((point) => <circle key={point.timestampUtc} className="chart-point" cx={x(point.timestampUtc)} cy={y(point.value)} r="2.5" aria-label={`${meta.axisLabel}: ${point.label}`}><title>{point.label}</title></circle>)}
-      {ticks.map((tick, index) => { const anchor = index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'; const tickX = x(tick); return <g key={tick}><line className="chart-tick" x1={tickX} y1={CHART_HEIGHT - padding.bottom} x2={tickX} y2={CHART_HEIGHT - padding.bottom + 5} /><text className="chart-label chart-tick-label" x={tickX} y={CHART_HEIGHT - padding.bottom + 20} textAnchor={anchor}><tspan x={tickX} dy="0">{tickLabels[index].local}</tspan><tspan x={tickX} dy="12">{tickLabels[index].zone}</tspan></text></g>; })}
+      {labels.map((point) => <circle key={point.timestampUtc.toISOString()} className="chart-point" cx={x(point.timestampUtc)} cy={y(point.value)} r="2.5" aria-label={`${meta.axisLabel}: ${point.label}`}><title>{point.label}</title></circle>)}
+      {ticks.map((tick, index) => { const anchor = index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'; const tickX = x(tick); return <g key={tick.toISOString()}><line className="chart-tick" x1={tickX} y1={CHART_HEIGHT - padding.bottom} x2={tickX} y2={CHART_HEIGHT - padding.bottom + 5} /><text className="chart-label chart-tick-label" x={tickX} y={CHART_HEIGHT - padding.bottom + 20} textAnchor={anchor}><tspan x={tickX} dy="0">{tickLabels[index].local}</tspan><tspan x={tickX} dy="12">{tickLabels[index].zone}</tspan></text></g>; })}
       <text className="chart-axis-title" x={chartWidth / 2} y={CHART_HEIGHT - 10} textAnchor="middle">Plant-local time</text>
       <text className="chart-axis-title" transform={`translate(16 ${CHART_HEIGHT / 2}) rotate(-90)`} textAnchor="middle">{meta.axisLabel}</text>
     </svg></div>

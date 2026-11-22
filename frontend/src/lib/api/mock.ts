@@ -1,5 +1,5 @@
 import { ApiClient } from './client';
-import { ApiError, type ForecastResponse, type HistoryReading, type HistoryResponse, type LatestResponse, type Measurements, type PlantListResponse, type PlantSummary } from './types';
+import { ApiError, asModelVersion, type ForecastResponse, type HistoryReading, type HistoryResponse, type LatestResponse, type Measurements, type PlantListResponse, type PlantSummary } from './types';
 
 // Deterministic, bounded, entirely browser-side demonstration. No network, tokens,
 // persistent storage, or modification of the real backend is involved.
@@ -70,7 +70,7 @@ export class MockApiClient extends ApiClient {
     const index = plants.indexOf(plant);
     return {
       plant, status: 'available', issued_at_utc: new Date(ANCHOR).toISOString(),
-      model_version: 'mock-seasonal-demo', source_revision: 'mock-only', physical_bound_rule: 'non-negative',
+      model_version: asModelVersion('mock-seasonal-demo'), source_revision: 'mock-only', physical_bound_rule: 'non-negative',
       forecasts: Array.from({ length: 12 }, (_, i) => ({
         hour_number: i + 1, target_time_utc: new Date(ANCHOR + (i + 1) * HOUR).toISOString(),
         predicted_flow_gal_h: flow(index, i + 1), units: 'gal/h' as const, source: 'mock-seasonal-demo',

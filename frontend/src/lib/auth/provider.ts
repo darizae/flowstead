@@ -4,8 +4,9 @@
  * separate public endpoints (the ApiClient routes by presence of a token).
  *
  * Hosted Supabase login is UNVERIFIED: this module is wired to public
- * `.env.example` placeholders, and an offline TestAuthProvider seam drives
- * scripted login/expiry/logout in unit and browser tests.
+ * `.env.example` placeholders. When Supabase is unconfigured the provider FAILS
+ * CLOSED (#39) rather than falling back to the TestAuthProvider test seam,
+ * which unit and browser tests inject explicitly.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -111,9 +112,32 @@ export class SupabaseAuthProvider implements AuthProvider {
 
 /**
  * Build the app's identity provider from public environment variables. Only the
- * Supabase URL and publishable (anon) key are accepted; hosted Supabase is
- * UNVERIFIED, so missing placeholders fall back to the offline test seam.
+ * Supabase URL and publishable (anon) key are accepted. When hosted Supabase is
+ * not configured (or config is malformed) the provider FAILS CLOSED: it never
+ * fabricates an identity and always rejects sign-in, so a misconfigured
+ * deployment cannot silently hand out a session. The offline TestAuthProvider
+ * seam is never the production default (#39); tests inject it explicitly via
+ * `__FLOWSTEAD_TEST_AUTH__` or the `auth` prop.
  */
+
+/**
+ * Fail-closed identity provider used whenever hosted Supabase is not
+ * configured. Always signed out; sign-in always rejects. Distinguishable from
+ * TestAuthProvider so a production bundle can never rely on the test seam.
+ */
+export class FailClosedAuthProvider implements AuthProvider {
+  private readonly listeners = new Set<() => void>();
+  getSession(): AuthSession | null { return null; }
+  async signIn(_email: string, _password: string): Promise<AuthSession | null> {
+    throw new Error('Sign in unavailable. Contact your administrator.');
+  }
+  async signOut(): Promise<void> { /* no session */ }
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
+}
+
 /** Test-only injected seam (set by Playwright/DOM tests before app load). */
 export interface FlowsteadTestAuthGlobal { __FLOWSTEAD_TEST_AUTH__?: AuthProvider }
 
@@ -126,9 +150,9 @@ export function createDefaultAuthProvider(): AuthProvider {
     try {
       return new SupabaseAuthProvider(createClient(url, anonKey));
     } catch {
-      /* fall back to offline seam */
+      /* malformed config: fail closed below */
     }
   }
-  return new TestAuthProvider();
+  return new FailClosedAuthProvider();
 }
 

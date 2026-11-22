@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card } from '@darizae/marisma';
 import type { ApiClient } from '../../lib/api/client';
 import { ApiError, type HistoryReading, type LatestResponse, type PlantSummary } from '../../lib/api/types';
+import { parseUtcTimestamp } from '../../shared/domain/utc';
 import { downloadBlob } from '../../lib/exports/download';
 import { LoadingState, RetryButton } from '../../shared/components/Status';
 import { HistoryChart } from '../history/HistoryChart';
@@ -33,9 +34,10 @@ function observedFromHistory(readings: HistoryReading[] | undefined): ForecastOb
   if (!readings) return [];
   return readings
     .filter((reading) => reading.measurements.influent_flow.quality === 'valid' && reading.measurements.influent_flow.value !== null)
-    .sort((a, b) => Date.parse(a.timestamp_utc) - Date.parse(b.timestamp_utc))
+    .map((reading) => ({ reading, timestamp: parseUtcTimestamp(reading.timestamp_utc, 'reading timestamp') }))
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
     .slice(-12)
-    .map((reading) => ({ timestampUtc: reading.timestamp_utc, value: reading.measurements.influent_flow.value as number }));
+    .map(({ reading, timestamp }) => ({ timestampUtc: timestamp, value: reading.measurements.influent_flow.value as number }));
 }
 
 export function PlantDetailPage({ client, selectedPlant, plants, loading, listError, latest, detailLoading, detailError, onBack, onSwitch, retry, scopeKey }: PlantDetailPageProps) {

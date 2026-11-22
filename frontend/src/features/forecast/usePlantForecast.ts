@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../../lib/api/client';
-import { ApiError, type ForecastResponse } from '../../lib/api/types';
-import { preferences } from '../../lib/cache/preferences';
+import type { ForecastResponse } from '../../lib/api/types';
 import { useRequestState } from '../../shared/hooks/useRequestState';
 
-/** Loads a Plant's forecast, gated on scope and Plant identity, persisting an authorized snapshot. */
+/** Loads a Plant's forecast, gated on scope and Plant identity. */
 export function usePlantForecast(client: ApiClient, plantId: string | undefined, scopeKey = 'public') {
   const [forecast, setForecast] = useState<ForecastResponse>();
   const scopeRef = useRef(scopeKey);
@@ -21,16 +20,9 @@ export function usePlantForecast(client: ApiClient, plantId: string | undefined,
     }
     await run(async () => {
       const result = await client.forecastPlant(plantId);
-      if (result.status !== 'available' && result.status !== 'unavailable') {
-        throw new ApiError('invalid_response', 'Flowstead returned an unreadable forecast response.');
-      }
       setForecast(result);
-      // Persist a sanitized snapshot only after this fresh authorized response.
-      if (scopeKey !== 'mock:public') {
-        await preferences.saveForecast(plantId, result, scopeKey === 'public' ? undefined : scopeKey.replace(/^principal:/, ''));
-      }
     });
-  }, [client, plantId, run, scopeKey]);
+  }, [client, plantId, run]);
 
   useEffect(() => {
     scopeRef.current = scopeKey;

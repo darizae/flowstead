@@ -1,4 +1,5 @@
 import type { HistoryReading, MeasurementUnit, PlantSummary } from '../../lib/api/types';
+import { parseUtcTimestamp } from '../../shared/domain/utc';
 
 export const HISTORY_RANGES = [24, 72, 168] as const;
 export type HistoryRange = (typeof HISTORY_RANGES)[number];
@@ -11,13 +12,12 @@ export const CHANNELS = [
 ] as const satisfies ReadonlyArray<{ key: keyof HistoryReading['measurements']; label: string; unit: MeasurementUnit; axisLabel: string }>;
 
 export type ChannelKey = (typeof CHANNELS)[number]['key'];
-export type HistoryPoint = { timestampUtc: string; value: number; quality: 'valid' };
+export type HistoryPoint = { timestampUtc: Date; value: number; quality: 'valid' };
 export type HistorySegment = HistoryPoint[];
 export type LabeledHistoryPoint = HistoryPoint & { label: string; timezoneAbbreviation: string; offset: string };
 
 export function historyWindow(range: HistoryRange, latestTimestampUtc: string | Date): { from: string; to: string } {
-  const latest = latestTimestampUtc instanceof Date ? new Date(latestTimestampUtc) : new Date(latestTimestampUtc);
-  if (Number.isNaN(latest.getTime())) throw new RangeError('Latest reading timestamp must be a valid UTC date.');
+  const latest = latestTimestampUtc instanceof Date ? latestTimestampUtc : parseUtcTimestamp(latestTimestampUtc, 'latest reading timestamp');
   const end = new Date(latest.getTime() + 60 * 60 * 1000);
   const start = new Date(end.getTime() - range * 60 * 60 * 1000);
   return { from: start.toISOString(), to: end.toISOString() };
@@ -34,23 +34,24 @@ function isValidValue(reading: HistoryReading, key: ChannelKey): boolean {
 
 /** Keep hourly gaps as separate paths; never bridge absent, missing, or invalid readings. */
 export function qualitySegments(readings: HistoryReading[], key: ChannelKey): HistorySegment[] {
-  const ordered = [...readings].sort((a, b) => Date.parse(a.timestamp_utc) - Date.parse(b.timestamp_utc));
+  const parsed = readings.map((reading) => ({ reading, timestamp: parseUtcTimestamp(reading.timestamp_utc, 'reading timestamp') }));
+  const ordered = [...parsed].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   const segments: HistorySegment[] = [];
   let current: HistorySegment = [];
   let previousTime: number | undefined;
-  for (const reading of ordered) {
-    const timestamp = Date.parse(reading.timestamp_utc);
+  for (const { reading, timestamp } of ordered) {
+    const time = timestamp.getTime();
     const valid = isValidValue(reading, key);
-    const contiguous = previousTime !== undefined && timestamp - previousTime === 60 * 60 * 1000;
+    const contiguous = previousTime !== undefined && time - previousTime === 60 * 60 * 1000;
     if (!valid || (previousTime !== undefined && !contiguous)) {
       if (current.length > 0) segments.push(current);
       current = [];
     }
     if (valid) {
       const measurement = reading.measurements[key];
-      current.push({ timestampUtc: reading.timestamp_utc, value: measurement.value as number, quality: 'valid' });
+      current.push({ timestampUtc: timestamp, value: measurement.value as number, quality: 'valid' });
     }
-    previousTime = timestamp;
+    previousTime = time;
   }
   if (current.length > 0) segments.push(current);
   return segments;
@@ -67,28 +68,29 @@ function abbreviationFor(date: Date, timeZone: string): string {
   return parts.find((part) => part.type === 'timeZoneName')?.value ?? timeZone;
 }
 
-export function plantHourLabel(timestampUtc: string, plant: Pick<PlantSummary, 'timezone'>): LabeledHistoryPoint['label'] {
-  const date = new Date(timestampUtc);
+export function plantHourLabel(timestampUtc: Date, plant: Pick<PlantSummary, 'timezone'>): LabeledHistoryPoint['label'] {
   const formatted = new Intl.DateTimeFormat('en-US', {
     timeZone: plant.timezone,
     month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).format(date);
-  const abbreviation = abbreviationFor(date, plant.timezone);
-  const offset = offsetFor(date, plant.timezone);
+  }).format(timestampUtc);
+  const abbreviation = abbreviationFor(timestampUtc, plant.timezone);
+  const offset = offsetFor(timestampUtc, plant.timezone);
   return `${formatted} ${abbreviation} (${offset})`;
 }
 
 export function labelHistoryPoints(points: HistoryPoint[], plant: Pick<PlantSummary, 'timezone'>): LabeledHistoryPoint[] {
-  return points.map((point) => {
-    const date = new Date(point.timestampUtc);
-    return { ...point, label: plantHourLabel(point.timestampUtc, plant), timezoneAbbreviation: abbreviationFor(date, plant.timezone), offset: offsetFor(date, plant.timezone) };
-  });
+  return points.map((point) => ({
+    ...point,
+    label: plantHourLabel(point.timestampUtc, plant),
+    timezoneAbbreviation: abbreviationFor(point.timestampUtc, plant.timezone),
+    offset: offsetFor(point.timestampUtc, plant.timezone),
+  }));
 }
 
-export function chartTicks(range: HistoryRange, fromUtc: string, toUtc: string): string[] {
-  const from = Date.parse(fromUtc);
-  const to = Date.parse(toUtc);
+export function chartTicks(range: HistoryRange, fromUtc: string, toUtc: string): Date[] {
+  const from = parseUtcTimestamp(fromUtc, 'window start').getTime();
+  const to = parseUtcTimestamp(toUtc, 'window end').getTime();
   const count = 5;
   const step = (to - from) / (count - 1);
-  return Array.from({ length: count }, (_, index) => new Date(from + step * index).toISOString());
+  return Array.from({ length: count }, (_, index) => new Date(from + step * index));
 }

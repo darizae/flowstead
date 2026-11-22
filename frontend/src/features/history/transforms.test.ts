@@ -33,18 +33,18 @@ describe('UT-M8-CHART history transforms', () => {
 
 describe('UT-M8-DST Plant-local labels', () => {
   it('labels both Eastern fall-back 01:00 hours with distinct offsets', () => {
-    const early = plantHourLabel('2025-11-02T05:00:00Z', { timezone: 'America/New_York' });
-    const late = plantHourLabel('2025-11-02T06:00:00Z', { timezone: 'America/New_York' });
+    const early = plantHourLabel(new Date('2025-11-02T05:00:00Z'), { timezone: 'America/New_York' });
+    const late = plantHourLabel(new Date('2025-11-02T06:00:00Z'), { timezone: 'America/New_York' });
     expect(early).toContain('01:00 EDT (UTC-04:00)');
     expect(late).toContain('01:00 EST (UTC-05:00)');
   });
 
   it('labels both Central fall-back 01:00 hours and does not invent spring-forward 02:00', () => {
-    const early = plantHourLabel('2025-11-02T06:00:00Z', { timezone: 'America/Chicago' });
-    const late = plantHourLabel('2025-11-02T07:00:00Z', { timezone: 'America/Chicago' });
+    const early = plantHourLabel(new Date('2025-11-02T06:00:00Z'), { timezone: 'America/Chicago' });
+    const late = plantHourLabel(new Date('2025-11-02T07:00:00Z'), { timezone: 'America/Chicago' });
     expect(early).toContain('01:00 CDT (UTC-05:00)');
     expect(late).toContain('01:00 CST (UTC-06:00)');
-    expect(plantHourLabel('2025-03-09T07:00:00Z', { timezone: 'America/Chicago' })).toContain('01:00 CST');
-    expect(plantHourLabel('2025-03-09T08:00:00Z', { timezone: 'America/Chicago' })).toContain('03:00 CDT');
+    expect(plantHourLabel(new Date('2025-03-09T07:00:00Z'), { timezone: 'America/Chicago' })).toContain('01:00 CST');
+    expect(plantHourLabel(new Date('2025-03-09T08:00:00Z'), { timezone: 'America/Chicago' })).toContain('03:00 CDT');
   });
 });
