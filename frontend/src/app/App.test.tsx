@@ -23,12 +23,15 @@ describe('Plants navigation', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Load Mock Data' }));
       expect(await screen.findByText('Bayview Water Reclamation')).toBeInTheDocument();
       expect(screen.getByText(/MOCK PREVIEW/)).toBeInTheDocument();
-      await userEvent.click(screen.getByRole('button', { name: /^Bayview Water Reclamation/ }));
+      const map = await screen.findByTestId('mock-geographic-map');
+      expect(map.querySelector('svg path')).toHaveAttribute('d', expect.stringMatching(/^M[\d.,\s]+Z$/));
+      await userEvent.click(screen.getByRole('button', { name: 'Open Bayview Water Reclamation' }));
       expect(await screen.findByText(/Preview only: synthetic browser-generated/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Download PDF' })).toBeDisabled();
       await userEvent.click(screen.getByRole('button', { name: 'Return to Live Data' }));
       await screen.findByText('Plants unavailable');
       expect(screen.queryByText('Bayview Water Reclamation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mock-geographic-map')).not.toBeInTheDocument();
     } finally {
       vi.unstubAllEnvs();
     }
