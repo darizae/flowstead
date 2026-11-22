@@ -51,7 +51,7 @@ test('IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link
   await expect(page.locator('.plant-row').first()).toBeFocused();
   await expect(page.locator(':focus-visible')).toBeVisible();
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
-    const open = indexedDB.open('flowstead-preferences', 2);
+    const open = indexedDB.open('flowstead-preferences');
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const database = open.result;
@@ -76,7 +76,7 @@ test('IDB-M7-PREF UI-M7-PARITY E2E-M12-PATH public list, detail, back, deep-link
     await expect(page.locator('.metric-card').nth(index)).toContainText(cardUnits[index]);
   }
   await expect.poll(async () => page.evaluate(() => new Promise<boolean>((resolve, reject) => {
-    const open = indexedDB.open('flowstead-preferences', 2);
+    const open = indexedDB.open('flowstead-preferences');
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const request = open.result.transaction('entries', 'readonly').objectStore('entries').get('2:principal:stale:preference:_pref');
@@ -294,7 +294,7 @@ test('E2E-M12-PATH E2E-M12-INDEX private queue journey preserves authorization, 
   await expect(page.getByTestId('sign-in-entry')).toBeVisible();
   await expect.poll(async () => page.evaluate(() => {
     const { promise, resolve, reject } = Promise.withResolvers<number>();
-    const open = indexedDB.open('flowstead-preferences', 2);
+    const open = indexedDB.open('flowstead-preferences');
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const request = open.result.transaction('entries', 'readonly').objectStore('entries').openCursor();
@@ -519,13 +519,13 @@ test('SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private Index
   await page.goto('/plants');
   await (await listResponsePromise).json();
   await expect(page.getByTestId('session-identity')).toBeVisible();
-  // visit a detail so a principal-scoped forecast snapshot is cached
+  // Visiting an authorized detail writes a principal-scoped UI preference.
   const forecastResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/v1/plants/plant-01/forecast');
   await page.locator('.plant-row').first().click();
   expect((await forecastResponsePromise).status()).toBe(200);
   await expect(page.getByTestId('forecast-target')).toHaveCount(12);
   const privateRowsBefore = await page.evaluate(() => new Promise<number>((resolve) => {
-    const open = indexedDB.open('flowstead-preferences', 2);
+    const open = indexedDB.open('flowstead-preferences');
     open.onsuccess = () => {
       const req = open.result.transaction('entries', 'readonly').objectStore('entries').openCursor();
       let count = 0;
@@ -539,7 +539,7 @@ test('SEC-M9-CACHE IDB-M9-ISOLATE E2E-M12-PATH sign out clears all private Index
   expect((await publicListPromise).status()).toBe(200);
   await expect(page.getByTestId('sign-in-entry')).toBeVisible();
   await expect.poll(async () => page.evaluate(() => new Promise<number>((resolve) => {
-    const open = indexedDB.open('flowstead-preferences', 2);
+    const open = indexedDB.open('flowstead-preferences');
     open.onsuccess = () => {
       const req = open.result.transaction('entries', 'readonly').objectStore('entries').openCursor();
       let count = 0;
