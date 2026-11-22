@@ -157,9 +157,12 @@ and are stored in the broker's durable JetStream. This proves
 publication, not authenticated forecast processing. NATS/API remain
 bound to loopback; Caddy alone serves public HTTPS.
 
-The two test operators are confirmed with disjoint Plant grants, but
-their actual browser JWT/Plant isolation and forecast generation flows
-have **not** been verified. Cost, restart/recovery, all export paths and
+The two test operators are confirmed with disjoint Plant grants; both
+have now also authenticated successfully against real Supabase Auth from
+owner-protected local password files (JWTs never logged). The frontend
+sign-in form is implemented locally, but actual browser JWT/Plant isolation
+and forecast generation flows have **not** been verified. See
+[T-020 live evidence](T020_PROGRESS_2026-11-22.md). Cost, restart/recovery, all export paths and
 retention checks are still open under T-017. Earlier passages that
 describe the worker/API as not installed or the roles as NOLOGIN are
 historical; this section is the latest verified state.

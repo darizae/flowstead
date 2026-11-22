@@ -24,8 +24,13 @@ and the checked-in deploy commits on local `main`:
 - **Costs**: actual OCI/Supabase/Vercel charges and hard-cap controls remain
   **outstanding**; no paid resource has been provisioned by this work.
 
-**No E2E pass is claimed.** The remaining T-017 scope below is the mandate of
-this task.
+**Execution status: PARTIAL.** Implementation and measured results are recorded
+in [T-020 progress](../../deployment/T020_PROGRESS_2026-11-22.md).
+A real Supabase password grant succeeded for each test account using protected,
+owner-local files without exposing the passwords/JWTs. The React login UI is
+implemented and locally tested. Production API/GUI browser E2E is blocked by
+an Oracle guest timeout/restart and is **not** a PASS. The remaining T-017
+scope below is still required.
 
 ## Scope
 

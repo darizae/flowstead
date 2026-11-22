@@ -59,10 +59,12 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
     try {
       await provider.signIn(email, password);
       closeSignIn();
-    } catch (error: unknown) {
+    } catch {
+      // Provider error details can contain internal auth configuration data;
+      // present a stable, non-enumerating failure to unauthenticated visitors.
       setPassword('');
       setSigningIn(false);
-      setSignInError(error instanceof Error && error.message ? error.message : 'Sign in failed. Check your credentials and try again.');
+      setSignInError('Sign in failed. Check your credentials and try again.');
     }
   };
 
