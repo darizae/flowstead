@@ -37,6 +37,8 @@ jobs:
         run: uv run --project backend mypy
       - name: Run backend unit tests
         run: uv run --project backend pytest -q backend/tests/unit
+      - name: Domain coverage threshold
+        run: uv run --project backend --frozen pytest -q --cov=flowstead_api.domain --cov-fail-under=60 --cov-report=term-missing backend/tests/unit
 
   frontend:
     name: Frontend typecheck / unit / build

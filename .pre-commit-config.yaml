@@ -1,4 +1,21 @@
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+        # Previously accepted acceptance evidence remains immutable; apply
+        # this guard to new source/config additions rather than historical ZIPs.
+        exclude: ^docs/design/evidence/
+      - id: trailing-whitespace
+        types: [text]
+        exclude: ^(docs/|frontend/src/lib/api/generated/)
+      - id: end-of-file-fixer
+        types: [text]
+        exclude: ^(docs/|frontend/src/lib/api/generated/)
   - repo: local
     hooks:
       - id: backend-ruff

@@ -72,7 +72,7 @@ format: format-backend
 test: test-backend-unit test-frontend-unit
 
 coverage:
-    uv run --project backend --with pytest-cov pytest --cov=flowstead_api.domain --cov-fail-under=60 --cov-report=term-missing backend/tests/unit
+    uv run --project backend pytest --cov=flowstead_api.domain --cov-fail-under=60 --cov-report=term-missing backend/tests/unit
     npm --prefix frontend run test:coverage
 
 check: lint typecheck-backend frontend-typecheck test docs-check

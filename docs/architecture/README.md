@@ -29,3 +29,12 @@ CI validates backend Ruff lint/format and unit tests, frontend ESLint/Prettier/t
 ## Decisions
 
 See [Architecture decisions](decisions/README.md) for the rationale and constraints of the chosen boundaries. Historical implementation records live in `docs/planning/tasks/`; they are provenance, not current API design guidance.
+
+## Detailed ownership, operations, and provenance
+
+- [Module ownership](PACKAGE_OWNERSHIP.md)
+- [Runtime settings](OPERATIONAL_SETTINGS.md)
+- [Local and hosted operations](OPERATIONS.md)
+- [Migration history and active Alembic workflow](MIGRATIONS.md)
+- [Evidence retention policy](EVIDENCE_POLICY.md)
+- [Historical task records](HISTORY.md)
