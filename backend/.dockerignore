@@ -8,4 +8,5 @@
 *.pyc
 *.pyo
 tests
-migrations
+# Alembic revisions and configuration are required for runtime upgrade
+# commands and safe disposable deployment verification.

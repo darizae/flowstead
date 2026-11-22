@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,7 +14,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine
 
-BACKEND_ROOT = Path(__file__).resolve().parents[4]
+BACKEND_ROOT = Path(os.environ.get("FLOWSTEAD_BACKEND_ROOT") or Path(__file__).resolve().parents[4])
 ALEMBIC_INI = BACKEND_ROOT / "migrations" / "alembic.ini"
 
 EXPECTED_COLUMNS: dict[str, dict[str, tuple[Any, ...]]] = {

@@ -14,27 +14,29 @@ FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb
 COPY --from=uv /uv /bin/uv
 WORKDIR /build
 COPY pyproject.toml uv.lock ./
+COPY src ./src
+COPY importer.py migrate.py __init__.py ./
 # Pin the venv to the final /opt/venv path so console-script shebangs (uvicorn,
 # alembic) keep resolving after the layer is copied into the runtime image.
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-editable
 
 FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app:/app/backend/src \
+    FLOWSTEAD_BACKEND_ROOT=/app/backend \
     PIP_NO_CACHE_DIR=1
 WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# backend.importer / backend.migrate are maintained as repo-root entrypoint
-# modules (`python -m backend.importer`); flowstead_api itself is standalone
-# and never imports the backend package.
+# flowstead_api is installed into /opt/venv as a regular Python package.
+# Keep the historical backend.* CLIs importable without injecting source
+# checkout paths into PYTHONPATH. Alembic revisions must remain available.
 COPY __init__.py ./backend/__init__.py
 COPY importer.py migrate.py ./backend/
-COPY src/flowstead_api ./backend/src/flowstead_api/
+COPY migrations ./backend/migrations/
 
 # Runtime starts as an unprivileged user; no writes to root-owned paths.
 RUN addgroup --system --gid 10001 app && \
