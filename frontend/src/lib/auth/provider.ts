@@ -19,6 +19,11 @@ export interface AuthSession {
 
 export interface AuthProvider {
   getSession(): AuthSession | null;
+  /**
+   * Email/password sign-in. Must reject rather than fabricate an identity when
+   * the provider cannot authenticate the user (offline seam, missing config).
+   */
+  signIn?(email: string, password: string): Promise<AuthSession | null>;
   signOut(): Promise<void>;
   subscribe(listener: () => void): () => void;
 }
@@ -27,8 +32,22 @@ export interface AuthProvider {
 export class TestAuthProvider implements AuthProvider {
   private session: AuthSession | null;
   private readonly listeners = new Set<() => void>();
-  constructor(initial?: AuthSession | null) { this.session = initial ?? null; }
+  /**
+   * @param enroll Test-only opt-in: when set, signIn() accepts the supplied
+   * credentials as a simulated session. Defaults to reject-all so the offline
+   * live default stays fail-closed (no fabricated identity).
+   */
+  constructor(initial?: AuthSession | null, private readonly enroll?: { email: string; password: string; principalId: string }) {
+    this.session = initial ?? null;
+  }
   getSession(): AuthSession | null { return this.session; }
+  async signIn(email: string, password: string): Promise<AuthSession | null> {
+    if (!this.enroll || this.enroll.email !== email || this.enroll.password !== password) {
+      throw new Error('Sign in unavailable. Contact your administrator.');
+    }
+    this.setSession({ token: `TOKEN-${this.enroll.principalId}`, principalId: this.enroll.principalId, expiresAt: Date.now() + 10 * 60 * 1000 });
+    return this.session;
+  }
   setSession(session: AuthSession | null): void {
     this.session = session;
     for (const listener of this.listeners) listener();
@@ -71,6 +90,13 @@ export class SupabaseAuthProvider implements AuthProvider {
     };
   }
   getSession(): AuthSession | null { return this.cachedSession; }
+  async signIn(email: string, password: string): Promise<AuthSession | null> {
+    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    this.cachedSession = this.mapSession(data.session);
+    this.emit();
+    return this.cachedSession;
+  }
   async signOut(): Promise<void> {
     await this.client.auth.signOut();
     this.cachedSession = null;

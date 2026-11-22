@@ -1,6 +1,6 @@
 import { downloadBlob } from '../lib/exports/download';
-import { AppNavbar, AppNavbarLink, AppShell, Button, Card, PageHeading, Spinner } from '@darizae/marisma';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppNavbar, AppNavbarLink, AppShell, Button, Card, Dialog, DialogContent, DialogDescription, DialogTitle, PageHeading, Spinner } from '@darizae/marisma';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createApiClient, type ApiClient } from '../lib/api/client';
 import { ApiError, type HistoryReading, type LatestResponse, type PlantSummary } from '../lib/api/types';
 import { preferences } from '../lib/cache/preferences';
@@ -44,6 +44,27 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
     return session;
   });
   const [notice, setNotice] = useState<string | null>(null);
+  const [signInOpen, setSignInOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
+
+  const openSignIn = () => { setEmail(''); setPassword(''); setSignInError(null); setSigningIn(false); setSignInOpen(true); };
+  const closeSignIn = () => { setPassword(''); setSignInError(null); setSigningIn(false); setSignInOpen(false); };
+  const submitSignIn = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!provider.signIn || !email || !password) return;
+    setSigningIn(true); setSignInError(null);
+    try {
+      await provider.signIn(email, password);
+      closeSignIn();
+    } catch (error: unknown) {
+      setPassword('');
+      setSigningIn(false);
+      setSignInError(error instanceof Error && error.message ? error.message : 'Sign in failed. Check your credentials and try again.');
+    }
+  };
 
   const providerPrincipal = authSession?.principalId;
   const principalId = usingAuth ? providerPrincipal : (principalIdProp ?? providerPrincipal);
@@ -102,8 +123,8 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
   const openPlant = (plant: PlantSummary) => { setSelectedId(plant.plant_id); save({ plantId: plant.plant_id }); navigate(`/plants/${encodeURIComponent(plant.plant_id)}`); };
   const goBack = () => { setSelectedId(undefined); navigate('/plants'); };
   const signOut = () => { setNotice(null); void provider.signOut(); };
-  const topbar = <div className="top-meta"><span>Session identity</span>{principalId ? <span className="session-identity" data-testid="session-identity">Operator · {principalId}</span> : <Button type="button" variant="ghost" size="small" data-testid="sign-in-entry">Sign in</Button>}{notice && <span className="session-notice" data-testid="session-notice" role="status">{notice}</span>}{principalId ? <Button type="button" variant="secondary" size="small" data-testid="sign-out" onClick={signOut}>Sign out</Button> : null}<span className="small-muted">Synthetic data · Florida</span></div>;
-  return <AppShell
+  const topbar = <div className="top-meta"><span>Session identity</span>{principalId ? <span className="session-identity" data-testid="session-identity">Operator · {principalId}</span> : <Button type="button" variant="ghost" size="small" data-testid="sign-in-entry" onClick={openSignIn}>Sign in</Button>}{notice && <span className="session-notice" data-testid="session-notice" role="status">{notice}</span>}{principalId ? <Button type="button" variant="secondary" size="small" data-testid="sign-out" onClick={signOut}>Sign out</Button> : null}<span className="small-muted">Synthetic data · Florida</span></div>;
+  return <><AppShell
     className="flowstead-marisma"
     data-testid="marisma-scope"
     data-marisma-accent="reedwater"
@@ -118,7 +139,25 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
     footer={<footer className="footer">Flowstead · bounded synthetic readings</footer>}
   >
     {principalTransitioning || preferenceLoading ? <LoadingState label="Loading Plants…" /> : effectiveSelectedId === undefined ? <Overview plants={plants} loading={loading} error={error} retry={retry} onSelect={openPlant} /> : <Detail client={client} selectedId={effectiveSelectedId} selectedPlant={selectedPlant} plants={plants} loading={loading} listError={error} latest={detail.latest} detailLoading={detail.loading} detailError={detail.error} onBack={goBack} onSwitch={(id) => { const plant = plants.find((item) => item.plant_id === id); if (plant) openPlant(plant); }} retry={detail.retry} scopeKey={principalKey} />}
-  </AppShell>;
+  </AppShell>
+    <Dialog open={signInOpen} onOpenChange={(open) => { if (!open) closeSignIn(); }}>
+      <DialogContent className="auth-modal-content" showCloseButton={false} aria-labelledby="sign-in-title" aria-describedby="sign-in-description">
+        <DialogTitle id="sign-in-title">Sign in</DialogTitle>
+        <DialogDescription id="sign-in-description">Sign in with your invited operator credentials. No account creation; contact your administrator for access.</DialogDescription>
+        <form className="auth-form" onSubmit={submitSignIn} noValidate>
+          <label htmlFor="sign-in-email">Email</label>
+          <input id="sign-in-email" name="email" type="email" autoComplete="email" autoFocus={signInOpen} value={email} onChange={(event) => setEmail(event.target.value)} aria-label="Email" />
+          <label htmlFor="sign-in-password">Password</label>
+          <input id="sign-in-password" name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} aria-label="Password" />
+          {signInError && <p className="auth-error" role="alert" data-testid="sign-in-error">{signInError}</p>}
+          <div className="auth-actions">
+            <Button type="button" variant="secondary" size="small" onClick={closeSignIn}>Cancel</Button>
+            <Button type="submit" variant="primary" size="small" loading={signingIn} disabled={signingIn || !email || !password}>Sign in</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  </>;
 }
 
 function LoadingState({ label }: { label: string }) {
