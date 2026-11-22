@@ -94,12 +94,24 @@ def check_links(paths: tuple[Path, ...], routes: set[str]) -> list[str]:
 
 
 def api_routes() -> set[tuple[str, str]]:
-    source = (ROOT / "backend/src/flowstead_api/main.py").read_text(encoding="utf-8")
-    matches = re.findall(
-        r'@app\.(get|post|put|patch|delete)\(\s*["\']([^"\']+)',
-        source,
-    )
-    return {(method.upper(), path) for method, path in matches}
+    """Read FastAPI routes across the router modules without importing dependencies."""
+    paths = [ROOT / "backend/src/flowstead_api/main.py"]
+    paths.extend(sorted((ROOT / "backend/src/flowstead_api/interfaces/http/routers").glob("*.py")))
+    routes: set[tuple[str, str]] = set()
+    for path in paths:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for decorator in node.decorator_list:
+                if not isinstance(decorator, ast.Call) or not isinstance(decorator.func, ast.Attribute):
+                    continue
+                if decorator.func.attr.lower() not in {"get", "post", "put", "patch", "delete"}:
+                    continue
+                if not decorator.args or not isinstance(decorator.args[0], ast.Constant):
+                    continue
+                routes.add((decorator.func.attr.upper(), decorator.args[0].value))
+    return routes
 
 
 def check_backend_contract(routes: set[tuple[str, str]]) -> list[str]:
@@ -123,6 +135,7 @@ def check_backend_contract(routes: set[tuple[str, str]]) -> list[str]:
                 errors.append(f"{path.relative_to(ROOT)}: missing immutable M1 value {value}")
 
     importer = (ROOT / "backend/importer.py").read_text(encoding="utf-8")
+    importer += (ROOT / "backend/src/flowstead_api/domain/m1.py").read_text(encoding="utf-8")
     for value in M1_VALUES[:3]:
         if value not in importer:
             errors.append(f"backend/importer.py: immutable M1 value differs from docs: {value}")
@@ -139,6 +152,8 @@ def _module_exports(path: Path) -> set[str]:
             names.update(target.id for target in node.targets if isinstance(target, ast.Name))
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.add(node.target.id)
+        elif isinstance(node, ast.ImportFrom):
+            names.update(alias.asname or alias.name for alias in node.names)
     return names
 
 
