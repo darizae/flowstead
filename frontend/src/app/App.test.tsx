@@ -13,6 +13,26 @@ const plant = (id: string, name: string) => ({ plant_id: id, name, location: { c
 const latest = (id: string) => ({ latest: true as const, plant: plant(id, 'Alpha Plant'), reading: { plant_id: id, timestamp_utc: '2025-01-01T00:00:00Z', latest: true as const, measurements: { influent_flow: { value: 10, quality: 'valid' as const, units: 'gal/h' as const }, rainfall: { value: null, quality: 'missing' as const, units: 'in/h' as const }, dissolved_oxygen: { value: 2, quality: 'invalid' as const, units: 'mg/L' as const }, effluent_ph: { value: 7, quality: 'valid' as const, units: 'unitless' as const } } } });
 
 describe('Plants navigation', () => {
+  it('production offers an explicit, reversible offline mock preview without calling the API for preview rows', async () => {
+    vi.stubEnv('PROD', true);
+    try {
+      window.history.replaceState({}, '', '/plants');
+      const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('offline'));
+      render(<FlowsteadApp client={new ApiClient({ fetcher })} />);
+      await screen.findByText('Plants unavailable');
+      await userEvent.click(screen.getByRole('button', { name: 'Load Mock Data' }));
+      expect(await screen.findByText('Bayview Water Reclamation')).toBeInTheDocument();
+      expect(screen.getByText(/MOCK PREVIEW/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /^Bayview Water Reclamation/ }));
+      expect(await screen.findByText(/Preview only: synthetic browser-generated/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Download PDF' })).toBeDisabled();
+      await userEvent.click(screen.getByRole('button', { name: 'Return to Live Data' }));
+      await screen.findByText('Plants unavailable');
+      expect(screen.queryByText('Bayview Water Reclamation')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it('UT-M7-NAV renders API Plants and supports detail/back without demo rows', async () => {
     window.history.replaceState({}, '', '/plants');
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url) => new Response(JSON.stringify(String(url).endsWith('/latest') ? latest('a') : { plants: [plant('a', 'Alpha Plant')] }), { status: 200 }));

@@ -104,7 +104,7 @@ export function ForecastChart({ forecast, observed }: ForecastChartProps) {
 
   return <section className="forecast-chart" data-testid="forecast-chart" aria-labelledby="forecast-chart-title" role="status">
     <div className="chart-heading"><h3 id="forecast-chart-title">Influent flow forecast</h3><span className="forecast-status-issue" data-testid="forecast-issue">{heading}</span></div>
-    <p className="chart-status" aria-live="polite">Observed readings merge into the 12-hour API forecast. Targets are API-predicted values, never client-computed.</p>
+    <p className="chart-status" aria-live="polite">{forecast.source_revision === 'mock-only' ? 'Preview only: synthetic browser-generated history and forecast, not API results.' : 'Observed readings merge into the 12-hour API forecast. Targets are API-predicted values, never client-computed.'}</p>
     {unavailable ? (
       <Card className="forecast-unavailable" data-testid="forecast-unavailable">
         <strong>Forecast unavailable</strong>

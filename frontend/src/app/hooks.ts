@@ -151,7 +151,9 @@ export function usePlantForecast(client: ApiClient, plantId: string | undefined,
       }
       setForecast(result);
       // Persist a sanitized snapshot only after this fresh authorized response.
-      await preferences.saveForecast(plantId, result, scopeKey === 'public' ? undefined : scopeKey.replace(/^principal:/, ''));
+      if (scopeKey !== 'mock:public') {
+        await preferences.saveForecast(plantId, result, scopeKey === 'public' ? undefined : scopeKey.replace(/^principal:/, ''));
+      }
     } catch (cause) {
       if (request !== requestGeneration.current) return;
       setForecast(undefined);

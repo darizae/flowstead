@@ -244,3 +244,11 @@ dev-down:
 
 default:
     @just --list
+
+# Read-only diagnostics; safe to run repeatedly on the approved existing VM.
+oci-diagnose:
+    python3 scripts/recover_oci_demo.py
+
+# Explicit bounded START/SOFTRESET; refuses transitional states and healthy guests.
+oci-recover:
+    python3 scripts/recover_oci_demo.py --recover

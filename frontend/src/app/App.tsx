@@ -1,11 +1,12 @@
 import { downloadBlob } from '../lib/exports/download';
 import { AppNavbar, AppNavbarLink, AppShell, Button, Card, Dialog, DialogContent, DialogDescription, DialogTitle, PageHeading, Spinner } from '@darizae/marisma';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createApiClient, type ApiClient } from '../lib/api/client';
+import { mockApiClient } from '../lib/api/mock';
 import { ApiError, type HistoryReading, type LatestResponse, type PlantSummary } from '../lib/api/types';
 import { preferences } from '../lib/cache/preferences';
 import { PlantDetailHeader, PlantListRow, MetricCards } from '../features/plants/components';
-import { PlantMap } from '../features/plants/PlantMap';
+import { MockPlantMap } from '../features/plants/MockPlantMap';
 import { HistoryChart } from '../features/history/HistoryChart';
 import { ForecastChart } from '../features/forecast/ForecastChart';
 import { type ForecastObservedPoint } from '../features/forecast/transforms';
@@ -34,6 +35,7 @@ function observedFromHistory(readings: HistoryReading[] | undefined): ForecastOb
 export interface FlowsteadAppProps { client?: ApiClient; principalId?: string; auth?: AuthProvider }
 const defaultApiClient = createApiClient();
 const defaultAuthProvider = createDefaultAuthProvider();
+const PlantMap = lazy(() => import('../features/plants/PlantMap').then((module) => ({ default: module.PlantMap })));
 
 export default function FlowsteadApp({ client = defaultApiClient, principalId: principalIdProp, auth }: FlowsteadAppProps) {
   const provider = auth ?? defaultAuthProvider;
@@ -49,6 +51,7 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
   const [password, setPassword] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [mockMode, setMockMode] = useState(false);
 
   const openSignIn = () => { setEmail(''); setPassword(''); setSignInError(null); setSigningIn(false); setSignInOpen(true); };
   const closeSignIn = () => { setPassword(''); setSignInError(null); setSigningIn(false); setSignInOpen(false); };
@@ -70,16 +73,18 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
 
   const providerPrincipal = authSession?.principalId;
   const principalId = usingAuth ? providerPrincipal : (principalIdProp ?? providerPrincipal);
-  const principalKey = principalId ?? 'public';
+  const demoMode = mockMode && !principalId && import.meta.env.PROD;
+  const activeClient = demoMode ? mockApiClient : client;
+  const principalKey = demoMode ? 'mock:public' : (principalId ?? 'public');
   const [activePrincipalKey, setActivePrincipalKey] = useState(principalKey);
   const [selectedId, setSelectedId] = useState(plantIdFromLocation);
   const restoredPreference = useRef(false);
   const principalTransitioning = activePrincipalKey !== principalKey;
   const effectiveSelectedId = principalTransitioning ? undefined : selectedId;
-  const { plants, loading, error, retry } = usePlants(client, principalKey);
+  const { plants, loading, error, retry } = usePlants(activeClient, principalKey);
   const { preference, loading: preferenceLoading, save } = usePreference(principalId);
   const selectedPlant = useMemo(() => plants.find((plant) => plant.plant_id === effectiveSelectedId), [plants, effectiveSelectedId]);
-  const detail = usePlantLatest(client, selectedPlant?.plant_id, principalKey);
+  const detail = usePlantLatest(activeClient, selectedPlant?.plant_id, principalKey);
 
   useEffect(() => {
     if (authSession) client.setToken(authSession.token); else client.clearToken();
@@ -122,7 +127,7 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
       setSelectedId(preference.plantId); navigate(`/plants/${encodeURIComponent(preference.plantId)}`);
     }
   }, [effectiveSelectedId, loading, preferenceLoading, plants, preference, principalTransitioning]);
-  const openPlant = (plant: PlantSummary) => { setSelectedId(plant.plant_id); save({ plantId: plant.plant_id }); navigate(`/plants/${encodeURIComponent(plant.plant_id)}`); };
+  const openPlant = (plant: PlantSummary) => { setSelectedId(plant.plant_id); if (!demoMode) save({ plantId: plant.plant_id }); navigate(`/plants/${encodeURIComponent(plant.plant_id)}`); };
   const goBack = () => { setSelectedId(undefined); navigate('/plants'); };
   const signOut = () => { setNotice(null); void provider.signOut(); };
   const topbar = <div className="top-meta"><span>Session identity</span>{principalId ? <span className="session-identity" data-testid="session-identity">Operator · {principalId}</span> : <Button type="button" variant="ghost" size="small" data-testid="sign-in-entry" onClick={openSignIn}>Sign in</Button>}{notice && <span className="session-notice" data-testid="session-notice" role="status">{notice}</span>}{principalId ? <Button type="button" variant="secondary" size="small" data-testid="sign-out" onClick={signOut}>Sign out</Button> : null}<span className="small-muted">Synthetic data · Florida</span></div>;
@@ -140,7 +145,8 @@ export default function FlowsteadApp({ client = defaultApiClient, principalId: p
     mainClassName="shell"
     footer={<footer className="footer">Flowstead · bounded synthetic readings</footer>}
   >
-    {principalTransitioning || preferenceLoading ? <LoadingState label="Loading Plants…" /> : effectiveSelectedId === undefined ? <Overview plants={plants} loading={loading} error={error} retry={retry} onSelect={openPlant} /> : <Detail client={client} selectedId={effectiveSelectedId} selectedPlant={selectedPlant} plants={plants} loading={loading} listError={error} latest={detail.latest} detailLoading={detail.loading} detailError={detail.error} onBack={goBack} onSwitch={(id) => { const plant = plants.find((item) => item.plant_id === id); if (plant) openPlant(plant); }} retry={detail.retry} scopeKey={principalKey} />}
+    {import.meta.env.PROD && !principalId && <div className="demo-toolbar" role="group" aria-label="Sample data mode"><span>{demoMode ? 'MOCK PREVIEW · Invented readings, not live monitoring' : 'Sample app · Live data may be unavailable'}</span><Button type="button" size="small" variant="secondary" data-testid="mock-toggle" onClick={() => { setMockMode(!mockMode); setSelectedId(undefined); navigate('/plants'); }}>{demoMode ? 'Return to Live Data' : 'Load Mock Data'}</Button></div>}
+    {principalTransitioning || preferenceLoading ? <LoadingState label="Loading Plants…" /> : effectiveSelectedId === undefined ? <Overview plants={plants} loading={loading} error={error} retry={retry} onSelect={openPlant} mock={demoMode} /> : <Detail client={activeClient} selectedId={effectiveSelectedId} selectedPlant={selectedPlant} plants={plants} loading={loading} listError={error} latest={detail.latest} detailLoading={detail.loading} detailError={detail.error} onBack={goBack} onSwitch={(id) => { const plant = plants.find((item) => item.plant_id === id); if (plant) openPlant(plant); }} retry={detail.retry} scopeKey={principalKey} />}
   </AppShell>
     <Dialog open={signInOpen} onOpenChange={(open) => { if (!open) closeSignIn(); }}>
       <DialogContent className="auth-modal-content" showCloseButton={false} aria-labelledby="sign-in-title" aria-describedby="sign-in-description">
@@ -171,7 +177,7 @@ function RetryButton({ children, onClick }: { children: string; onClick: () => v
 }
 
 
-function Overview({ plants, loading, error, retry, onSelect }: { plants: PlantSummary[]; loading: boolean; error?: ApiError; retry: () => void; onSelect: (plant: PlantSummary) => void }) {
+function Overview({ plants, loading, error, retry, onSelect, mock = false }: { plants: PlantSummary[]; loading: boolean; error?: ApiError; retry: () => void; onSelect: (plant: PlantSummary) => void; mock?: boolean }) {
   return <>
     <PageHeading className="page-head" eyebrow="Operations overview" title="Plants" description="Monitor the latest readings from authorized wastewater Plants." />
     {loading ? <LoadingState label="Loading Plants…" /> : error ? <div className="error-state" role="alert"><strong>{error.code === 'unauthorized' ? 'Session expired' : 'Plants unavailable'}</strong><p>{error.message}</p><RetryButton onClick={retry}>Retry</RetryButton></div> : plants.length === 0 ? <Card className="surface empty"><strong>No plants assigned</strong><span>There are no Plants available for this view.</span></Card> : <div className="overview-grid">
@@ -181,7 +187,7 @@ function Overview({ plants, loading, error, retry, onSelect }: { plants: PlantSu
       </Card>
       <Card className="panel map-panel" aria-labelledby="map-title">
         <div className="panel-head"><h2 id="map-title">Florida map</h2></div>
-        <PlantMap plants={plants} onSelect={onSelect} />
+        {mock ? <MockPlantMap plants={plants} onSelect={onSelect} /> : <Suspense fallback={<p className="small-muted">Preparing map…</p>}><PlantMap plants={plants} onSelect={onSelect} /></Suspense>}
       </Card>
     </div>}
   </>;
@@ -220,7 +226,7 @@ function Detail({ client, selectedId: _selectedId, selectedPlant, plants, loadin
   };
   if (listError?.code === 'unauthorized') return <div className="error-state" role="alert"><strong>Session expired</strong><p>Your authorized Plant list is no longer available.</p><RetryButton onClick={onBack}>All plants</RetryButton></div>;
   if (!selectedPlant) return <Card className="surface state"><strong>Plant not available</strong><p>This Plant is not available in your current view.</p><RetryButton onClick={onBack}>All plants</RetryButton></Card>;
-  const reportDisabled = loading || Boolean(listError) || detailLoading || Boolean(detailError) || !latest;
+  const reportDisabled = scopeKey === 'mock:public' || loading || Boolean(listError) || detailLoading || Boolean(detailError) || !latest;
   return (
     <>
       <PlantDetailHeader
