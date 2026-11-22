@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from ...access import AccessScope, PublicAccess
 from .records import (
     PUBLIC_PLANT_IDS,
     PlantRow,
@@ -22,20 +23,13 @@ class PlantRepository:
     the repository never widens it.
     """
 
-    def list(
-        self,
-        connection: Any,
-        *,
-        subject_id: str | None,
-        public: bool,
-    ) -> list[PlantRow]:
-        if public:
+    def list(self, connection: Any, *, scope: AccessScope) -> list[PlantRow]:
+        if isinstance(scope, PublicAccess):
             query = """
                 SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
                        p.latitude, p.longitude
                 FROM app.plants AS p
-                WHERE p.public_demo = true
-                  AND p.plant_id = ANY(%s)
+                WHERE p.public_demo = true AND p.plant_id = ANY(%s)
                 ORDER BY p.plant_id
                 LIMIT 5
             """
@@ -45,25 +39,17 @@ class PlantRepository:
                 SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
                        p.latitude, p.longitude
                 FROM app.plants AS p
-                JOIN app.operator_plant_access AS access
-                  ON access.plant_id = p.plant_id
+                JOIN app.operator_plant_access AS access ON access.plant_id = p.plant_id
                 WHERE access.subject_id = %s
                 ORDER BY p.plant_id
                 LIMIT 5
             """
-            params = (subject_id,)
+            params = (scope.subject_id,)
         rows = connection.execute(query, params).fetchall()
         return [_plant_row(row) for row in rows]
 
-    def get(
-        self,
-        connection: Any,
-        plant_id: str,
-        *,
-        subject_id: str | None,
-        public: bool,
-    ) -> PlantRow | None:
-        access_clause, params = _access_clause(plant_id, subject_id=subject_id, public=public)
+    def get(self, connection: Any, plant_id: str, *, scope: AccessScope) -> PlantRow | None:
+        access_clause, params = _access_clause(plant_id, scope=scope)
         query = f"""
             SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
                    p.latitude, p.longitude
@@ -75,14 +61,9 @@ class PlantRepository:
         return None if row is None else _plant_row(row)
 
     def latest(
-        self,
-        connection: Any,
-        plant_id: str,
-        *,
-        subject_id: str | None,
-        public: bool,
+        self, connection: Any, plant_id: str, *, scope: AccessScope
     ) -> tuple[PlantRow, ReadingRow] | None:
-        access_clause, params = _access_clause(plant_id, subject_id=subject_id, public=public)
+        access_clause, params = _access_clause(plant_id, scope=scope)
         query = f"""
             SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
                    p.latitude, p.longitude,
@@ -108,10 +89,9 @@ class PlantRepository:
         from_utc: datetime,
         to_utc: datetime,
         *,
-        subject_id: str | None,
-        public: bool,
+        scope: AccessScope,
     ) -> tuple[PlantRow, list[ReadingRow]] | None:
-        access_clause, params = _access_clause(plant_id, subject_id=subject_id, public=public)
+        access_clause, params = _access_clause(plant_id, scope=scope)
         query = f"""
             SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,
                    p.latitude, p.longitude,

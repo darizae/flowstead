@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
+from ...access import AccessScope
 from ...forecast import (
     MODEL_VERSION,
     PHYSICAL_BOUND_RULE,
@@ -179,11 +180,10 @@ class ForecastRepository:
         connection: Any,
         plant_id: str,
         *,
-        subject_id: str | None,
-        public: bool,
+        scope: AccessScope,
     ) -> ForecastRead | None:
         """Return a stored twelve-row forecast, or None to trigger the fallback path."""
-        access_clause, params = _access_clause(plant_id, subject_id=subject_id, public=public)
+        access_clause, params = _access_clause(plant_id, scope=scope)
         rows = connection.execute(
             f"""
             SELECT p.plant_id, p.name, p.city, p.state_code, p.timezone,

@@ -6,8 +6,6 @@ historical ``flowstead_api.database.Database`` API for the routes and test
 suite while delegating every operation to a real application use case.
 """
 
-from __future__ import annotations
-
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -17,6 +15,7 @@ from uuid import UUID
 
 import psycopg
 
+from .access import PUBLIC_ACCESS, OperatorAccess
 from .application.forecasts import (
     build_forecast_for_plant,
     read_forecast_status,
@@ -81,21 +80,28 @@ class Database:
         )
 
     def plant(self, plant_id: str, *, subject_id: str | None, public: bool) -> PlantRow | None:
-        """Read one Plant through the same public/private access predicate."""
         return get_plant(
-            self.resolved_url(), self._plants, plant_id, subject_id=subject_id, public=public
+            self.resolved_url(),
+            self._plants,
+            plant_id,
+            scope=PUBLIC_ACCESS if public else OperatorAccess(subject_id or ""),
         )
 
     def list_plants(self, *, subject_id: str | None, public: bool) -> list[PlantRow]:
         return list_accessible_plants(
-            self.resolved_url(), self._plants, subject_id=subject_id, public=public
+            self.resolved_url(),
+            self._plants,
+            scope=PUBLIC_ACCESS if public else OperatorAccess(subject_id or ""),
         )
 
     def latest(
         self, plant_id: str, *, subject_id: str | None, public: bool
     ) -> tuple[PlantRow, ReadingRow] | None:
         return latest_reading(
-            self.resolved_url(), self._plants, plant_id, subject_id=subject_id, public=public
+            self.resolved_url(),
+            self._plants,
+            plant_id,
+            scope=PUBLIC_ACCESS if public else OperatorAccess(subject_id or ""),
         )
 
     def history(
@@ -113,8 +119,7 @@ class Database:
             plant_id,
             from_utc,
             to_utc,
-            subject_id=subject_id,
-            public=public,
+            scope=PUBLIC_ACCESS if public else OperatorAccess(subject_id or ""),
         )
 
     def build_forecast(
@@ -141,8 +146,7 @@ class Database:
             self._plants,
             self._forecasts,
             plant_id,
-            subject_id=subject_id,
-            public=public,
+            scope=PUBLIC_ACCESS if public else OperatorAccess(subject_id or ""),
         )
 
     def flow_observations(self, plant_id: str) -> list[Any]:

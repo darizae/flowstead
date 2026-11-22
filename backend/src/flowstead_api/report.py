@@ -22,7 +22,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from .infrastructure.persistence.records import ForecastRead, PlantRow, ReadingRow
+from .application.reports import ReportForecast, ReportPlant, ReportReading
 
 MAX_REPORT_BYTES = 256_000
 SYNTHETIC_SOURCE = "Synthetic source: Flowstead M1 dataset (fictional demonstration data)"
@@ -40,7 +40,7 @@ def _safe_text(value: object) -> str:
     return escape(_ascii(value))
 
 
-def safe_report_filename(plant: PlantRow) -> str:
+def safe_report_filename(plant: ReportPlant) -> str:
     """Return an ASCII-only attachment name with no path/control characters."""
     stem = _ascii(plant.name).lower()
     stem = re.sub(r"[^a-z0-9]+", "-", stem).strip("-") or "plant"
@@ -62,9 +62,9 @@ def _date(value: datetime, timezone_name: str) -> str:
 
 
 def render_report(
-    plant: PlantRow,
-    reading: ReadingRow | None,
-    forecast: ForecastRead | None,
+    plant: ReportPlant,
+    reading: ReportReading | None,
+    forecast: ReportForecast | None,
     *,
     generated_at_utc: datetime | None = None,
     max_bytes: int = MAX_REPORT_BYTES,

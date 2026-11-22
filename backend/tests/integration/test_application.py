@@ -17,6 +17,7 @@ import psycopg
 import pytest
 from backend.importer import SOURCE_SHA, import_m1
 
+from flowstead_api.access import PUBLIC_ACCESS, OperatorAccess
 from flowstead_api.application.forecasts import (
     process_forecast_request,
     request_forecast,
@@ -75,14 +76,13 @@ def test_list_accessible_plants_respects_public_and_operator_scope() -> None:
     plants = PlantRepository()
 
     public_ids = {
-        p.plant_id
-        for p in list_accessible_plants(DATABASE_URL, plants, subject_id=None, public=True)
+        p.plant_id for p in list_accessible_plants(DATABASE_URL, plants, scope=PUBLIC_ACCESS)
     }
     assert public_ids == {"plant-01", "plant-02", "plant-03", "plant-04", "plant-05"}
 
     operator_ids = {
         p.plant_id
-        for p in list_accessible_plants(DATABASE_URL, plants, subject_id="operator-a", public=False)
+        for p in list_accessible_plants(DATABASE_URL, plants, scope=OperatorAccess("operator-a"))
     }
     assert operator_ids == {"plant-01", "plant-02"}
 
@@ -105,8 +105,7 @@ def test_get_plant_history_returns_bounded_readings_under_scope() -> None:
         "plant-01",
         from_utc,
         to_utc,
-        subject_id="operator-a",
-        public=False,
+        scope=OperatorAccess("operator-a"),
     )
     assert visible is not None and len(visible[1]) == 168
 
@@ -117,8 +116,7 @@ def test_get_plant_history_returns_bounded_readings_under_scope() -> None:
             "plant-02",
             from_utc,
             to_utc,
-            subject_id="operator-a",
-            public=False,
+            scope=OperatorAccess("operator-a"),
         )
         is None
     )

@@ -11,6 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+from ...access import AccessScope, OperatorAccess, PublicAccess
 from ...domain.m1 import APPROVED_PLANT_IDS
 from ...forecast import PHYSICAL_BOUND_RULE, ForecastBuild
 
@@ -42,21 +43,21 @@ class ForecastRead:
     build: ForecastBuild
 
 
-def _access_clause(
-    plant_id: str, *, subject_id: str | None, public: bool
-) -> tuple[str, tuple[Any, ...]]:
-    if public:
+def _access_clause(plant_id: str, *, scope: AccessScope) -> tuple[str, tuple[Any, ...]]:
+    if isinstance(scope, PublicAccess):
         return "WHERE p.plant_id = %s AND p.public_demo = true AND p.plant_id = ANY(%s)", (
             plant_id,
             list(PUBLIC_PLANT_IDS),
         )
-    return (
-        (
-            "JOIN app.operator_plant_access AS access ON access.plant_id = p.plant_id "
-            "WHERE p.plant_id = %s AND access.subject_id = %s"
-        ),
-        (plant_id, subject_id),
-    )
+    if isinstance(scope, OperatorAccess):
+        return (
+            (
+                "JOIN app.operator_plant_access AS access ON access.plant_id = p.plant_id "
+                "WHERE p.plant_id = %s AND access.subject_id = %s"
+            ),
+            (plant_id, scope.subject_id),
+        )
+    raise TypeError("unknown Plant access scope")
 
 
 def _plant_row(row: tuple[Any, ...]) -> PlantRow:

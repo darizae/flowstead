@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 
+from ....application.reports import report_data
 from ....auth import Principal, get_current_principal
 from ....report import render_report
 from ..mappers import (
@@ -65,7 +66,10 @@ def public_report(request: Request, plant_id: str) -> Response:
     latest_result = request.app.state.database.latest(plant_id, subject_id=None, public=True)
     reading = latest_result[1] if latest_result is not None else None
     forecast = request.app.state.database.forecast(plant_id, subject_id=None, public=True)
-    content = render_report(plant, reading, forecast, generated_at_utc=datetime.now(UTC))
+    report = report_data(plant, reading, forecast)
+    content = render_report(
+        report.plant, report.reading, report.forecast, generated_at_utc=datetime.now(UTC)
+    )
     return report_response(plant, content)
 
 
@@ -122,5 +126,8 @@ def private_report(
     )
     reading = latest_result[1] if latest_result is not None else None
     forecast = request.app.state.database.forecast(plant_id, subject_id=principal.sub, public=False)
-    content = render_report(plant, reading, forecast, generated_at_utc=datetime.now(UTC))
+    report = report_data(plant, reading, forecast)
+    content = render_report(
+        report.plant, report.reading, report.forecast, generated_at_utc=datetime.now(UTC)
+    )
     return report_response(plant, content)

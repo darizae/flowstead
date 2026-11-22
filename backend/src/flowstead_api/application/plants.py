@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from ..access import AccessScope
 from ..forecast import MODEL_VERSION, PHYSICAL_BOUND_RULE, ForecastBuild
 from ..infrastructure.persistence.records import ForecastRead, PlantRow, ReadingRow
 from ..infrastructure.persistence.unit_of_work import UnitOfWork
@@ -16,38 +17,24 @@ from .ports.repositories import ForecastRepository, PlantRepository
 
 
 def list_accessible_plants(
-    database_url: str,
-    plants: PlantRepository,
-    *,
-    subject_id: str | None,
-    public: bool,
+    database_url: str, plants: PlantRepository, *, scope: AccessScope
 ) -> list[PlantRow]:
     with UnitOfWork(database_url) as uow:
-        return plants.list(uow.connection, subject_id=subject_id, public=public)
+        return plants.list(uow.connection, scope=scope)
 
 
 def get_plant(
-    database_url: str,
-    plants: PlantRepository,
-    plant_id: str,
-    *,
-    subject_id: str | None,
-    public: bool,
+    database_url: str, plants: PlantRepository, plant_id: str, *, scope: AccessScope
 ) -> PlantRow | None:
     with UnitOfWork(database_url) as uow:
-        return plants.get(uow.connection, plant_id, subject_id=subject_id, public=public)
+        return plants.get(uow.connection, plant_id, scope=scope)
 
 
 def latest_reading(
-    database_url: str,
-    plants: PlantRepository,
-    plant_id: str,
-    *,
-    subject_id: str | None,
-    public: bool,
+    database_url: str, plants: PlantRepository, plant_id: str, *, scope: AccessScope
 ) -> tuple[PlantRow, ReadingRow] | None:
     with UnitOfWork(database_url) as uow:
-        return plants.latest(uow.connection, plant_id, subject_id=subject_id, public=public)
+        return plants.latest(uow.connection, plant_id, scope=scope)
 
 
 def get_plant_history(
@@ -57,18 +44,10 @@ def get_plant_history(
     from_utc: datetime,
     to_utc: datetime,
     *,
-    subject_id: str | None,
-    public: bool,
+    scope: AccessScope,
 ) -> tuple[PlantRow, list[ReadingRow]] | None:
     with UnitOfWork(database_url) as uow:
-        return plants.history(
-            uow.connection,
-            plant_id,
-            from_utc,
-            to_utc,
-            subject_id=subject_id,
-            public=public,
-        )
+        return plants.history(uow.connection, plant_id, from_utc, to_utc, scope=scope)
 
 
 def get_plant_forecast(
@@ -77,15 +56,14 @@ def get_plant_forecast(
     forecasts: ForecastRepository,
     plant_id: str,
     *,
-    subject_id: str | None,
-    public: bool,
+    scope: AccessScope,
 ) -> ForecastRead | None:
     """Read a stored forecast, or an explicit unavailable result for a present Plant."""
     with UnitOfWork(database_url) as uow:
-        forecast = forecasts.read(uow.connection, plant_id, subject_id=subject_id, public=public)
+        forecast = forecasts.read(uow.connection, plant_id, scope=scope)
         if forecast is not None:
             return forecast
-        latest = plants.latest(uow.connection, plant_id, subject_id=subject_id, public=public)
+        latest = plants.latest(uow.connection, plant_id, scope=scope)
     if latest is None:
         return None
     plant, latest_reading = latest
