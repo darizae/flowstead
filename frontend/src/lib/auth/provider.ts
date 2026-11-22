@@ -9,7 +9,7 @@
  * which unit and browser tests inject explicitly.
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export interface AuthSession {
   token: string;
@@ -38,25 +38,46 @@ export class TestAuthProvider implements AuthProvider {
    * credentials as a simulated session. Defaults to reject-all so the offline
    * live default stays fail-closed (no fabricated identity).
    */
-  constructor(initial?: AuthSession | null, private readonly enroll?: { email: string; password: string; principalId: string }) {
+  constructor(
+    initial?: AuthSession | null,
+    private readonly enroll?: {
+      email: string;
+      password: string;
+      principalId: string;
+    },
+  ) {
     this.session = initial ?? null;
   }
-  getSession(): AuthSession | null { return this.session; }
+  getSession(): AuthSession | null {
+    return this.session;
+  }
   async signIn(email: string, password: string): Promise<AuthSession | null> {
-    if (!this.enroll || this.enroll.email !== email || this.enroll.password !== password) {
-      throw new Error('Sign in unavailable. Contact your administrator.');
+    if (
+      !this.enroll ||
+      this.enroll.email !== email ||
+      this.enroll.password !== password
+    ) {
+      throw new Error("Sign in unavailable. Contact your administrator.");
     }
-    this.setSession({ token: `TOKEN-${this.enroll.principalId}`, principalId: this.enroll.principalId, expiresAt: Date.now() + 10 * 60 * 1000 });
+    this.setSession({
+      token: `TOKEN-${this.enroll.principalId}`,
+      principalId: this.enroll.principalId,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
     return this.session;
   }
   setSession(session: AuthSession | null): void {
     this.session = session;
     for (const listener of this.listeners) listener();
   }
-  async signOut(): Promise<void> { this.setSession(null); }
+  async signOut(): Promise<void> {
+    this.setSession(null);
+  }
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 }
 
@@ -82,7 +103,13 @@ export class SupabaseAuthProvider implements AuthProvider {
       this.emit();
     });
   }
-  private mapSession(session: { access_token: string; user?: { id?: string } | null; expires_at?: number | null } | null): AuthSession | null {
+  private mapSession(
+    session: {
+      access_token: string;
+      user?: { id?: string } | null;
+      expires_at?: number | null;
+    } | null,
+  ): AuthSession | null {
     if (!session?.access_token || !session.user?.id) return null;
     return {
       token: session.access_token,
@@ -90,9 +117,14 @@ export class SupabaseAuthProvider implements AuthProvider {
       expiresAt: session.expires_at != null ? session.expires_at * 1000 : null,
     };
   }
-  getSession(): AuthSession | null { return this.cachedSession; }
+  getSession(): AuthSession | null {
+    return this.cachedSession;
+  }
   async signIn(email: string, password: string): Promise<AuthSession | null> {
-    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+    const { data, error } = await this.client.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) throw error;
     this.cachedSession = this.mapSession(data.session);
     this.emit();
@@ -105,9 +137,13 @@ export class SupabaseAuthProvider implements AuthProvider {
   }
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
-  private emit(): void { for (const listener of this.listeners) listener(); }
+  private emit(): void {
+    for (const listener of this.listeners) listener();
+  }
 }
 
 /**
@@ -127,22 +163,31 @@ export class SupabaseAuthProvider implements AuthProvider {
  */
 export class FailClosedAuthProvider implements AuthProvider {
   private readonly listeners = new Set<() => void>();
-  getSession(): AuthSession | null { return null; }
-  async signIn(_email: string, _password: string): Promise<AuthSession | null> {
-    throw new Error('Sign in unavailable. Contact your administrator.');
+  getSession(): AuthSession | null {
+    return null;
   }
-  async signOut(): Promise<void> { /* no session */ }
+  async signIn(_email: string, _password: string): Promise<AuthSession | null> {
+    throw new Error("Sign in unavailable. Contact your administrator.");
+  }
+  async signOut(): Promise<void> {
+    /* no session */
+  }
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 }
 
 /** Test-only injected seam (set by Playwright/DOM tests before app load). */
-export interface FlowsteadTestAuthGlobal { __FLOWSTEAD_TEST_AUTH__?: AuthProvider }
+export interface FlowsteadTestAuthGlobal {
+  __FLOWSTEAD_TEST_AUTH__?: AuthProvider;
+}
 
 export function createDefaultAuthProvider(): AuthProvider {
-  const injected = (globalThis as FlowsteadTestAuthGlobal).__FLOWSTEAD_TEST_AUTH__;
+  const injected = (globalThis as FlowsteadTestAuthGlobal)
+    .__FLOWSTEAD_TEST_AUTH__;
   if (injected) return injected;
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -155,4 +200,3 @@ export function createDefaultAuthProvider(): AuthProvider {
   }
   return new FailClosedAuthProvider();
 }
-

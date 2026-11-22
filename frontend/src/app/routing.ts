@@ -6,10 +6,14 @@
 export function plantIdFromLocation(): string | undefined {
   const match = window.location.pathname.match(/^\/plants\/([^/]+)\/?$/);
   if (!match) return undefined;
-  try { return decodeURIComponent(match[1]); } catch { return ''; }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return "";
+  }
 }
 
 export function navigate(path: string): void {
-  window.history.pushState({}, '', path);
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }

@@ -23,10 +23,14 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
-    files: ["e2e/**", "src/lib/exports/csv.ts"],
+    files: ["e2e/**", "src/lib/exports/csv.ts", "src/lib/exports/csv.test.ts"],
     rules: {
       // Legacy regexes deliberately escape quotes/control bytes in generated CSV and E2E inputs.
       "no-useless-escape": "off",

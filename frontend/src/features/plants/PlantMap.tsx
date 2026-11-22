@@ -1,13 +1,13 @@
-import * as maplibregl from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { PlantSummary } from '../../lib/api/types';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import * as maplibregl from "maplibre-gl";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { PlantSummary } from "../../lib/api/types";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
-const MAP_UNAVAILABLE_COPY = 'Map unavailable. Select a plant from the list.';
+const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const MAP_UNAVAILABLE_COPY = "Map unavailable. Select a plant from the list.";
 
 export interface PlantMapProps {
   plants: PlantSummary[];
@@ -50,29 +50,36 @@ export function PlantMap({ plants, onSelect, fallback }: PlantMapProps) {
       });
       map = createdMap;
       let styleLoaded = false;
-      createdMap.once('load', () => {
+      createdMap.once("load", () => {
         if (failed) return;
         styleLoaded = true;
         window.clearTimeout(timeout);
         setReady(true);
       });
-      createdMap.on('error', () => { if (!styleLoaded) failMap(); });
+      createdMap.on("error", () => {
+        if (!styleLoaded) failMap();
+      });
       // Some failed style requests never fire a MapLibre error. Keep the
       // geographic preview usable instead of leaving a blank map indefinitely.
       if (hasFallback) timeout = window.setTimeout(failMap, 12_000);
       const bounds = new maplibregl.LngLatBounds();
       for (const plant of plants) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'plant-marker';
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "plant-marker";
         button.dataset.plantId = plant.plant_id;
-        button.setAttribute('aria-label', `Open ${plant.name}`);
+        button.setAttribute("aria-label", `Open ${plant.name}`);
         button.title = plant.name;
-        button.addEventListener('click', () => selectRef.current(plant));
-        markers.push(new maplibregl.Marker({ element: button }).setLngLat([plant.location.longitude, plant.location.latitude]).addTo(createdMap));
+        button.addEventListener("click", () => selectRef.current(plant));
+        markers.push(
+          new maplibregl.Marker({ element: button })
+            .setLngLat([plant.location.longitude, plant.location.latitude])
+            .addTo(createdMap),
+        );
         bounds.extend([plant.location.longitude, plant.location.latitude]);
       }
-      if (!bounds.isEmpty()) createdMap.fitBounds(bounds, { padding: 56, maxZoom: 10, duration: 0 });
+      if (!bounds.isEmpty())
+        createdMap.fitBounds(bounds, { padding: 56, maxZoom: 10, duration: 0 });
     } catch {
       failMap();
     }
@@ -84,14 +91,38 @@ export function PlantMap({ plants, onSelect, fallback }: PlantMapProps) {
   }, [plants, hasFallback]);
 
   if (hasFallback) {
-    return <div className="map-with-preview" data-testid="map-with-preview">
-      {!unavailable && <div className="real-map" ref={mapNode} role="region" aria-label="Map of visible Plants" aria-hidden={!ready} inert={!ready} />}
-      {(!ready || unavailable) && <div className="map-preview-overlay">{fallback}</div>}
-    </div>;
+    return (
+      <div className="map-with-preview" data-testid="map-with-preview">
+        {!unavailable && (
+          <div
+            className="real-map"
+            ref={mapNode}
+            role="region"
+            aria-label="Map of visible Plants"
+            aria-hidden={!ready}
+            inert={!ready}
+          />
+        )}
+        {(!ready || unavailable) && (
+          <div className="map-preview-overlay">{fallback}</div>
+        )}
+      </div>
+    );
   }
-  if (unavailable) return <div className="map-fallback" data-testid="map-fallback" role="status"><strong>{MAP_UNAVAILABLE_COPY}</strong></div>;
-  return <div className="real-map" ref={mapNode} role="region" aria-label="Map of visible Plants" />;
+  if (unavailable)
+    return (
+      <div className="map-fallback" data-testid="map-fallback" role="status">
+        <strong>{MAP_UNAVAILABLE_COPY}</strong>
+      </div>
+    );
+  return (
+    <div
+      className="real-map"
+      ref={mapNode}
+      role="region"
+      aria-label="Map of visible Plants"
+    />
+  );
 }
 
 export { MAP_UNAVAILABLE_COPY, STYLE_URL };
-

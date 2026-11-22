@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { downloadBlob } from '../../lib/exports/download';
-import { svgToPng, type SvgToPngOptions } from '../../lib/exports/svgToPng';
+import { useEffect, useRef, useState } from "react";
+import { downloadBlob } from "../../lib/exports/download";
+import { svgToPng, type SvgToPngOptions } from "../../lib/exports/svgToPng";
 
 export const CHART_WIDTH = 760;
 export const CHART_HEIGHT = 300;
@@ -17,14 +17,36 @@ export function niceDomain(values: number[]): [number, number] {
   return [low - pad, high + pad];
 }
 
-export function formatNumber(value: number): string { return Number.isInteger(value) ? String(value) : value.toFixed(2); }
-
-export function xPosition(timestamp: Date, fromMs: number, toMs: number, width: number, padding: typeof CHART_PADDING): number {
-  return padding.left + ((timestamp.getTime() - fromMs) / Math.max(1, toMs - fromMs)) * (width - padding.left - padding.right);
+export function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
-export function yPosition(value: number, min: number, max: number, padding: typeof CHART_PADDING): number {
-  return CHART_HEIGHT - padding.bottom - ((value - min) / Math.max(1e-9, max - min)) * (CHART_HEIGHT - padding.top - padding.bottom);
+export function xPosition(
+  timestamp: Date,
+  fromMs: number,
+  toMs: number,
+  width: number,
+  padding: typeof CHART_PADDING,
+): number {
+  return (
+    padding.left +
+    ((timestamp.getTime() - fromMs) / Math.max(1, toMs - fromMs)) *
+      (width - padding.left - padding.right)
+  );
+}
+
+export function yPosition(
+  value: number,
+  min: number,
+  max: number,
+  padding: typeof CHART_PADDING,
+): number {
+  return (
+    CHART_HEIGHT -
+    padding.bottom -
+    ((value - min) / Math.max(1e-9, max - min)) *
+      (CHART_HEIGHT - padding.top - padding.bottom)
+  );
 }
 
 /** Tracks the rendered chart container width via ResizeObserver. */
@@ -33,10 +55,14 @@ export function useChartWidth() {
   const [chartWidth, setChartWidth] = useState(CHART_WIDTH);
   useEffect(() => {
     const element = chartRef.current;
-    if (!element || typeof ResizeObserver === 'undefined') return;
-    const updateWidth = (width: number) => { if (width > 0) setChartWidth(Math.round(width)); };
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const updateWidth = (width: number) => {
+      if (width > 0) setChartWidth(Math.round(width));
+    };
     updateWidth(element.getBoundingClientRect().width);
-    const observer = new ResizeObserver(([entry]) => updateWidth(entry?.contentRect.width ?? 0));
+    const observer = new ResizeObserver(([entry]) =>
+      updateWidth(entry?.contentRect.width ?? 0),
+    );
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -47,9 +73,14 @@ export function useChartWidth() {
 export function usePngExport() {
   const svgRef = useRef<SVGSVGElement>(null);
   const mountedRef = useRef(true);
-  const exportKeyRef = useRef('');
+  const exportKeyRef = useRef("");
   const [pngDownloading, setPngDownloading] = useState(false);
-  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const downloadPng = async (options: SvgToPngOptions, fileName: string) => {
     const svg = svgRef.current;
     if (!svg || pngDownloading) return;
@@ -57,7 +88,8 @@ export function usePngExport() {
     setPngDownloading(true);
     try {
       const blob = await svgToPng(svg, options);
-      if (mountedRef.current && requestKey === exportKeyRef.current) downloadBlob(blob, fileName);
+      if (mountedRef.current && requestKey === exportKeyRef.current)
+        downloadBlob(blob, fileName);
     } finally {
       if (mountedRef.current) setPngDownloading(false);
     }

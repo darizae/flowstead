@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { preferences, type PreferenceState } from '../lib/cache/preferences';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { preferences, type PreferenceState } from "../lib/cache/preferences";
 
 /** Loads and saves the current principal's UI preferences, clearing prior private state on switch. */
 export function usePreference(principalId?: string) {
@@ -12,9 +12,12 @@ export function usePreference(principalId?: string) {
     previousPrincipal.current = principalId;
     setPreference(undefined);
     setLoading(true);
-    const clearPrevious = previous && previous !== principalId
-      ? (principalId ? preferences.remove(previous) : preferences.clearPrivate())
-      : Promise.resolve();
+    const clearPrevious =
+      previous && previous !== principalId
+        ? principalId
+          ? preferences.remove(previous)
+          : preferences.clearPrivate()
+        : Promise.resolve();
     void clearPrevious
       .then(() => preferences.load(principalId))
       .then((value) => {
@@ -22,11 +25,16 @@ export function usePreference(principalId?: string) {
         setPreference(value);
         setLoading(false);
       });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [principalId]);
-  const save = useCallback((next: PreferenceState) => {
-    setPreference(next);
-    void preferences.save(next, principalId);
-  }, [principalId]);
+  const save = useCallback(
+    (next: PreferenceState) => {
+      setPreference(next);
+      void preferences.save(next, principalId);
+    },
+    [principalId],
+  );
   return { preference, loading, save };
 }

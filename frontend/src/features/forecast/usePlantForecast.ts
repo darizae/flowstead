@@ -1,16 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ApiClient } from '../../lib/api/client';
-import type { ForecastResponse } from '../../lib/api/types';
-import { useRequestState } from '../../shared/hooks/useRequestState';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ApiClient } from "../../lib/api/client";
+import type { ForecastResponse } from "../../lib/api/types";
+import { useRequestState } from "../../shared/hooks/useRequestState";
 
 /** Loads a Plant's forecast, gated on scope and Plant identity. */
-export function usePlantForecast(client: ApiClient, plantId: string | undefined, scopeKey = 'public') {
+export function usePlantForecast(
+  client: ApiClient,
+  plantId: string | undefined,
+  scopeKey = "public",
+) {
   const [forecast, setForecast] = useState<ForecastResponse>();
   const scopeRef = useRef(scopeKey);
   const scopeReady = scopeRef.current === scopeKey;
   const plantRef = useRef(plantId);
   const plantReady = plantRef.current === plantId;
-  const { loading, error, run, reset } = useRequestState(Boolean(plantId), 'Unable to load Plant forecast.');
+  const { loading, error, run, reset } = useRequestState(
+    Boolean(plantId),
+    "Unable to load Plant forecast.",
+  );
 
   const load = useCallback(async () => {
     if (!plantId) {
@@ -22,7 +29,7 @@ export function usePlantForecast(client: ApiClient, plantId: string | undefined,
       const result = await client.forecastPlant(plantId);
       setForecast(result);
     });
-  }, [client, plantId, run]);
+  }, [client, plantId, run, reset]);
 
   useEffect(() => {
     scopeRef.current = scopeKey;

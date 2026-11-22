@@ -7,7 +7,8 @@
 /** Parse a UTC timestamp, throwing a descriptive error on invalid input. */
 export function parseUtcTimestamp(value: string, what: string): Date {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) throw new RangeError(`Invalid ${what}: ${value}`);
+  if (!Number.isFinite(date.getTime()))
+    throw new RangeError(`Invalid ${what}: ${value}`);
   return date;
 }
 
