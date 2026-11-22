@@ -121,8 +121,8 @@ jobs:
       DATABASE_URL: postgresql://flowstead:flowstead_local@127.0.0.1:5432/flowstead
       NATS_URL: nats://127.0.0.1:4222
       FLOWSTEAD_ISOLATED_NATS_TEST: '1'
-      FLOWSTEAD_M1_MANIFEST: ${{ runner.temp }}/flowstead-m1/manifest.json
-      FLOWSTEAD_M1_DATA: ${{ runner.temp }}/flowstead-m1/telemetry.csv
+      FLOWSTEAD_M1_MANIFEST: ${{ github.workspace }}/flowstead-m1/manifest.json
+      FLOWSTEAD_M1_DATA: ${{ github.workspace }}/flowstead-m1/telemetry.csv
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -151,9 +151,9 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://flowstead:flowstead_local@127.0.0.1:5432/flowstead
-      FLOWSTEAD_M1_MANIFEST: ${{ runner.temp }}/flowstead-m1/manifest.json
-      FLOWSTEAD_M1_DATA: ${{ runner.temp }}/flowstead-m1/telemetry.csv
-      FLOWSTEAD_EVIDENCE_DIR: ${{ runner.temp }}/flowstead-browser-evidence
+      FLOWSTEAD_M1_MANIFEST: ${{ github.workspace }}/flowstead-m1/manifest.json
+      FLOWSTEAD_M1_DATA: ${{ github.workspace }}/flowstead-m1/telemetry.csv
+      FLOWSTEAD_EVIDENCE_DIR: ${{ github.workspace }}/flowstead-browser-evidence
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -177,6 +177,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: flowstead-browser-evidence
-          path: ${{ runner.temp }}/flowstead-browser-evidence/
+          path: ${{ github.workspace }}/flowstead-browser-evidence/
           if-no-files-found: ignore
           retention-days: 14
