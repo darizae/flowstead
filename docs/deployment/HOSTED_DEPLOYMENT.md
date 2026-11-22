@@ -132,3 +132,34 @@ confirmed users and all five scoped grants. No passwords, cookies,
 service-role keys, or JWTs were copied into Git or chat. Actual end-to-end
 authenticated API tests remain blocked until the existing VM completes
 its graceful restart and the restricted worker/API services are running.
+
+## Live application state — verified 2026-11-22 (supersedes earlier staging entries)
+
+The existing Oracle E2 micro now runs **four active systemd services**:
+`flowstead-api`, `flowstead-worker`, `flowstead-nats` and
+`flowstead-proxy`, with zero observed restarts. Two distinct, limited
+Supabase SQL roles are now LOGIN-enabled and were verified over
+certificate-validated TLS. Their credentials are held in separate
+role-owned `0640` VM environment files; the old
+`flowstead_runtime` role remains NOLOGIN without app privileges.
+A bootstrap defect confusing Postgres underscore roles with Linux hyphen
+groups was fixed; an HTTPS startup-race readiness retry was added.
+The updated password-free `--resume` finished **exit 0**, with API and
+worker startup and public smoke checks passing.
+
+**Verified live API:** `https://api.flowstead.darizae.dev/api/v1/health/live`,
+`/health/ready`, `/public/plants` (5 Plants), Plant 01 latest and
+Plant 01 report PDF all returned **HTTP 200**. Anonymous and
+obviously malformed bearer requests to private `/plants` returned
+**401**. Allowed frontend CORS preflight succeeded; untrusted origin
+was denied. The five pending ingestion events became `published`
+and are stored in the broker's durable JetStream. This proves
+publication, not authenticated forecast processing. NATS/API remain
+bound to loopback; Caddy alone serves public HTTPS.
+
+The two test operators are confirmed with disjoint Plant grants, but
+their actual browser JWT/Plant isolation and forecast generation flows
+have **not** been verified. Cost, restart/recovery, all export paths and
+retention checks are still open under T-017. Earlier passages that
+describe the worker/API as not installed or the roles as NOLOGIN are
+historical; this section is the latest verified state.

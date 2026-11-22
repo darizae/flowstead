@@ -22,6 +22,7 @@ import sys
 import time
 from pathlib import Path
 from urllib.parse import quote
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 import psycopg
@@ -229,10 +230,13 @@ def install_runtime_secrets(ip: str, role_passes: dict[str, str]) -> None:
         filename = "api.env" if role == "flowstead_api" else "worker.env"
         # Password contents are sent via encrypted stdin, never argv or chat.
         # Root:role 0640; cross-role reads blocked by Linux permissions.
+        # Database role names contain underscores, but Linux service groups
+        # use hyphens. Preserve this separation when setting file ownership.
+        linux_group = role.replace("_", "-")
         shell = (
-            "sudo -n sh -c 'umask 077; "
+            "sudo -n sh -c 'set -eu; umask 077; "
             "cat > /etc/flowstead/" + filename + "; "
-            "chown root:" + role + " /etc/flowstead/" + filename + "; "
+            "chown root:" + linux_group + " /etc/flowstead/" + filename + "; "
             "chmod 0640 /etc/flowstead/" + filename + "'"
         )
         print("Installing protected " + filename + " (contents never printed)...")
@@ -248,6 +252,30 @@ def install_runtime_secrets(ip: str, role_passes: dict[str, str]) -> None:
     print("Installed independent protected API and worker secrets on existing OCI VM.")
 
 
+def read_https_json_when_ready(path: str, *, startup_seconds: float = 45.0) -> object:
+    """Wait for the new API socket, not merely an active systemd process.
+
+    Caddy can briefly return 502 between systemctl start and uvicorn bind.
+    Only retry transient upstream/transport failures, never authentication or
+    application routing errors. No response bodies are logged.
+    """
+    deadline = time.monotonic() + startup_seconds
+    while True:
+        try:
+            with urlopen("https://" + API_HOST + path, timeout=8) as response:
+                if response.status != 200:
+                    raise RuntimeError("HTTPS API returned an unexpected status")
+                return json.loads(response.read(65536))
+        except HTTPError as error:
+            if error.code not in (502, 503, 504):
+                raise RuntimeError("HTTPS API returned unexpected status " + str(error.code)) from None
+        except (URLError, TimeoutError):
+            pass
+        if time.monotonic() >= deadline:
+            raise RuntimeError("HTTPS API did not become ready before startup deadline")
+        time.sleep(2)
+
+
 def launch_and_check(ip: str, worker_password: str) -> None:
     ssh(ip, "sudo -n systemctl start flowstead-worker")
     time.sleep(3)
@@ -255,13 +283,10 @@ def launch_and_check(ip: str, worker_password: str) -> None:
     ssh(ip, "sudo -n systemctl start flowstead-api")
     time.sleep(3)
     ssh(ip, "systemctl is-active --quiet flowstead-api")
-    with urlopen("https://" + API_HOST + "/api/v1/health/live", timeout=15) as r:
-        if r.status != 200:
-            raise RuntimeError("HTTPS API health did not return HTTP 200")
-    with urlopen("https://" + API_HOST + "/api/v1/public/plants", timeout=15) as r:
-        if r.status != 200:
-            raise RuntimeError("Public Plants API did not return HTTP 200")
-        payload = json.loads(r.read(65536))
+    health = read_https_json_when_ready("/api/v1/health/live")
+    if not isinstance(health, dict) or health.get("status") != "ok":
+        raise RuntimeError("HTTPS API returned unexpected health result")
+    payload = read_https_json_when_ready("/api/v1/public/plants")
     plants = payload.get("plants") if isinstance(payload, dict) else payload
     if not isinstance(plants, list) or len(plants) != 5:
         raise RuntimeError("Public API response must return exactly five Plants")

@@ -66,3 +66,74 @@ def test_bootstrap_defaults_to_read_only_preflight_and_no_secret_output() -> Non
     assert "sql.Literal(scram_verifier(role_passes[role]))" in text
     assert "input_text=stdin" not in text  # interactive password not sent to host
     assert 'Never log psycopg failure text' in text
+
+def test_bootstrap_installer_uses_linux_groups_and_stops_on_ownership_errors(monkeypatch) -> None:
+    script = _script()
+    calls: list[tuple[str, str | None]] = []
+
+    def capture_ssh(_ip: str, shell: str, *, data: str | None = None) -> None:
+        calls.append((shell, data))
+
+    monkeypatch.setattr(script, "ssh", capture_ssh)
+    script.install_runtime_secrets(
+        "127.0.0.1",
+        {"flowstead_api": "test-only-api", "flowstead_worker": "test-only-worker"},
+    )
+    api_install = [command for command, content in calls if content and "test-only-api" in content]
+    worker_install = [command for command, content in calls if content and "test-only-worker" in content]
+    assert len(api_install) == 1
+    assert len(worker_install) == 1
+    assert "set -eu;" in api_install[0] and "set -eu;" in worker_install[0]
+    assert "chown root:flowstead-api /etc/flowstead/api.env" in api_install[0]
+    assert "chown root:flowstead-worker /etc/flowstead/worker.env" in worker_install[0]
+    assert "chown root:flowstead_api" not in api_install[0]
+    assert "chown root:flowstead_worker" not in worker_install[0]
+    assert all("test-only" not in command for command, _ in calls)
+
+
+def test_https_readiness_retries_transient_502_without_logging_response(monkeypatch) -> None:
+    from urllib.error import HTTPError
+
+    script = _script()
+    attempts: list[str] = []
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _max_bytes: int) -> bytes:
+            return b'{"status":"ok"}'
+
+    def open_url(url: str, *, timeout: int):
+        attempts.append(url)
+        if len(attempts) == 1:
+            raise HTTPError(url, 502, "Bad Gateway", {}, None)
+        return Response()
+
+    monkeypatch.setattr(script, "urlopen", open_url)
+    monkeypatch.setattr(script.time, "sleep", lambda _seconds: None)
+
+    assert script.read_https_json_when_ready("/api/v1/health/live") == {"status": "ok"}
+    assert len(attempts) == 2
+
+
+def test_https_readiness_does_not_retry_authentication_errors(monkeypatch) -> None:
+    from urllib.error import HTTPError
+    import pytest
+
+    script = _script()
+    attempts = []
+
+    def open_url(url: str, *, timeout: int):
+        attempts.append(url)
+        raise HTTPError(url, 401, "Unauthorized", {}, None)
+
+    monkeypatch.setattr(script, "urlopen", open_url)
+    with pytest.raises(RuntimeError, match="unexpected status 401"):
+        script.read_https_json_when_ready("/api/v1/health/live")
+    assert len(attempts) == 1

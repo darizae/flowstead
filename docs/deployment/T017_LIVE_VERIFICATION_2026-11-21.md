@@ -271,3 +271,63 @@ origin DOMAIN/TLS passed, but application HTTPS 200, outbox dispatch,
 auth journeys, forecasting, provider billing and full T-017 remain incomplete.
 No extra VM, load balancer, paid hosting or unrelated Supabase project was
 created or changed.
+
+## 2026-11-22 live API and worker cutover — verified, supersedes earlier blockers
+
+- **Root-cause and repair:** The first successful role-login `--resume` run
+  installed both environment files but failed its OS-file-access check:
+  it used Postgres role names with underscores (`flowstead_api`,
+  `flowstead_worker`) as Unix groups. The actual Linux groups have hyphens
+  (`flowstead-api`, `flowstead-worker`). Files were `0640 root:root`,
+  preventing each service from reading its own DB credential. The installer
+  now maps role names to Linux groups and uses `set -eu` to fail on an
+  unsuccessful `chown`. A focused regression test verifies both behaviors.
+- **Startup handling:** A second attempt passed all file checks and started
+  both systemd services, but an immediate HTTPS smoke encountered a
+  **transient 502** while Uvicorn bound its socket. Added a bounded
+  readiness retry limited to HTTPS 502/503/504 and transport errors; actual
+  401 and other unexpected status codes fail immediately. Regression
+  tests cover a transient 502 and a non-retryable 401.
+- **Full bootstrap acceptance:** Running
+  `backend/.venv/bin/python scripts/provision_demo_runtime.py --resume`
+  with the existing private local credential file completed with **exit 0**,
+  without reentering the admin password: both restricted DB logins and
+  certificate-validated TLS PASS; protected VM file ACLs PASS; worker/API
+  systemd startup PASS; live HTTPS health and five public Plants PASS;
+  PostgreSQL pending outbox rows **0**.
+- **Live systemd and resource evidence:** Existing Oracle E2 micro RUNNING.
+  `flowstead-api`, `flowstead-worker`, `flowstead-nats` and
+  `flowstead-proxy` are all **active** with zero recorded restarts.
+  `api.env` is `0640 root:flowstead-api`; `worker.env` and
+  `nats-worker.env` are `0640 root:flowstead-worker`.
+  The API listens only on `127.0.0.1:8000`, NATS on
+  `127.0.0.1:4222` and `127.0.0.1:8222`; Caddy exposes 80/443.
+  Host reported approximately **945 MiB RAM**, **369 MiB available**,
+  **0 MiB of 497 MiB swap in use**. Worker and API used approximately
+  85 MiB and 93 MiB of memory, respectively.
+- **Real external HTTPS checks:** Both `/api/v1/health/live` and
+  `/api/v1/health/ready` returned **200 JSON**; `/api/v1/public/plants`
+  returned **200 JSON** with all five synthetic Plants;
+  `/api/v1/public/plants/plant-01/latest` returned **200 JSON**;
+  `/api/v1/public/plants/plant-01/report.pdf` returned **200**
+  `application/pdf` with a valid PDF header; unknown-Plant latest
+  returned **404**.
+- **Authentication/CORS negative checks:** Protected `/api/v1/plants`
+  denied anonymous and obviously forged-token requests with **401**.
+  CORS preflight from `https://flowstead.darizae.dev` returned **200**
+  with the matching allow-origin; untrusted origin was rejected with
+  **400** and no allow-origin.
+- **Message bridge:** Five original `app.message_outbox` rows moved from
+  `pending` to **`published`**, zero remain pending, and the NATS
+  JetStream monitoring endpoint reported one stream/one consumer/five
+  stored messages. `app.message_failures` was **0**. These observations
+  prove actual publishing, **not** a full authenticated forecast job
+  and processing path. `app.forecast_jobs` and
+  `app.forecast_issuances` still had zero rows.
+- **Remaining T-017 scope:** Authenticated browser sessions using both
+  confirmed test operators, real JWT cross-Plant authorization (positive
+  and negative), forecast request -> worker -> stored 12-hour forecast,
+  report/export access isolation, Caddy/NATS restart recovery, actual
+  OCI charges and retention controls remain to be independently tested.
+  This is a **LIVE API/WORKER deployment PASS, overall T-017 PARTIAL**.
+  No new VM or paid cloud resource was created in this cutover.
