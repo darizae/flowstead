@@ -4,7 +4,7 @@ When the owner explicitly assigns one task file under `docs/planning/tasks/`, **
 
 Read only the assigned task, relevant parts of `docs/planning/IMPLEMENTATION_SPEC.md`, owning source/tests and `.agents/skills/engineering-quality/SKILL.md`; consult `docs/planning/HANDOFF_SEQUENCE.md` only to understand the overall order, **not** to decide whether to start. Use the root `justfile` for real local commands. UI work additionally follows `docs/design/UI_UX_BASELINE.md`, `docs/design/reference/flowstead-ui.html` and `docs/design/UI_UX_PARITY_MATRIX.md`; tests use `docs/testing/INDEXED_TEST_PLAN.md` and `docs/testing/TEST_DATA_GUIDE.md`. Cloud-focused tasks use `docs/setup/DEPLOYMENT_ARCHITECTURE.md`.
 
-The owner's read-only example trees on the Mac are `/Users/danie/repos/repomix-static-reconstructor/reconstructed/analysis_b`, `/Users/danie/repos/repomix-static-reconstructor/reconstructed/integration_tests` and `/Users/danie/repos/repomix-static-reconstructor/reconstructed/toolkit`. Inspect only relevant task-named files; never copy/vendor or execute external example code. The Flowstead contract and current application interfaces win when examples differ.
+The owner's read-only example trees on the Mac are `/Users/danie/repos/_archive/repomix-static-reconstructor.pre-init-20261119/reconstructed/analysis_b`, `/Users/danie/repos/_archive/repomix-static-reconstructor.pre-init-20261119/reconstructed/integration_tests` and `/Users/danie/repos/_archive/repomix-static-reconstructor.pre-init-20261119/reconstructed/toolkit`. Inspect only relevant task-named files; never copy/vendor or execute external example code. The Flowstead contract and current application interfaces win when examples differ.
 
 ## Current backend ownership
 
