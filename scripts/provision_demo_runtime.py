@@ -217,6 +217,7 @@ def ssh(ip: str, shell: str, *, data: str | None = None) -> None:
 
 
 def install_runtime_secrets(ip: str, role_passes: dict[str, str]) -> None:
+    print("Checking VM services, users and CA...")
     ssh(ip,
         "test -f /etc/flowstead/supabase-root-2021.crt &&"
         " systemctl is-active --quiet flowstead-nats &&"
@@ -234,7 +235,9 @@ def install_runtime_secrets(ip: str, role_passes: dict[str, str]) -> None:
             "chown root:" + role + " /etc/flowstead/" + filename + "; "
             "chmod 0640 /etc/flowstead/" + filename + "'"
         )
+        print("Installing protected " + filename + " (contents never printed)...")
         ssh(ip, shell, data=make_env(role, role_passes[role]))
+    print("Verifying OS file-access boundaries...")
     ssh(ip,
         "sudo -n -u flowstead-api test -r /etc/flowstead/api.env &&"
         " sudo -n -u flowstead-worker test -r /etc/flowstead/worker.env &&"
@@ -273,27 +276,35 @@ def launch_and_check(ip: str, worker_password: str) -> None:
 def main() -> None:
     args = argparse.ArgumentParser()
     args.add_argument("--apply", action="store_true")
+    args.add_argument("--resume", action="store_true", help="Continue after roles were activated and validated")
     params = args.parse_args()
+    if params.apply and params.resume:
+        raise RuntimeError("Choose --apply or --resume, not both")
     verify_ca()
     ip = vm_ip()
     print("Preflight passed: CA and existing Oracle VM verified.")
-    if not params.apply:
-        print("Run with --apply in a private interactive Mac Terminal.")
+    if not params.apply and not params.resume:
+        print("Run with --apply in a private interactive Mac Terminal, or --resume after role activation.")
         return
-    if not sys.stdin.isatty():
-        raise RuntimeError("A private interactive Mac Terminal is required")
-    owner_pass = getpass.getpass(
-        "Enter the flowstead-demo Postgres DB password (hidden; never stored): "
-    )
-    if not owner_pass:
-        raise RuntimeError("No password supplied; reset it in Supabase DB Settings")
     role_passes = get_role_secrets()
-    try:
-        activate_roles(owner_pass, role_passes)
-        test_role_logins(role_passes)
-    finally:
-        owner_pass = ""
+    if params.apply:
+        if not sys.stdin.isatty():
+            raise RuntimeError("A private interactive Mac Terminal is required")
+        owner_pass = getpass.getpass(
+            "Enter the flowstead-demo Postgres DB password (hidden; never stored): "
+        )
+        if not owner_pass:
+            raise RuntimeError("No password supplied; reset it in Supabase DB Settings")
+        try:
+            activate_roles(owner_pass, role_passes)
+        finally:
+            owner_pass = ""
+    else:
+        print("Resuming after the already-successful database role activation; no admin password needed.")
+    test_role_logins(role_passes)
+    print("Starting VM-only credential installation.")
     install_runtime_secrets(ip, role_passes)
+    print("Starting API and worker services.")
     launch_and_check(ip, role_passes["flowstead_worker"])
     print("Complete: runtime services configured and checked.")
 

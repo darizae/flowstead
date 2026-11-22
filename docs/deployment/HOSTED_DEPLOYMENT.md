@@ -85,8 +85,8 @@ and uv 0.9.13, committed backend source, and frozen production Python
 dependencies in `/opt/flowstead/venv`. Imports of the FastAPI, PostgreSQL,
 JWT, reporting, NATS and SQLAlchemy libraries passed. Caddy and
 authenticated NATS JetStream are both systemd-active. API/worker systemd
-units are installed but intentionally INACTIVE while their individual DB
-logins are still NOLOGIN.
+units are installed but intentionally INACTIVE pending transfer of the
+now-activated role credentials over owner SSH.
 
 An authenticated Supabase Connect view confirmed the project session
 pooler is **`aws-1-eu-west-1.pooler.supabase.com:5432`**. The VM verified
@@ -94,28 +94,40 @@ TLSv1.3, the hostname and the Supabase Root 2021 trust anchor. Templates
 for API and worker are updated to use that host, the real project ref,
 an ES256 Auth issuer, and the exact frontend CORS origin.
 
-### Only required private credential action
+### Role activation completed; VM handoff interrupted (2026-11-22)
 
-In the owner's authenticated local Mac Terminal, use the read-only
-`scripts/provision_demo_runtime.py` preflight and then the interactive
-`--apply` mode. It prompts the owner **privately** for the existing
-`flowstead-demo` PostgreSQL administrator password, never storing or
-printing it. It creates or reuses two independent randomly generated
-local role passwords, sends only standard SCRAM verifiers to Postgres over
-certificate-validated TLS, verifies permission restrictions, installs
-two separate protected host env files over SSH stdin, then starts and
-smoke-tests worker/API. This is **prepared, not yet executed**. If the
-admin password is unknown, the owner must reset it in the project's
-Supabase Database Settings using their own authenticated session.
-No admin credential should be pasted in chat or committed.
+The owner ran `scripts/provision_demo_runtime.py --apply` from their private
+Mac Terminal and successfully activated both restricted Postgres logins
+using independent SCRAM verifiers. Both `flowstead_api` and
+`flowstead_worker` logged into the project session pooler with CA-verified
+TLS and passed least-privilege checks. The Postgres owner password was not
+stored. A generic RuntimeError interrupted the subsequent VM stage while
+SSH failed to return an SSH daemon banner. **Do not rerun `--apply` or reset
+any database credentials.** The two application secrets persist in the
+owner-only local `runtime-roles.json` file (mode 0600).
+
+The script now supports a password-free, idempotent resume command:
+
+```bash
+cd ~/repos/flowstead
+backend/.venv/bin/python scripts/provision_demo_runtime.py --resume
+```
+
+This rechecks both existing database logins, securely installs independent
+role-specific VM environment files using SSH stdin, checks cross-role file
+access denials, starts worker and API one at a time, then checks the real
+HTTPS API and remaining NATS outbox events. The VM must first complete its
+graceful recovery and present an SSH daemon banner. No API/worker hosted
+PASS may be recorded before a successful `--resume` and live smoke.
 
 ### Auth test-operator accounts
 
-No Auth test identities were created. The authenticated provider dashboard
-did reach Auth Users > Create new user, but the owner's Chrome password-manager
-extension's autofill overlay blocked browser automation. Owner needs only
-dismiss that overlay with Escape/click elsewhere in Chrome to retry.
-The proposed synthetic non-deliverable identifiers are
-`flowstead-test-operator-a@example.invalid` and
-`flowstead-test-operator-b@example.invalid`. No real recipient invitations
-may be sent; no direct SQL writes to managed `auth.users` are authorized.
+No Auth test identities have been verified as created. The owner clarified
+that the dialog **is the real Supabase Auth Admin Create new user form**,
+not a browser password-manager popup. The two proposed non-deliverable
+identifiers are `flowstead-test-operator-a@example.invalid` and
+`flowstead-test-operator-b@example.invalid`. Each requires a unique private
+password and **Auto confirm user** to avoid sending confirmation email.
+The owner can submit that real form twice. Verify resulting Auth user IDs
+before assigning distinct Plant entitlements; never insert directly into
+managed `auth.users` or invite unknown real email recipients.

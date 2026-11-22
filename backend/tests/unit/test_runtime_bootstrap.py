@@ -56,6 +56,11 @@ def test_bootstrap_envs_have_distinct_database_roles_and_no_admin_secret() -> No
 def test_bootstrap_defaults_to_read_only_preflight_and_no_secret_output() -> None:
     text = SCRIPT.read_text()
     assert 'args.add_argument("--apply", action="store_true")' in text
+    assert 'args.add_argument("--resume", action="store_true"' in text
+    assert 'if params.apply:\n' in text
+    assert 'test_role_logins(role_passes)' in text
+    assert 'install_runtime_secrets(ip, role_passes)' in text
+    assert 'Resuming after the already-successful database role activation' in text
     assert "getpass.getpass" in text
     assert "sys.stdin.isatty()" in text
     assert "sql.Literal(scram_verifier(role_passes[role]))" in text

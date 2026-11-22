@@ -227,7 +227,7 @@ committed `uv.lock` requirements in `/opt/flowstead/venv` using
 imported FastAPI, psycopg, NATS client, JWT, SQLAlchemy and report libraries.
 The broker and proxy remained active after installation; the host had >200 MiB
 memory available. API and worker systemd units are installed but remain
-**INACTIVE** pending restricted DB credentials.
+**INACTIVE** pending delivery of already-activated restricted role credentials to the VM.
 
 **Verified Supabase connection target — PASS (TLS, not DB login):** The
 authenticated project-specific Connect dialog identified session pooler
@@ -237,29 +237,32 @@ pooler TLS 1.3 certificate, hostname and Supabase Root 2021 CA with
 `Verification: OK` and correct pinned fingerprint. The earlier guessed
 `aws-0` endpoint was **not** the confirmed host.
 
-**Remaining credential gate — user action required:** Connected provider SQL
-credential-setting actions were blocked by the execution safety checks.
-The restricted roles `flowstead_api` and `flowstead_worker` remain
-**NOLOGIN**; no database-owner password was copied into a service. The
-source-controlled `scripts/provision_demo_runtime.py` has a successful
-read-only `--preflight`. Run its `--apply` mode in the owner's **private,
-interactive Mac Terminal**, entering only the existing project's Postgres
-password via hidden prompt. It generates two independent high-entropy
-credentials, sends only SCRAM verifiers to Postgres over verified TLS, checks
-grants, transfers the two secrets by SSH stdin into root-owned 0640 role files,
-then starts worker/API and verifies live public HTTPS response. This stage is
-**NOT executed** and should not be described as deployed until it passes.
+**Updated database status (2026-11-22) — activated and verified:** The owner ran
+`scripts/provision_demo_runtime.py --apply` in their private Mac Terminal.
+Both `flowstead_api` and `flowstead_worker` database roles now have LOGIN,
+and their individually generated high-entropy credentials succeeded against
+the Supabase session pooler over verified TLS. Postgres owner credentials
+were not stored. The script exited with a generic RuntimeError **after** those
+checks, before it reported VM credential installation; the later VM SSH
+preflight timed out without a server SSH banner. Existing app role passwords
+are still in the owner-only, local `runtime-roles.json` file and MUST NOT be
+regenerated or shared. The updated script supports `--resume` to recheck both
+existing logins and continue secure VM secret-file installation and service
+startup without asking for the database administrator password. The VM was
+placed through one graceful SOFTRESET for an unresponsive SSH daemon; its
+stop/restart and any resumed run must be verified, not assumed complete.
 
-**Test identities — BLOCKED by UI:** Auth Dashboard had a valid authenticated
-browser-relay session. Attempts to create two non-deliverable test identities
-at `flowstead-test-operator-a@example.invalid` and
-`flowstead-test-operator-b@example.invalid` were blocked by the owner's
-Chrome password-manager autofill extension intercepting the password input
-dialog. No users or grants were created (read-only `auth.users=0`).
-Close the autofill popup (Escape or click elsewhere), then retry through the
-Supabase Auth Admin Create User UI, without sending emails to unrelated
-real addresses or writing directly to `auth.users`. Assign distinct Plant
-grants only after obtaining actual Auth subject UUIDs.
+**Test identities — USER FORM OPEN, NOT AN EXTENSION POPUP:** The owner
+confirmed the visible Supabase Auth Admin dialog is the actual *Create a new
+user* form, with Email address, User Password and Auto confirm user. The
+previous browser-agent interpretation as an autofill popup was incorrect.
+As of the most recent SQL verification, no matching users exist for
+`flowstead-test-operator-a@example.invalid` or
+`flowstead-test-operator-b@example.invalid`. Create each test identity with a
+unique private password and Auto confirm enabled, **without inviting real
+third-party inboxes**. Do not store or share credentials in chat. Obtain the
+two real `auth.users.id` values and grant intentionally different Plant IDs
+through reviewed operator authorization DML before conducting T-017 E2E tests.
 
 **Current release conclusion:** Frontend DOMAIN/TLS/FAVICON passed. Backend
 origin DOMAIN/TLS passed, but application HTTPS 200, outbox dispatch,
