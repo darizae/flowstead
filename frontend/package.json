@@ -10,6 +10,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src e2e *.config.ts",
+    "format": "prettier --write 'src/**/*.{ts,tsx,css}' '*.{ts,js,json}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx,css}' '*.{ts,js,json}'",
+    "test:coverage": "vitest --config vitest.config.ts run --coverage",
     "test": "vitest --config vitest.config.ts",
     "audit": "npm audit --audit-level=moderate",
     "e2e": "playwright test"
@@ -26,6 +30,7 @@
     "vite": "8.3.8"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "1.57.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.0",
@@ -33,9 +38,15 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.6",
     "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "^4.1.12",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "fake-indexeddb": "6.2.4",
+    "globals": "^16.5.0",
     "jsdom": "27.1.0",
+    "prettier": "^3.10.1",
     "typescript": "6.0.3",
+    "typescript-eslint": "^8.73.0",
     "vitest": "4.1.12"
   }
 }

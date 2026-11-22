@@ -3,7 +3,7 @@
 set dotenv-load := true
 
 db-up:
-    python3 backend/tests/db_lifecycle.py
+    python3 scripts/db_lifecycle.py
 
 db-down:
     docker compose down
@@ -41,7 +41,7 @@ test-message-unit:
     uv run --project backend pytest -q backend/tests/unit/test_messages.py
 
 test-message-integration:
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     docker compose up -d --wait nats
     FLOWSTEAD_ISOLATED_NATS_TEST=1 uv run --project backend pytest -q backend/tests/integration/test_messaging.py
 
@@ -49,17 +49,39 @@ test-forecast-unit:
     uv run --project backend pytest -q backend/tests/unit/test_forecast.py
 
 test-forecast-integration:
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_forecast.py
 
 check-backend:
+    python3 scripts/check_architecture.py
+    uv run --project backend ruff check backend/src backend/importer.py backend/migrate.py backend/tests
+    uv run --project backend ruff format --check backend/src backend/importer.py backend/migrate.py backend/tests
     uv run --project backend python -m compileall -q backend
+
+format-backend:
+    uv run --project backend ruff check --fix backend/src backend/importer.py backend/migrate.py backend/tests
+    uv run --project backend ruff format backend/src backend/importer.py backend/migrate.py backend/tests
+
+lint: check-backend
+    npm --prefix frontend run lint
+    npm --prefix frontend run format:check
+
+format: format-backend
+    npm --prefix frontend run format
+
+test: test-backend-unit test-frontend-unit
+
+coverage:
+    uv run --project backend --with pytest-cov pytest --cov=flowstead_api.domain --cov-fail-under=60 --cov-report=term-missing backend/tests/unit
+    npm --prefix frontend run test:coverage
+
+check: lint frontend-typecheck test docs-check
 
 test-backend-unit:
     uv run --project backend pytest -q backend/tests/unit
 
 test-db-integration:
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration
 
 audit-backend:
@@ -80,12 +102,12 @@ test-report:
 
 
 test-api-integration:
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_api.py
 
 test-auth:
     uv run --project backend pytest -q backend/tests/unit/test_auth.py
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_auth.py
 
 # T-014 dev smoke: proves the local half of the Supabase integration without a
@@ -97,7 +119,7 @@ dev-smoke:
     #!/usr/bin/env zsh
     set -euo pipefail
     export DATABASE_URL="${DATABASE_URL:-postgresql://flowstead:flowstead_local@127.0.0.1:${POSTGRES_PORT:-54329}/flowstead}"
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     uv run --project backend pytest -q backend/tests/integration/test_migrations.py -k "head or stamp or reversible"
     uv run --project backend pytest -q backend/tests/unit/test_auth.py
     uv run --project backend pytest -q backend/tests/integration/test_auth.py
@@ -169,7 +191,7 @@ test-e2e-local:
     #!/usr/bin/env zsh
     set -euo pipefail
     export DATABASE_URL="${DATABASE_URL:-postgresql://flowstead:flowstead_local@127.0.0.1:${POSTGRES_PORT:-54329}/flowstead}"
-    python3 backend/tests/db_lifecycle.py --require-database-url
+    python3 scripts/db_lifecycle.py --require-database-url
     uv run --project backend python frontend/e2e/run_local.py
 
 # One-command local stack: Docker PostgreSQL + NATS, Alembic upgrade, JetStream
@@ -182,7 +204,7 @@ dev:
     export DATABASE_URL="${DATABASE_URL:-postgresql://flowstead:flowstead_local@127.0.0.1:${POSTGRES_PORT:-54329}/flowstead}"
     export NATS_URL="${NATS_URL:-nats://127.0.0.1:${NATS_PORT:-42229}}"
     # flowstead_api.database imports backend.importer; the repo root must be
-    # importable (same contract as backend/tests/db_lifecycle.py consumers).
+    # importable (same contract as scripts/db_lifecycle.py consumers).
     export PYTHONPATH="{{ justfile_directory() }}${PYTHONPATH:+:$PYTHONPATH}"
 
     for port in 8000 5173; do

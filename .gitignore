@@ -24,6 +24,9 @@ frontend/dist/
 frontend/test-results/
 frontend/playwright-report/
 frontend/tsconfig.tsbuildinfo
+frontend/coverage/
+.coverage
+coverage.xml
 docs/design/evidence/playwright-report/
 docs/design/evidence/playwright-test-results/
 .omp/

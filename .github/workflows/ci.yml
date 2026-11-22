@@ -27,6 +27,11 @@ jobs:
           enable-cache: true
       - name: Sync locked dependencies
         run: uv sync --project backend --frozen
+      - name: Ruff lint and format
+        run: |
+          python3 scripts/check_architecture.py
+          uv run --project backend --frozen ruff check backend/src backend/importer.py backend/migrate.py backend/tests
+          uv run --project backend --frozen ruff format --check backend/src backend/importer.py backend/migrate.py backend/tests
       - name: Run backend unit tests
         run: uv run --project backend pytest -q backend/tests/unit
 
@@ -49,6 +54,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
         working-directory: frontend
+      - name: Lint and formatting
+        run: |
+          npm run lint
+          npm run format:check
+        working-directory: frontend
       - name: Unit tests
         run: npm test -- --run
         working-directory: frontend
@@ -65,3 +75,31 @@ jobs:
         uses: actions/checkout@v4
       - name: Run docs check
         run: python3 scripts/docs_check.py
+
+  backend-integration:
+    name: Backend PostgreSQL and NATS integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: flowstead
+          POSTGRES_PASSWORD: flowstead_local
+          POSTGRES_DB: flowstead
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flowstead -d flowstead"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://flowstead:flowstead_local@127.0.0.1:5432/flowstead
+      NATS_URL: nats://127.0.0.1:4222
+      FLOWSTEAD_ISOLATED_NATS_TEST: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Start JetStream-enabled NATS
+        run: docker run --detach --name flowstead-ci-nats -p 4222:4222 nats:2.12-alpine -js
+      - run: uv sync --project backend --frozen
+      - run: uv run --project backend --frozen pytest -q backend/tests/integration
