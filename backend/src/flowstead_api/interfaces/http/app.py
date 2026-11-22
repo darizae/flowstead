@@ -5,14 +5,15 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ...auth import (
+from ...database import Database
+from ...infrastructure.auth import (
     AuthConfigurationError,
     TokenVerifier,
     UnavailableVerifier,
-    verifier_from_env,
+    verifier_from_config,
 )
-from ...database import Database
 from ...security import ClientRateLimiter, HttpSecurityMiddleware, SecurityConfig
+from ...settings import ApiSettings
 from .routers.forecasts import router as forecasts_router
 from .routers.health import router as health_router
 from .routers.plants import router as plants_router
@@ -25,7 +26,22 @@ def create_app(
     security_config: SecurityConfig | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Flowstead API", version="0.1.0")
-    security = security_config or SecurityConfig.from_env()
+    auth_configuration_error: str | None = None
+    try:
+        settings = ApiSettings.from_env(
+            database_url=database_url,
+            auth_required=auth_verifier is None,
+            security_config=security_config,
+        )
+    except AuthConfigurationError as error:
+        auth_configuration_error = str(error)
+        settings = ApiSettings.from_env(
+            database_url=database_url,
+            auth_required=False,
+            security_config=security_config,
+        )
+    security = settings.security
+    app.state.settings = settings
     if security.cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -41,7 +57,7 @@ def create_app(
             max_age=600,
         )
     app.add_middleware(HttpSecurityMiddleware, config=security)
-    app.state.database = Database(database_url)
+    app.state.database = Database(settings.database_url)
     # Per-principal+Plant bound on forecast-request submission, independent of
     # the shared per-IP HTTP limiter: an authenticated operator cannot amplify
     # DB/outbox/JetStream work beyond this rate per Plant (SEC19-03).
@@ -60,9 +76,14 @@ def create_app(
     if auth_verifier is not None:
         app.state.auth_verifier = auth_verifier
         app.state.auth_configuration_error = None
+    elif auth_configuration_error is not None:
+        app.state.auth_verifier = UnavailableVerifier()
+        app.state.auth_configuration_error = auth_configuration_error
     else:
         try:
-            app.state.auth_verifier = verifier_from_env()
+            if settings.auth is None:
+                raise AuthConfigurationError("authentication settings are unavailable")
+            app.state.auth_verifier = verifier_from_config(settings.auth)
             app.state.auth_configuration_error = None
         except AuthConfigurationError as error:
             app.state.auth_verifier = UnavailableVerifier()

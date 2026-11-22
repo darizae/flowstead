@@ -21,8 +21,6 @@ from .infrastructure.messaging.transport import (
     PUBLISH_TIMEOUT_SECONDS,
     RETRY_DELAYS_SECONDS,
     STREAM_NAME,
-    _database_url,
-    _nats_url,
     connect,
     dispatch_once,
     ensure_topology,
@@ -36,6 +34,7 @@ from .infrastructure.messaging.worker import (
     record_terminal_request_failure,
     worker_once,
 )
+from .settings import WorkerSettings
 
 __all__ = [
     "ACK_WAIT_SECONDS",
@@ -105,8 +104,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--database-url")
     parser.add_argument("--nats-url")
     args = parser.parse_args(argv)
-    database_url = _database_url(args.database_url)
-    nats_url = _nats_url(args.nats_url)
+    settings = WorkerSettings.from_env(
+        database_url=args.database_url,
+        nats_url=args.nats_url,
+    )
+    database_url = settings.database_url
+    nats_url = settings.nats_url
     if args.mode == "run":
         asyncio.run(run_service(database_url, nats_url))
         return 0

@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response
 
 from ....application.reports import report_data
-from ....auth import Principal, get_current_principal
+from ....infrastructure.auth import Principal, get_current_principal
 from ....report import render_report
 from ..mappers import (
     history_response,

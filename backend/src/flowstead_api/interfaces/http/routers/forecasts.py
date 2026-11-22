@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from ....auth import Principal, get_current_principal
+from ....infrastructure.auth import Principal, get_current_principal
 from ..mappers import forecast_job_response, forecast_response, not_found
 from ..schemas import ForecastJobResponse, ForecastResponse
 
