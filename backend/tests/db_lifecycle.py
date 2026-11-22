@@ -1,5 +1,11 @@
 """Compatibility imports for legacy unit tests; implementation is in scripts/."""
 
+import sys
+from pathlib import Path
+
+# Direct invocation sets sys.path[0] to backend/tests, not the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from scripts.db_lifecycle import (  # noqa: F401
     COMPOSE_FILE,
     PROJECT_ROOT,
