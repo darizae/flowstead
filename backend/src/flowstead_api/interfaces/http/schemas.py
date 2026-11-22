@@ -94,7 +94,7 @@ class LatestReading(BaseModel):
 
     plant_id: str
     timestamp_utc: datetime
-    latest: Literal[True] = True
+    latest: Literal[True]
     measurements: Measurements
 
     @field_serializer("timestamp_utc")
@@ -105,7 +105,7 @@ class LatestReading(BaseModel):
 class LatestResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    latest: Literal[True] = True
+    latest: Literal[True]
     plant: PlantSummary
     reading: LatestReading
 
@@ -115,7 +115,7 @@ class HistoryReading(BaseModel):
 
     plant_id: str
     timestamp_utc: datetime
-    latest: Literal[False] = False
+    latest: Literal[False]
     measurements: Measurements
 
     @field_serializer("timestamp_utc")
@@ -129,7 +129,7 @@ class HistoryResponse(BaseModel):
     plant: PlantSummary
     from_utc: datetime
     to_utc: datetime
-    readings: list[HistoryReading] = Field(default_factory=list)
+    readings: list[HistoryReading]
 
     @field_serializer("from_utc", "to_utc")
     def serialize_window(self, value: datetime) -> str:
@@ -142,7 +142,7 @@ class ForecastHour(BaseModel):
     hour_number: int = Field(ge=1, le=12)
     target_time_utc: datetime
     predicted_flow_gal_h: float
-    units: Literal["gal/h"] = "gal/h"
+    units: Literal["gal/h"]
     source: Literal["seasonal_naive_24h", "persistence_6h", "stored"]
 
     @field_serializer("target_time_utc")
@@ -159,8 +159,8 @@ class ForecastResponse(BaseModel):
     model_version: str
     source_revision: str | None
     physical_bound_rule: str
-    forecasts: list[ForecastHour] = Field(default_factory=list)
-    unavailable_reason: str | None = None
+    forecasts: list[ForecastHour]
+    unavailable_reason: str | None
 
     @field_serializer("issued_at_utc")
     def serialize_issued_at(self, value: datetime | None) -> str | None:
@@ -175,11 +175,15 @@ class ForecastJobResponse(BaseModel):
     plant_id: str
     status: Literal["queued", "processing", "completed", "failed"]
     requested_at_utc: datetime
-    completed_at_utc: datetime | None = None
-    diagnostic: str | None = None
+    completed_at_utc: datetime | None
+    diagnostic: str | None
 
-    @field_serializer("requested_at_utc", "completed_at_utc")
-    def serialize_job_time(self, value: datetime | None) -> str | None:
+    @field_serializer("requested_at_utc")
+    def serialize_requested_time(self, value: datetime) -> str:
+        return _utc_iso(value)
+
+    @field_serializer("completed_at_utc")
+    def serialize_completed_time(self, value: datetime | None) -> str | None:
         return None if value is None else _utc_iso(value)
 
 
@@ -192,7 +196,7 @@ class PlantListResponse(BaseModel):
 class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["ok"] = "ok"
+    status: Literal["ok"]
 
 
 def _utc_iso(value: datetime) -> str:

@@ -76,9 +76,9 @@ def plant_summary(plant: PlantRow, *, public: bool) -> PlantSummary:
         name=plant.name,
         location=PlantLocation(
             city=plant.city,
-            state_code=plant.state_code,
-            latitude=plant.latitude,
-            longitude=plant.longitude,
+            state_code=plant.state_code,  # type: ignore[arg-type]
+            latitude=float(plant.latitude),  # type: ignore[arg-type]
+            longitude=float(plant.longitude),  # type: ignore[arg-type]
         ),
         timezone=plant.timezone,
         links=PlantLinks(
@@ -91,11 +91,13 @@ def plant_summary(plant: PlantRow, *, public: bool) -> PlantSummary:
 
 def latest_response(plant: PlantRow, reading: ReadingRow, *, public: bool) -> LatestResponse:
     return LatestResponse(
+        latest=True,
         plant=plant_summary(plant, public=public),
         reading=LatestReading(
             plant_id=reading.plant_id,
             timestamp_utc=reading.timestamp_utc,
             measurements=_measurements(reading),
+            latest=True,
         ),
     )
 
@@ -117,6 +119,7 @@ def history_response(
                 plant_id=reading.plant_id,
                 timestamp_utc=reading.timestamp_utc,
                 measurements=_measurements(reading),
+                latest=False,
             )
             for reading in readings
         ],
@@ -145,7 +148,7 @@ def forecast_response(result: ForecastRead, *, public: bool) -> ForecastResponse
                 target_time_utc=point.target_time_utc,
                 predicted_flow_gal_h=float(point.predicted_flow_gal_h),
                 units="gal/h",
-                source=point.source,
+                source=point.source,  # type: ignore[arg-type]
             )
             for point in build.points
         ],
@@ -165,7 +168,7 @@ def forecast_job_response(job: ForecastJob) -> ForecastJobResponse:
         request_event_id=job.request_event_id,
         correlation_id=job.correlation_id,
         plant_id=job.plant_id,
-        status=job.status,
+        status=job.status,  # type: ignore[arg-type]
         requested_at_utc=job.requested_at,
         completed_at_utc=job.completed_at,
         diagnostic=job.diagnostic,
@@ -177,20 +180,26 @@ def _measurements(reading: ReadingRow) -> Measurements:
     qualities = reading.qualities
     return Measurements(
         influent_flow=FlowMeasurement(
-            value=_number(values[0]), quality=qualities[0], units="gal/h"
+            value=_number(values[0]),
+            quality=qualities[0],
+            units="gal/h",  # type: ignore[arg-type]
         ),
-        rainfall=RainfallMeasurement(value=_number(values[1]), quality=qualities[1], units="in/h"),
+        rainfall=RainfallMeasurement(value=_number(values[1]), quality=qualities[1], units="in/h"),  # type: ignore[arg-type]
         dissolved_oxygen=DissolvedOxygenMeasurement(
-            value=_number(values[2]), quality=qualities[2], units="mg/L"
+            value=_number(values[2]),
+            quality=qualities[2],
+            units="mg/L",  # type: ignore[arg-type]
         ),
         effluent_ph=EffluentPhMeasurement(
-            value=_number(values[3]), quality=qualities[3], units="unitless"
+            value=_number(values[3]),
+            quality=qualities[3],
+            units="unitless",  # type: ignore[arg-type]
         ),
     )
 
 
 def _number(value: object) -> float | None:
-    return None if value is None else float(value)
+    return None if value is None else float(value)  # type: ignore[arg-type]
 
 
 def not_found() -> HTTPException:

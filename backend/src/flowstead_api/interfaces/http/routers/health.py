@@ -11,7 +11,7 @@ router = APIRouter(tags=["system"])
 
 @router.get("/api/v1/health/live", response_model=HealthResponse)
 def health_live() -> HealthResponse:
-    return HealthResponse()
+    return HealthResponse(status="ok")
 
 
 @router.get("/api/v1/health/ready", response_model=HealthResponse)
@@ -24,9 +24,9 @@ def health_ready(request: Request) -> HealthResponse:
             status_code=503,
             detail={"code": "not_ready", "message": "database is not reachable"},
         ) from error
-    return HealthResponse()
+    return HealthResponse(status="ok")
 
 
 @router.get("/api/v1/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse()
+    return HealthResponse(status="ok")

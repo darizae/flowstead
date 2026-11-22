@@ -4,3 +4,6 @@ coverage
 test-results
 playwright-report
 package-lock.json
+# Auto-generated from the backend OpenAPI contract (audit #29)
+src/lib/api/generated
+openapi.json

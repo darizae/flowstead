@@ -10,6 +10,8 @@ export default tseslint.config(
       "node_modules/**",
       "playwright-report/**",
       "test-results/**",
+      // Auto-generated from the backend OpenAPI contract (audit #29)
+      "src/lib/api/generated/**",
     ],
   },
   js.configs.recommended,

@@ -75,7 +75,7 @@ coverage:
     uv run --project backend --with pytest-cov pytest --cov=flowstead_api.domain --cov-fail-under=60 --cov-report=term-missing backend/tests/unit
     npm --prefix frontend run test:coverage
 
-check: lint frontend-typecheck test docs-check
+check: lint typecheck-backend frontend-typecheck test docs-check
 
 test-backend-unit:
     uv run --project backend pytest -q backend/tests/unit
@@ -132,6 +132,10 @@ test-frontend-unit:
 
 frontend-typecheck:
     npm --prefix frontend run typecheck
+
+# Audit #45: strict static typing over the pure domain/application modules.
+typecheck-backend:
+    cd backend && uv run mypy
 
 frontend-build:
     npm --prefix frontend run build

@@ -30,3 +30,5 @@ coverage.xml
 docs/design/evidence/playwright-report/
 docs/design/evidence/playwright-test-results/
 .omp/
+# Workspace-only tooling installs
+/node_modules/
