@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import os
-import subprocess
+import socket
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import psycopg
@@ -23,30 +24,24 @@ from backend.importer import (
     import_m1,
 )
 from backend.tests.auth_helpers import install_test_principal, principal_headers
+from backend.tests.integration.nats_harness import NatsHarness, start_nats, stop_nats
 from fastapi.testclient import TestClient
-from nats.errors import NoServersError
-from nats.js.errors import NotFoundError
 
 from flowstead_api.forecast import MODEL_VERSION
 from flowstead_api.main import create_app
 from flowstead_api.message_store import insert_outbox
 from flowstead_api.messages import FORECAST_REQUESTED, ForecastRequested
 from flowstead_api.messaging import (
-    FORECAST_DURABLE,
     MAX_DELIVERIES,
-    STREAM_NAME,
     connect,
     dispatch_once,
     ensure_topology,
     worker_once,
 )
 
-NATS_URL = os.environ.get("NATS_URL", "nats://127.0.0.1:42229")
-REPO_ROOT = Path(__file__).resolve().parents[3]
-
 
 @pytest.fixture
-def seeded_url(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> str:
+def seeded_url(isolated_service_url: str) -> str:
     with psycopg.connect(isolated_service_url) as connection, connection.transaction():
         batch_id = connection.execute(
             """
@@ -107,6 +102,16 @@ def seeded_url(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> st
                 [("operator-a", "plant-01"), ("operator-a", "plant-02")],
             )
     return isolated_service_url
+
+
+@pytest.fixture
+def isolated_nats() -> Iterator[NatsHarness]:
+    """Provide one function-owned broker without changing process-wide state."""
+    harness = start_nats()
+    try:
+        yield harness
+    finally:
+        stop_nats(harness)
 
 
 def _client(url: str) -> TestClient:
@@ -261,26 +266,17 @@ def test_forecast_status_is_requester_scoped_across_shared_plant_reads(
     )
 
 
-async def _reset_isolated_broker() -> None:
-    assert os.environ.get("FLOWSTEAD_ISOLATED_NATS_TEST") == "1"
-    client = await connect(NATS_URL)
+async def _ensure_isolated_broker(nats_url: str) -> None:
+    client = await connect(nats_url)
     try:
         js = client.jetstream()
-        try:
-            await js.purge_stream(STREAM_NAME)
-        except NotFoundError:
-            pass
-        try:
-            await js.delete_consumer(STREAM_NAME, FORECAST_DURABLE)
-        except NotFoundError:
-            pass
         await ensure_topology(js)
     finally:
         await client.drain()
 
 
-async def _dispatch(url: str) -> int:
-    client = await connect(NATS_URL)
+async def _dispatch(nats_url: str, url: str) -> int:
+    client = await connect(nats_url)
     try:
         js = client.jetstream()
         await ensure_topology(js)
@@ -289,8 +285,8 @@ async def _dispatch(url: str) -> int:
         await client.drain()
 
 
-async def _work(url: str, count: int = 1) -> list[int]:
-    client = await connect(NATS_URL)
+async def _work(nats_url: str, url: str, count: int = 1) -> list[int]:
+    client = await connect(nats_url)
     try:
         js = client.jetstream()
         await ensure_topology(js)
@@ -299,15 +295,12 @@ async def _work(url: str, count: int = 1) -> list[int]:
         await client.drain()
 
 
-@pytest.mark.skipif(
-    os.environ.get("FLOWSTEAD_ISOLATED_NATS_TEST") != "1",
-    reason="set by the isolated local JetStream acceptance recipe",
-)
 def test_import_events_commit_atomically_and_publish_to_real_jetstream(
-    isolated_service_url: str, tmp_path: Path
+    isolated_service_url: str, isolated_nats: NatsHarness, tmp_path: Path
 ) -> None:
     """Case: MSG-M4B-PUBLISH"""
-    asyncio.run(_reset_isolated_broker())
+    nats_url = isolated_nats.url
+    asyncio.run(_ensure_isolated_broker(nats_url))
     manifest, data = _write_bounded_import(tmp_path)
 
     assert import_m1(isolated_service_url, manifest, data, SOURCE_SHA)
@@ -332,7 +325,7 @@ def test_import_events_commit_atomically_and_publish_to_real_jetstream(
             for row in rows
         )
 
-    assert asyncio.run(_dispatch(isolated_service_url)) == 5
+    assert asyncio.run(_dispatch(nats_url, isolated_service_url)) == 5
     with psycopg.connect(isolated_service_url) as connection:
         assert connection.execute(
             """
@@ -348,24 +341,30 @@ def test_import_events_commit_atomically_and_publish_to_real_jetstream(
         assert connection.execute("SELECT count(*) FROM app.message_outbox").fetchone() == before
 
 
-@pytest.mark.skipif(
-    os.environ.get("FLOWSTEAD_ISOLATED_NATS_TEST") != "1",
-    reason="set by the isolated local JetStream acceptance recipe",
-)
 def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
-    seeded_url: str,
+    seeded_url: str, isolated_nats: NatsHarness
 ) -> None:
     """Cases: MSG-M4B-FLOW, MSG-M4B-DUP, MSG-M4B-OUTAGE, MSG-M4B-PAUSE, MSG-M4B-POISON"""
-    asyncio.run(_reset_isolated_broker())
+    nats_url = isolated_nats.url
+    asyncio.run(_ensure_isolated_broker(nats_url))
     client = _client(seeded_url)
     queued = client.post("/api/v1/plants/plant-01/forecast-requests", headers=_headers()).json()
 
     # A real controlled broker stop cannot change the committed queue or break
     # ordinary reads; restarting the same JetStream volume resumes delivery.
-    subprocess.run(["docker", "compose", "stop", "nats"], cwd=REPO_ROOT, check=True)
+    isolated_nats.stop()
     try:
-        with pytest.raises(NoServersError):
-            asyncio.run(connect(NATS_URL))
+        # A stopped broker must refuse new TCP connections. Calling the
+        # production NATS reconnecting transport here can hang indefinitely,
+        # so use an explicitly bounded socket-level outage probe instead.
+        parsed = urlsplit(nats_url)
+        with (
+            pytest.raises(OSError),
+            socket.create_connection(
+                (parsed.hostname or "127.0.0.1", parsed.port or 4222), timeout=1
+            ),
+        ):
+            pytest.fail("owned NATS broker remained reachable after stop")
         assert client.get("/api/v1/public/plants/plant-01/latest").status_code == 200
         assert (
             client.get(
@@ -380,13 +379,9 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
                 (queued["request_event_id"],),
             ).fetchone() == ("pending",)
     finally:
-        subprocess.run(
-            ["docker", "compose", "up", "-d", "--wait", "nats"],
-            cwd=REPO_ROOT,
-            check=True,
-        )
+        isolated_nats.start()
 
-    assert asyncio.run(_dispatch(seeded_url)) == 1
+    assert asyncio.run(_dispatch(nats_url, seeded_url)) == 1
     with psycopg.connect(seeded_url) as connection:
         stream_event = connection.execute(
             "SELECT subject, payload FROM app.message_outbox WHERE event_id = %s",
@@ -402,8 +397,8 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
             """,
             (queued["request_event_id"],),
         )
-    assert asyncio.run(_dispatch(seeded_url)) == 1
-    assert asyncio.run(_work(seeded_url)) == [1]
+    assert asyncio.run(_dispatch(nats_url, seeded_url)) == 1
+    assert asyncio.run(_work(nats_url, seeded_url)) == [1]
 
     with psycopg.connect(seeded_url) as connection:
         assert connection.execute(
@@ -428,7 +423,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
     # A new stream sequence containing the identical request is acknowledged
     # from the inbox receipt and cannot create a second issuance or result event.
     async def redeliver() -> None:
-        nc = await connect(NATS_URL)
+        nc = await connect(nats_url)
         try:
             js = nc.jetstream()
             data = json.dumps(stream_event[1], sort_keys=True, separators=(",", ":")).encode()
@@ -437,7 +432,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
             await nc.drain()
 
     asyncio.run(redeliver())
-    assert asyncio.run(_work(seeded_url)) == [1]
+    assert asyncio.run(_work(nats_url, seeded_url)) == [1]
     with psycopg.connect(seeded_url) as connection:
         assert connection.execute(
             "SELECT count(*) FROM app.forecast_issuances WHERE plant_id = 'plant-01'"
@@ -470,7 +465,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
         ).fetchall()
 
     async def publish_reversed() -> list[tuple[int, str]]:
-        nc = await connect(NATS_URL)
+        nc = await connect(nats_url)
         published: list[tuple[int, str]] = []
         try:
             js = nc.jetstream()
@@ -499,7 +494,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
             """,
             published_reversed,
         )
-    assert asyncio.run(_work(seeded_url, 2)) == [1, 1]
+    assert asyncio.run(_work(nats_url, seeded_url, 2)) == [1, 1]
     with psycopg.connect(seeded_url) as connection:
         assert connection.execute(
             "SELECT count(*) FROM app.forecast_issuances WHERE plant_id = 'plant-01'"
@@ -513,7 +508,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
         ).fetchone() == (2,)
 
     async def publish_poison() -> None:
-        nc = await connect(NATS_URL)
+        nc = await connect(nats_url)
         try:
             js = nc.jetstream()
             poison = dict(stream_event[1])
@@ -524,7 +519,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
             await nc.drain()
 
     asyncio.run(publish_poison())
-    assert asyncio.run(_work(seeded_url)) == [1]
+    assert asyncio.run(_work(nats_url, seeded_url)) == [1]
     with psycopg.connect(seeded_url) as connection:
         assert (
             connection.execute(
@@ -560,8 +555,8 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
             (issuance_id, latest + timedelta(hours=1)),
         )
     failed = client.post("/api/v1/plants/plant-02/forecast-requests", headers=_headers()).json()
-    assert asyncio.run(_dispatch(seeded_url)) >= 1
-    deliveries = asyncio.run(_work(seeded_url, MAX_DELIVERIES))
+    assert asyncio.run(_dispatch(nats_url, seeded_url)) >= 1
+    deliveries = asyncio.run(_work(nats_url, seeded_url, MAX_DELIVERIES))
     assert deliveries == [1] * MAX_DELIVERIES
     with psycopg.connect(seeded_url) as connection:
         assert connection.execute(

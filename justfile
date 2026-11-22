@@ -42,15 +42,14 @@ test-message-unit:
 
 test-message-integration:
     python3 scripts/db_lifecycle.py --require-database-url
-    docker compose up -d --wait nats
-    FLOWSTEAD_ISOLATED_NATS_TEST=1 uv run --project backend pytest -q backend/tests/integration/test_messaging.py
+    uv run --project backend python -m backend.tests.run_integration_gate --suite messaging
 
 test-forecast-unit:
     uv run --project backend pytest -q backend/tests/unit/test_forecast.py
 
 test-forecast-integration:
     python3 scripts/db_lifecycle.py --require-database-url
-    uv run --project backend pytest -q backend/tests/integration/test_forecast.py
+    uv run --project backend python -m backend.tests.run_integration_gate --suite forecast
 
 check-backend:
     python3 scripts/check_architecture.py
@@ -82,7 +81,15 @@ test-backend-unit:
 
 test-db-integration:
     python3 scripts/db_lifecycle.py --require-database-url
-    uv run --project backend pytest -q backend/tests/integration
+    uv run --project backend python -m backend.tests.run_integration_gate --suite db
+
+# Full backend-only live acceptance: real Uvicorn/worker, PostgreSQL, JetStream,
+# and independent authenticated HTTP clients (no frontend/browser required).
+test-live-integration:
+    uv run --project backend python -m backend.tests.run_integration_gate --suite live
+
+test-backend-integration:
+    uv run --project backend python -m backend.tests.run_integration_gate --suite all
 
 audit-backend:
     #!/usr/bin/env zsh
@@ -103,12 +110,12 @@ test-report:
 
 test-api-integration:
     python3 scripts/db_lifecycle.py --require-database-url
-    uv run --project backend pytest -q backend/tests/integration/test_api.py
+    uv run --project backend python -m backend.tests.run_integration_gate --suite api
 
 test-auth:
     uv run --project backend pytest -q backend/tests/unit/test_auth.py
     python3 scripts/db_lifecycle.py --require-database-url
-    uv run --project backend pytest -q backend/tests/integration/test_auth.py
+    uv run --project backend python -m backend.tests.run_integration_gate --suite auth
 
 # T-014 dev smoke: proves the local half of the Supabase integration without a
 # hosted project — migration head + JWT verification (signature/issuer/audience)

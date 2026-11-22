@@ -187,6 +187,7 @@ def test_process_forecast_request_commits_forecast_job_outbox_and_receipt() -> N
 
 
 def test_process_forecast_request_rolls_back_on_build_failure() -> None:
+    """Case: IT-M4-ATOMIC — build failure rolls back job, outbox and forecast."""
     _grant("operator-a", "plant-01")
     job = request_forecast(DATABASE_URL, plant_id="plant-01", subject_id="operator-a")
     assert job is not None

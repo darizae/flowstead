@@ -47,6 +47,7 @@ def _grant(subject_id: str, *plant_ids: str) -> None:
 
 
 def test_forecast_persists_twelve_rows_and_rerun_is_idempotent() -> None:
+    """Case: IT-M4-ATOMIC — repeat forecast builds do not duplicate rows."""
     database = Database(DATABASE_URL)
 
     first = database.build_forecast("plant-01")
@@ -66,6 +67,7 @@ def test_forecast_persists_twelve_rows_and_rerun_is_idempotent() -> None:
 
 
 def test_private_forecast_authorization_and_default_public_denial(client: TestClient) -> None:
+    """Case: IT-M4-CROSSPLANT — private read cannot cross Plant ownership."""
     _grant("operator-a", "plant-01")
     with psycopg.connect(DATABASE_URL) as connection, connection.transaction():
         connection.execute("UPDATE app.plants SET public_demo = false")

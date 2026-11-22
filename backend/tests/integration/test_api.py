@@ -46,6 +46,7 @@ def _grant(subject_id: str, *plant_ids: str) -> None:
 
 
 def test_disjoint_principals_receive_disjoint_private_reads(client: TestClient) -> None:
+    """Case: IT-M3-PLANT — two different SQL-owned Plant sets stay disjoint."""
     _grant("operator-a", "plant-01")
     _grant("operator-b", "plant-02")
 
@@ -77,7 +78,7 @@ def test_disjoint_principals_receive_disjoint_private_reads(client: TestClient) 
 
 
 def test_private_denials_and_bounded_windows(client: TestClient) -> None:
-    """Case: SEC-M12-RATE — JWT, window and SQL-shaped Plant inputs fail closed."""
+    """Cases: IT-M3-DENY, SEC-M12-RATE — auth, window, SQL inputs fail closed."""
     _grant("operator-a", "plant-01")
     assert client.get("/api/v1/plants").status_code == 401
     assert client.get("/api/v1/plants/plant-01/latest").status_code == 401
@@ -121,6 +122,7 @@ def test_private_denials_and_bounded_windows(client: TestClient) -> None:
 
 
 def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:
+    """Case: IT-M3-PUBLIC — only explicitly enabled Plants become public."""
     with psycopg.connect(DATABASE_URL) as connection, connection.transaction():  # type: ignore[arg-type]
         connection.execute("UPDATE app.plants SET public_demo = false")
     assert client.get("/api/v1/public/plants").json() == {"plants": []}

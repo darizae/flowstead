@@ -57,7 +57,7 @@ def _count(url: str, table: str) -> int:
 
 
 def test_migration_and_full_import_are_idempotent(isolated_url: str) -> None:
-    """Cases: DB-M4A-FRESH, IT-M2-MIGRATE"""
+    """Cases: DB-M4A-FRESH, IT-M2-MIGRATE, IT-M2-IMPORT"""
     migrate(isolated_url)
     assert import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
     first = (
@@ -75,6 +75,7 @@ def test_migration_and_full_import_are_idempotent(isolated_url: str) -> None:
 
 
 def test_tampered_source_sha_does_not_change_database(isolated_url: str) -> None:
+    """Case: IT-M2-REJECT — a tampered pinned source is rejected atomically."""
     with pytest.raises(ImportValidationError):
         import_m1(isolated_url, Path(MANIFEST), Path(DATA), "0" * 40)
     assert _count(isolated_url, "ingest_batches") == 0

@@ -13,6 +13,23 @@
 
 ## Indexed task acceptance cases (case definitions, not pass status)
 
+### Backend integration harness acceptance
+
+These infrastructure cases certify execution guarantees, not additional product
+features. A test name/docstring is traceability, **not** proof of an executed
+passing result. See `backend/tests/README.md` for commands and process boundaries.
+
+| ID | Required observable assertion | Evidence status |
+|---|---|---|
+| `IT-TEST-GATE-01` | All-skipped, partially skipped and empty pytest collections fail a required acceptance gate; complete passing collection succeeds. | UNVERIFIED until asserting unit test is run |
+| `IT-TEST-GATE-02` | Missing database and fixture inputs fail preflight rather than returning a green integration result. | UNVERIFIED until asserting unit test is run |
+| `LIVE-HEALTH`, `LIVE-READINESS` | A separate real Uvicorn process serves live/ready endpoints against a migrated disposable PostgreSQL database. | UNVERIFIED until real live suite runs |
+| `LIVE-AUTH-RS256`, `LIVE-IDENTITY`, `LIVE-AUTHZ` | Locally signed RS256/JWKS tokens are verified by the running API; disjoint owners and anonymous clients cannot enumerate other Plants. | UNVERIFIED until real live suite runs |
+| `LIVE-CONCURRENT-AUTHZ` | Concurrent independent HTTP clients share one real API without crossing Plant ownership. | UNVERIFIED until real live suite runs |
+| `LIVE-QUEUE-PAUSE`, `LIVE-QUEUE-NONLEAK` | The private stack holds worker progress while owner receives queued and shared-Plant nonrequester receives absent-equivalent 404. | UNVERIFIED until real live suite runs |
+| `LIVE-WORKER-SUBPROCESS`, `LIVE-QUEUE-COMPLETION` | A separate real worker consumes JetStream messages and commits twelve forecast hours within a bounded deadline. | UNVERIFIED until real live suite runs |
+| `LIVE-WORKER-OUTAGE` | After stopping the owned worker, queued commands and requester isolation persist in PostgreSQL. | UNVERIFIED until real live suite runs |
+
 ### T-002 — [task source](../planning/tasks/002_local-postgres-schema-import__codex-luna-5-6__high.md)
 
 | ID | Intended observable assertion (from task) | Evidence status |
