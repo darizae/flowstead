@@ -55,6 +55,23 @@ const latest = (id: string) => ({
 });
 
 describe("Plants navigation", () => {
+  it("replays the brand jump on activation without replacing the navigation link", async () => {
+    window.history.replaceState({}, "", "/plants");
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ plants: [] }), { status: 200 }),
+      );
+    render(<FlowsteadApp client={new ApiClient({ fetcher })} />);
+    const brand = screen.getByRole("link", { name: "Flowstead" });
+    const mark = brand.querySelector(".mark");
+    expect(mark).not.toBeNull();
+    await userEvent.click(brand);
+    expect(mark).toHaveClass("brand-mark--jumping");
+    expect(window.location.pathname).toBe("/plants");
+    await userEvent.click(brand);
+    expect(mark).toHaveClass("brand-mark--jumping");
+  });
   it("production offers an explicit, reversible offline mock preview without calling the API for preview rows", async () => {
     vi.stubEnv("PROD", true);
     try {
@@ -68,7 +85,7 @@ describe("Plants navigation", () => {
         screen.getByRole("button", { name: "Load Mock Data" }),
       );
       expect(
-        await screen.findByText("Bayview Water Reclamation"),
+        (await screen.findAllByText("Bayview Water Reclamation"))[0],
       ).toBeInTheDocument();
       expect(screen.getByText(/MOCK PREVIEW/)).toBeInTheDocument();
       const map = await screen.findByTestId("mock-geographic-map");
@@ -83,7 +100,7 @@ describe("Plants navigation", () => {
         await screen.findByText(/Preview only: synthetic browser-generated/),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Download PDF" }),
+        screen.getByRole("button", { name: "Download PDF Report" }),
       ).toBeDisabled();
       await userEvent.click(
         screen.getByRole("button", { name: "Return to Live Data" }),
@@ -135,8 +152,12 @@ describe("Plants navigation", () => {
     expect(
       await screen.findByRole("heading", { name: "Measurement history" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Download PDF" })).toBeEnabled();
-    await userEvent.click(screen.getByRole("button", { name: /All plants/ }));
+    expect(
+      screen.getByRole("button", { name: "Download PDF Report" }),
+    ).toBeEnabled();
+    await userEvent.click(
+      screen.getByRole("link", { name: "Go back to overview" }),
+    );
     expect(
       await screen.findByRole("heading", { name: "Plant list" }),
     ).toBeInTheDocument();

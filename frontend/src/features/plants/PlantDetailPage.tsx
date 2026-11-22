@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card } from "@darizae/marisma";
+import { Button, Card, CardContent } from "@darizae/marisma";
 import type { ApiClient } from "../../lib/api/client";
 import {
   ApiError,
@@ -209,78 +209,82 @@ export function PlantDetailPage({
           <MetricCards measurements={latest.reading.measurements} />
           <div className="detail-grid">
             <Card className="history-panel" aria-labelledby="history-title">
-              <h2 id="history-title">Measurement history</h2>
-              {history.loading ? (
-                <LoadingState label="Loading history…" />
-              ) : history.error ? (
-                <div className="error-state" role="alert">
-                  <strong>History unavailable</strong>
-                  <p>{history.error.message}</p>
-                  <RetryButton onClick={history.retry}>Retry</RetryButton>
-                </div>
-              ) : history.history ? (
-                <HistoryChart
-                  history={history.history}
-                  range={range}
-                  channel={channel}
-                  onRangeChange={setRange}
-                  onChannelChange={setChannel}
-                />
-              ) : (
-                <p>No history is available for this Plant.</p>
-              )}
+              <CardContent>
+                <h2 id="history-title">Measurement history</h2>
+                {history.loading ? (
+                  <LoadingState label="Loading history…" />
+                ) : history.error ? (
+                  <div className="error-state" role="alert">
+                    <strong>History unavailable</strong>
+                    <p>{history.error.message}</p>
+                    <RetryButton onClick={history.retry}>Retry</RetryButton>
+                  </div>
+                ) : history.history ? (
+                  <HistoryChart
+                    history={history.history}
+                    range={range}
+                    channel={channel}
+                    onRangeChange={setRange}
+                    onChannelChange={setChannel}
+                  />
+                ) : (
+                  <p>No history is available for this Plant.</p>
+                )}
+              </CardContent>
             </Card>
             <Card className="forecast-panel" aria-labelledby="forecast-title">
-              <div className="forecast-panel-head">
-                <h2 id="forecast-title">Influent flow forecast</h2>
-                {client.hasPrincipal ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="small"
-                    data-testid="forecast-refresh"
-                    disabled={
-                      forecastRequest.status === "queued" ||
-                      forecastRequest.status === "processing"
-                    }
-                    onClick={() => void forecastRequest.refresh()}
-                  >
-                    Refresh forecast
-                  </Button>
-                ) : null}
-              </div>
-              {forecastRequest.status ? (
-                <p
-                  className={`forecast-request-status ${forecastRequest.status === "failed" ? "error" : ""}`}
-                  data-testid="forecast-request-status"
-                  role="status"
-                >
-                  {forecastRequest.status === "queued"
-                    ? "Forecast queued"
-                    : forecastRequest.status === "processing"
-                      ? "Forecast processing"
-                      : forecastRequest.status === "completed"
-                        ? "Forecast completed"
-                        : (forecastRequest.error?.message ??
-                          "Forecast refresh failed.")}
-                </p>
-              ) : null}
-              {forecast.loading ? (
-                <LoadingState label="Loading forecast…" />
-              ) : forecast.error ? (
-                <div className="error-state" role="alert">
-                  <strong>Forecast unavailable</strong>
-                  <p>{forecast.error.message}</p>
-                  <RetryButton onClick={forecast.retry}>Retry</RetryButton>
+              <CardContent>
+                <div className="forecast-panel-head">
+                  <h2 id="forecast-title">Influent flow forecast</h2>
+                  {client.hasPrincipal ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="small"
+                      data-testid="forecast-refresh"
+                      disabled={
+                        forecastRequest.status === "queued" ||
+                        forecastRequest.status === "processing"
+                      }
+                      onClick={() => void forecastRequest.refresh()}
+                    >
+                      Refresh forecast
+                    </Button>
+                  ) : null}
                 </div>
-              ) : forecast.forecast ? (
-                <ForecastChart
-                  forecast={forecast.forecast}
-                  observed={observed}
-                />
-              ) : (
-                <p>No forecast is available for this Plant.</p>
-              )}
+                {forecastRequest.status ? (
+                  <p
+                    className={`forecast-request-status ${forecastRequest.status === "failed" ? "error" : ""}`}
+                    data-testid="forecast-request-status"
+                    role="status"
+                  >
+                    {forecastRequest.status === "queued"
+                      ? "Forecast queued"
+                      : forecastRequest.status === "processing"
+                        ? "Forecast processing"
+                        : forecastRequest.status === "completed"
+                          ? "Forecast completed"
+                          : (forecastRequest.error?.message ??
+                            "Forecast refresh failed.")}
+                  </p>
+                ) : null}
+                {forecast.loading ? (
+                  <LoadingState label="Loading forecast…" />
+                ) : forecast.error ? (
+                  <div className="error-state" role="alert">
+                    <strong>Forecast unavailable</strong>
+                    <p>{forecast.error.message}</p>
+                    <RetryButton onClick={forecast.retry}>Retry</RetryButton>
+                  </div>
+                ) : forecast.forecast ? (
+                  <ForecastChart
+                    forecast={forecast.forecast}
+                    observed={observed}
+                  />
+                ) : (
+                  <p>No forecast is available for this Plant.</p>
+                )}
+              </CardContent>
             </Card>
           </div>
         </>

@@ -24,7 +24,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@darizae/marisma": "0.2.0",
+    "@darizae/marisma": "0.3.0",
     "@supabase/supabase-js": "^2.119.1",
     "@tailwindcss/vite": "4.3.5",
     "@vitejs/plugin-react": "6.0.1",

@@ -112,9 +112,7 @@ describe("UT-M9-FORECAST", () => {
     ).toBeInTheDocument();
     expect(screen.queryAllByTestId("forecast-target")).toHaveLength(0);
     expect(
-      screen.getByText(
-        /Targets are API-predicted values, never client-computed/,
-      ),
+      screen.getByRole("button", { name: "About the forecast" }),
     ).toBeInTheDocument();
   });
 });

@@ -1,0 +1,77 @@
+/* Overview-page-only styles, kept out of app.css to avoid layout conflicts.
+   Tokens reuse the global :root palette defined in src/styles.css. */
+
+.overview-alert {
+  max-width: 680px;
+  margin-top: 26px;
+}
+
+/* Paginated plant list */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.pagination small {
+  color: var(--ink-muted);
+}
+
+/* Hover/focus info card on real-map markers (DOM children of the button) */
+.plant-marker-card,
+.mock-map-pin-card {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  width: max-content;
+  max-width: 240px;
+  min-width: 150px;
+  padding: 9px 11px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(23, 56, 51, 0.18);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+}
+
+.plant-marker-card strong,
+.mock-map-pin-card strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.plant-marker-card span,
+.mock-map-pin-card span {
+  display: block;
+  color: var(--ink-muted);
+}
+
+/* Card revealed by hover OR keyboard focus (map markers are buttons) */
+.plant-marker:hover .plant-marker-card,
+.plant-marker:focus .plant-marker-card,
+.mock-map-pin:hover .mock-map-pin-card,
+.mock-map-pin:focus .mock-map-pin-card {
+  display: block;
+}
+
+.plant-marker-card {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mock-map-pin-card {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}

@@ -9,6 +9,23 @@ maplibregl.setWorkerUrl(maplibreWorkerUrl);
 const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const MAP_UNAVAILABLE_COPY = "Map unavailable. Select a plant from the list.";
 
+function infoCard(plant: PlantSummary): HTMLElement {
+  const card = document.createElement("span");
+  card.className = "plant-marker-card";
+  card.setAttribute("aria-hidden", "true");
+  const data = [
+    plant.name,
+    `${plant.location.city}, ${plant.location.state_code}`,
+    plant.timezone,
+  ];
+  data.forEach((line, i) => {
+    const node = document.createElement(i === 0 ? "strong" : "span");
+    node.textContent = line;
+    card.appendChild(node);
+  });
+  return card;
+}
+
 export interface PlantMapProps {
   plants: PlantSummary[];
   onSelect: (plant: PlantSummary) => void;
@@ -70,6 +87,7 @@ export function PlantMap({ plants, onSelect, fallback }: PlantMapProps) {
         button.dataset.plantId = plant.plant_id;
         button.setAttribute("aria-label", `Open ${plant.name}`);
         button.title = plant.name;
+        button.appendChild(infoCard(plant));
         button.addEventListener("click", () => selectRef.current(plant));
         markers.push(
           new maplibregl.Marker({ element: button })

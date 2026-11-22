@@ -1,6 +1,9 @@
 packages:
   - .
 
+minimumReleaseAgeExclude:
+  - '@darizae/marisma@0.3.0'
+
 # The OpenAPI parser pins vulnerable js-yaml@4.2.0; preserve its API but
 # resolve the patched v4 release until upstream relaxes that exact pin.
 overrides:

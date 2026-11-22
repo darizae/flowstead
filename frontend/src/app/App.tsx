@@ -49,6 +49,7 @@ export default function FlowsteadApp({
   const principalKey = demoMode ? "mock:public" : (principalId ?? "public");
   const [activePrincipalKey, setActivePrincipalKey] = useState(principalKey);
   const [selectedId, setSelectedId] = useState(plantIdFromLocation);
+  const brandMarkRef = useRef<HTMLSpanElement>(null);
   const restoredPreference = useRef(false);
   const principalTransitioning = activePrincipalKey !== principalKey;
   const effectiveSelectedId = principalTransitioning ? undefined : selectedId;
@@ -120,6 +121,13 @@ export default function FlowsteadApp({
     setSelectedId(undefined);
     navigate("/plants");
   };
+  const replayBrandJump = () => {
+    const mark = brandMarkRef.current;
+    if (!mark) return;
+    mark.classList.remove("brand-mark--jumping");
+    void mark.offsetWidth;
+    mark.classList.add("brand-mark--jumping");
+  };
   const topbar = (
     <div className="top-meta">
       <span>Session identity</span>
@@ -158,7 +166,7 @@ export default function FlowsteadApp({
           Sign out
         </Button>
       ) : null}
-      <span className="small-muted">Synthetic data · Florida</span>
+      <span className="small-muted">Synthetic data</span>
     </div>
   );
   return (
@@ -179,10 +187,22 @@ export default function FlowsteadApp({
                 href="/plants"
                 onClick={(event) => {
                   event.preventDefault();
+                  replayBrandJump();
                   goBack();
                 }}
               >
-                <span className="mark" aria-hidden="true">
+                <span
+                  className="mark"
+                  aria-hidden="true"
+                  ref={brandMarkRef}
+                  onAnimationEnd={(event) => {
+                    if (event.animationName === "flowstead-brand-jump") {
+                      event.currentTarget.classList.remove(
+                        "brand-mark--jumping",
+                      );
+                    }
+                  }}
+                >
                   ≈
                 </span>
                 <span>Flowstead</span>
@@ -198,7 +218,7 @@ export default function FlowsteadApp({
                 goBack();
               }}
             >
-              Plants
+              {effectiveSelectedId ? "Go back to overview" : "Plants"}
             </AppNavbarLink>
           </AppNavbar>
         }

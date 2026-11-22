@@ -49,6 +49,13 @@ export function MockPlantMap({
           >
             <span aria-hidden="true" className="mock-map-dot" />
             {plant.location.city}
+            <span aria-hidden="true" className="mock-map-pin-card">
+              <strong>{plant.name}</strong>
+              <span>
+                {plant.location.city}, {plant.location.state_code}
+              </span>
+              <span>{plant.timezone}</span>
+            </span>
           </button>
         );
       })}

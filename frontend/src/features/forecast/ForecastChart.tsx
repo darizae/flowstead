@@ -1,4 +1,11 @@
-import { Button, Card } from "@darizae/marisma";
+import {
+  Button,
+  Card,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@darizae/marisma";
 import { useMemo } from "react";
 import type { ForecastResponse } from "../../lib/api/types";
 import { tryParseUtc } from "../../shared/domain/utc";
@@ -131,240 +138,262 @@ export function ForecastChart({ forecast, observed }: ForecastChartProps) {
   };
 
   return (
-    <section
-      className="forecast-chart"
-      data-testid="forecast-chart"
-      aria-labelledby="forecast-chart-title"
-      role="status"
-    >
-      <div className="chart-heading">
-        <h3 id="forecast-chart-title">Influent flow forecast</h3>
-        <span className="forecast-status-issue" data-testid="forecast-issue">
-          {heading}
-        </span>
-      </div>
-      <p className="chart-status" aria-live="polite">
-        {forecast.source_revision === "mock-only"
-          ? "Preview only: synthetic browser-generated history and forecast, not API results."
-          : "Observed readings merge into the 12-hour API forecast. Targets are API-predicted values, never client-computed."}
-      </p>
-      {unavailable ? (
-        <Card
-          className="forecast-unavailable"
-          data-testid="forecast-unavailable"
-        >
-          <strong>Forecast unavailable</strong>
-          <p>
-            {forecast.unavailable_reason ??
-              "No persisted forecast is available for this Plant yet."}
-          </p>
-          <span className="small-muted">
-            Exactly {FORECAST_HOURS} API target hours are shown when available;
-            none are invented client-side.
+    <TooltipProvider>
+      <section
+        className="forecast-chart"
+        data-testid="forecast-chart"
+        aria-labelledby="forecast-chart-title"
+        role="status"
+      >
+        <div className="chart-heading">
+          <h3 id="forecast-chart-title">Influent flow forecast</h3>
+          {forecast.source_revision !== "mock-only" && (
+            <Tooltip>
+              <TooltipTrigger
+                aria-label="About the forecast"
+                size="small"
+                variant="ghost"
+              >
+                ?
+              </TooltipTrigger>
+              <TooltipContent>
+                Observed readings merge into the 12-hour API forecast. Targets
+                are API-predicted values, never client-computed.
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <span className="forecast-status-issue" data-testid="forecast-issue">
+            {heading}
           </span>
-        </Card>
-      ) : labeled.length === 0 ? (
-        <p className="chart-empty" role="status">
-          No forecast targets are available for this Plant.
-        </p>
-      ) : (
-        <div className="chart-scroll" ref={chartRef}>
-          <svg
-            ref={svgRef}
-            className="forecast-svg"
-            viewBox={`0 0 ${chartWidth} ${CHART_HEIGHT}`}
-            role="img"
-            aria-labelledby="forecast-chart-title forecast-chart-description"
+        </div>
+        {forecast.source_revision === "mock-only" && (
+          <p className="chart-status" aria-live="polite">
+            Preview only: synthetic browser-generated history and forecast, not
+            API results.
+          </p>
+        )}
+        {unavailable ? (
+          <Card
+            className="forecast-unavailable"
+            data-testid="forecast-unavailable"
           >
-            <desc id="forecast-chart-description">
-              Influent flow observed-to-predicted boundary for {plant.name} in
-              Plant-local time. {predictedPoints.length} API forecast targets.
-            </desc>
-            <line
-              className="chart-axis"
-              x1={padding.left}
-              y1={CHART_HEIGHT - padding.bottom}
-              x2={chartWidth - padding.right}
-              y2={CHART_HEIGHT - padding.bottom}
-            />
-            <line
-              className="chart-axis"
-              x1={padding.left}
-              y1={padding.top}
-              x2={padding.left}
-              y2={CHART_HEIGHT - padding.bottom}
-            />
-            {yTicks.map(({ fraction, value }) => (
-              <g key={fraction}>
-                <line
-                  className="chart-grid"
-                  x1={padding.left}
-                  y1={
-                    padding.top +
-                    fraction * (CHART_HEIGHT - padding.top - padding.bottom)
-                  }
-                  x2={chartWidth - padding.right}
-                  y2={
-                    padding.top +
-                    fraction * (CHART_HEIGHT - padding.top - padding.bottom)
-                  }
-                />
-                <text
-                  className="chart-label"
-                  x={padding.left - 10}
-                  y={
-                    padding.top +
-                    fraction * (CHART_HEIGHT - padding.top - padding.bottom) +
-                    4
-                  }
-                  textAnchor="end"
-                >
-                  {formatNumber(value)}
-                </text>
-              </g>
-            ))}
-            {observedPoints.length > 1 && (
-              <polyline
-                className="chart-line"
-                points={observedPoints
-                  .map((point) => `${x(point.timestampUtc)},${y(point.value)}`)
-                  .join(" ")}
-              />
-            )}
-            {predictedPoints.length > 1 && (
-              <polyline
-                className="chart-line forecast-predicted"
-                points={predictedPoints
-                  .map((point) => `${x(point.timestampUtc)},${y(point.value)}`)
-                  .join(" ")}
-              />
-            )}
-            {observedPoints.map((point) => (
-              <circle
-                key={point.timestampUtc.toISOString()}
-                className="chart-point forecast-observed-point"
-                cx={x(point.timestampUtc)}
-                cy={y(point.value)}
-                r="2.5"
-                aria-label={`Observed: ${point.timestampUtc.toISOString()}`}
-              >
-                <title>{point.timestampUtc.toISOString()}</title>
-              </circle>
-            ))}
-            {predictedPoints.map((point) => (
-              <circle
-                key={point.timestampUtc.toISOString()}
-                className="chart-point forecast-target"
-                cx={x(point.timestampUtc)}
-                cy={y(point.value)}
-                r="3"
-                data-testid="forecast-target"
-                aria-label={`Predicted ${point.value} gal/h`}
-              >
-                <title>{point.value} gal/h</title>
-              </circle>
-            ))}
-            {boundary && (
+            <strong>Forecast unavailable</strong>
+            <p>
+              {forecast.unavailable_reason ??
+                "No persisted forecast is available for this Plant yet."}
+            </p>
+            <span className="small-muted">
+              Exactly {FORECAST_HOURS} API target hours are shown when
+              available; none are invented client-side.
+            </span>
+          </Card>
+        ) : labeled.length === 0 ? (
+          <p className="chart-empty" role="status">
+            No forecast targets are available for this Plant.
+          </p>
+        ) : (
+          <div className="chart-scroll" ref={chartRef}>
+            <svg
+              ref={svgRef}
+              className="forecast-svg"
+              viewBox={`0 0 ${chartWidth} ${CHART_HEIGHT}`}
+              role="img"
+              aria-labelledby="forecast-chart-title forecast-chart-description"
+            >
+              <desc id="forecast-chart-description">
+                Influent flow observed-to-predicted boundary for {plant.name} in
+                Plant-local time. {predictedPoints.length} API forecast targets.
+              </desc>
               <line
-                className="chart-boundary"
-                x1={x(boundary.timestampUtc)}
-                y1={padding.top}
-                x2={x(boundary.timestampUtc)}
+                className="chart-axis"
+                x1={padding.left}
+                y1={CHART_HEIGHT - padding.bottom}
+                x2={chartWidth - padding.right}
                 y2={CHART_HEIGHT - padding.bottom}
               />
-            )}
-            {axisTicks.map((tick, index) => {
-              const anchor =
-                index === 0
-                  ? "start"
-                  : index === axisTicks.length - 1
-                    ? "end"
-                    : "middle";
-              const tickX = xPosition(
-                tick,
-                fromTime,
-                toTime,
-                chartWidth,
-                padding,
-              );
-              return (
-                <g key={tick.toISOString()}>
+              <line
+                className="chart-axis"
+                x1={padding.left}
+                y1={padding.top}
+                x2={padding.left}
+                y2={CHART_HEIGHT - padding.bottom}
+              />
+              {yTicks.map(({ fraction, value }) => (
+                <g key={fraction}>
                   <line
-                    className="chart-tick"
-                    x1={tickX}
-                    y1={CHART_HEIGHT - padding.bottom}
-                    x2={tickX}
-                    y2={CHART_HEIGHT - padding.bottom + 5}
+                    className="chart-grid"
+                    x1={padding.left}
+                    y1={
+                      padding.top +
+                      fraction * (CHART_HEIGHT - padding.top - padding.bottom)
+                    }
+                    x2={chartWidth - padding.right}
+                    y2={
+                      padding.top +
+                      fraction * (CHART_HEIGHT - padding.top - padding.bottom)
+                    }
                   />
                   <text
-                    className="chart-label chart-tick-label"
-                    x={tickX}
-                    y={CHART_HEIGHT - padding.bottom + 20}
-                    textAnchor={anchor}
+                    className="chart-label"
+                    x={padding.left - 10}
+                    y={
+                      padding.top +
+                      fraction * (CHART_HEIGHT - padding.top - padding.bottom) +
+                      4
+                    }
+                    textAnchor="end"
                   >
-                    {localTickLabel(tick, plant.timezone)}
+                    {formatNumber(value)}
                   </text>
                 </g>
-              );
-            })}
-            <text
-              className="chart-axis-title"
-              x={chartWidth / 2}
-              y={CHART_HEIGHT - 10}
-              textAnchor="middle"
-            >
-              Plant-local time
-            </text>
-            <text
-              className="chart-axis-title"
-              transform={`translate(16 ${CHART_HEIGHT / 2}) rotate(-90)`}
-              textAnchor="middle"
-            >
-              Influent flow (gal/h)
-            </text>
-          </svg>
+              ))}
+              {observedPoints.length > 1 && (
+                <polyline
+                  className="chart-line"
+                  points={observedPoints
+                    .map(
+                      (point) => `${x(point.timestampUtc)},${y(point.value)}`,
+                    )
+                    .join(" ")}
+                />
+              )}
+              {predictedPoints.length > 1 && (
+                <polyline
+                  className="chart-line forecast-predicted"
+                  points={predictedPoints
+                    .map(
+                      (point) => `${x(point.timestampUtc)},${y(point.value)}`,
+                    )
+                    .join(" ")}
+                />
+              )}
+              {observedPoints.map((point) => (
+                <circle
+                  key={point.timestampUtc.toISOString()}
+                  className="chart-point forecast-observed-point"
+                  cx={x(point.timestampUtc)}
+                  cy={y(point.value)}
+                  r="2.5"
+                  aria-label={`Observed: ${point.timestampUtc.toISOString()}`}
+                >
+                  <title>{point.timestampUtc.toISOString()}</title>
+                </circle>
+              ))}
+              {predictedPoints.map((point) => (
+                <circle
+                  key={point.timestampUtc.toISOString()}
+                  className="chart-point forecast-target"
+                  cx={x(point.timestampUtc)}
+                  cy={y(point.value)}
+                  r="3"
+                  data-testid="forecast-target"
+                  aria-label={`Predicted ${point.value} gal/h`}
+                >
+                  <title>{point.value} gal/h</title>
+                </circle>
+              ))}
+              {boundary && (
+                <line
+                  className="chart-boundary"
+                  x1={x(boundary.timestampUtc)}
+                  y1={padding.top}
+                  x2={x(boundary.timestampUtc)}
+                  y2={CHART_HEIGHT - padding.bottom}
+                />
+              )}
+              {axisTicks.map((tick, index) => {
+                const anchor =
+                  index === 0
+                    ? "start"
+                    : index === axisTicks.length - 1
+                      ? "end"
+                      : "middle";
+                const tickX = xPosition(
+                  tick,
+                  fromTime,
+                  toTime,
+                  chartWidth,
+                  padding,
+                );
+                return (
+                  <g key={tick.toISOString()}>
+                    <line
+                      className="chart-tick"
+                      x1={tickX}
+                      y1={CHART_HEIGHT - padding.bottom}
+                      x2={tickX}
+                      y2={CHART_HEIGHT - padding.bottom + 5}
+                    />
+                    <text
+                      className="chart-label chart-tick-label"
+                      x={tickX}
+                      y={CHART_HEIGHT - padding.bottom + 20}
+                      textAnchor={anchor}
+                    >
+                      {localTickLabel(tick, plant.timezone)}
+                    </text>
+                  </g>
+                );
+              })}
+              <text
+                className="chart-axis-title"
+                x={chartWidth / 2}
+                y={CHART_HEIGHT - 10}
+                textAnchor="middle"
+              >
+                Plant-local time
+              </text>
+              <text
+                className="chart-axis-title"
+                transform={`translate(16 ${CHART_HEIGHT / 2}) rotate(-90)`}
+                textAnchor="middle"
+              >
+                Influent flow (gal/h)
+              </text>
+            </svg>
+          </div>
+        )}
+        <div className="quality-legend" aria-label="Forecast quality legend">
+          <span>
+            <i className="legend-swatch observed" />
+            Observed
+          </span>
+          <span>
+            <i className="legend-swatch predicted" />
+            Predicted
+          </span>
+          <span>
+            <i className="legend-swatch boundary" />
+            Observed→predicted boundary
+          </span>
+          <span>
+            {predictedPoints.length} of {FORECAST_HOURS} API targets
+          </span>
         </div>
-      )}
-      <div className="quality-legend" aria-label="Forecast quality legend">
-        <span>
-          <i className="legend-swatch observed" />
-          Observed
-        </span>
-        <span>
-          <i className="legend-swatch predicted" />
-          Predicted
-        </span>
-        <span>
-          <i className="legend-swatch boundary" />
-          Observed→predicted boundary
-        </span>
-        <span>
-          {predictedPoints.length} of {FORECAST_HOURS} API targets
-        </span>
-      </div>
-      <div className="chart-footer" data-testid="forecast-export-footer">
-        <div className="chart-export-actions">
-          <Button
-            type="button"
-            size="small"
-            variant="secondary"
-            onClick={downloadCsv}
-            disabled={!canExport}
-          >
-            Download CSV
-          </Button>
-          <Button
-            type="button"
-            size="small"
-            variant="secondary"
-            onClick={downloadPngImage}
-            disabled={!canExport || pngDownloading}
-          >
-            {pngDownloading ? "Preparing PNG…" : "Download PNG"}
-          </Button>
+        <div className="chart-footer" data-testid="forecast-export-footer">
+          <div className="chart-export-actions">
+            <Button
+              type="button"
+              size="small"
+              variant="secondary"
+              onClick={downloadCsv}
+              disabled={!canExport}
+            >
+              Download CSV
+            </Button>
+            <Button
+              type="button"
+              size="small"
+              variant="secondary"
+              onClick={downloadPngImage}
+              disabled={!canExport || pngDownloading}
+            >
+              {pngDownloading ? "Preparing PNG…" : "Download PNG"}
+            </Button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </TooltipProvider>
   );
 }
 

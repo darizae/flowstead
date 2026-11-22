@@ -43,7 +43,6 @@ export function PlantListRow({
 export function PlantDetailHeader({
   plant,
   plants,
-  onBack,
   onSwitch,
   onDownload,
   downloadDisabled,
@@ -62,18 +61,7 @@ export function PlantDetailHeader({
       className="detail-header"
       eyebrow="Plant details"
       title={plant.name}
-      description={`${plant.location.city}, Florida · ${plant.timezone}`}
-      breadcrumbs={
-        <Button
-          className="back-link"
-          variant="ghost"
-          size="small"
-          type="button"
-          onClick={onBack}
-        >
-          ← <span>All plants</span>
-        </Button>
-      }
+      description={`${plant.location.city}, ${plant.location.state_code} · ${plant.timezone}`}
       actions={
         <div className="detail-actions">
           <Button
@@ -83,7 +71,7 @@ export function PlantDetailHeader({
             onClick={onDownload}
             disabled={downloadDisabled || downloadLoading}
           >
-            {downloadLoading ? "Preparing PDF…" : "Download PDF"}
+            {downloadLoading ? "Preparing PDF…" : "Download PDF Report"}
           </Button>
           <Select
             label="Select plant"

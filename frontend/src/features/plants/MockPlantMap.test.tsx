@@ -58,4 +58,20 @@ describe("offline geographic preview", () => {
     );
     expect(onSelect).toHaveBeenCalledWith(naples);
   });
+
+  it("planes a hover/focus info card with useful plant data on each pin", () => {
+    render(<MockPlantMap plants={[tampa, naples]} onSelect={vi.fn()} />);
+    for (const plant of [tampa, naples]) {
+      const node = screen
+        .getByRole("button", { name: `Open ${plant.name}` })
+        .querySelector(".mock-map-pin-card");
+      expect(node).not.toBeNull();
+      expect(node).toHaveAttribute("aria-hidden", "true");
+      expect(node).toHaveTextContent(plant.name);
+      expect(node).toHaveTextContent(
+        `${plant.location.city}, ${plant.location.state_code}`,
+      );
+      expect(node).toHaveTextContent(plant.timezone);
+    }
+  });
 });

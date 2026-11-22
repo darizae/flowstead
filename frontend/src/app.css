@@ -1,4 +1,5 @@
 .topbar {
+  position: relative;
   height: 72px;
   margin: 0;
   border: 0;
@@ -23,8 +24,10 @@
 .topbar nav {
   order: initial;
   min-width: 0;
-  flex: 1;
-  flex-basis: auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  flex: 0 0 auto;
   overflow: visible;
 }
 
@@ -54,6 +57,35 @@
   font-weight: 900;
   font-size: 17px;
   transform: rotate(-4deg);
+  transform-origin: 50% 100%;
+}
+
+.brand-mark--jumping {
+  animation: flowstead-brand-jump 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform;
+}
+
+@keyframes flowstead-brand-jump {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg) scale(1);
+  }
+  22% {
+    transform: translateY(2px) rotate(-4deg) scale(1.06, 0.9);
+  }
+  48% {
+    transform: translateY(-8px) rotate(-1deg) scale(0.96, 1.08);
+  }
+  75% {
+    transform: translateY(1px) rotate(-5deg) scale(1.03, 0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark--jumping {
+    animation: none;
+    transform: rotate(-4deg);
+  }
 }
 
 .top-meta {
@@ -335,6 +367,11 @@
 }
 
 @media (max-width: 900px) {
+  .topbar nav {
+    position: static;
+    transform: none;
+    flex: 1 1 auto;
+  }
   .overview-grid,
   .reserved-grid {
     grid-template-columns: 1fr;
