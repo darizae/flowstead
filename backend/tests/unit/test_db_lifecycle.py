@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 
 import pytest
-
 from backend.tests.db_lifecycle import (
     COMPOSE_FILE,
     PROJECT_ROOT,
@@ -16,19 +15,29 @@ from backend.tests.db_lifecycle import (
     ensure_database,
 )
 
-
 COMPOSE_UP = (
-    "docker", "compose", "--project-directory", str(PROJECT_ROOT),
-    "-f", str(COMPOSE_FILE), "-p",
+    "docker",
+    "compose",
+    "--project-directory",
+    str(PROJECT_ROOT),
+    "-f",
+    str(COMPOSE_FILE),
+    "-p",
     os.environ.get("COMPOSE_PROJECT_NAME") or PROJECT_ROOT.name,
-    "up", "-d", "db",
+    "up",
+    "-d",
+    "db",
 )
 
 
 class FakeDocker:
     def __init__(
-        self, *, state: str = "healthy", foreign: bool = False,
-        foreign_checkout: bool = False, foreign_workdir: bool = False,
+        self,
+        *,
+        state: str = "healthy",
+        foreign: bool = False,
+        foreign_checkout: bool = False,
+        foreign_workdir: bool = False,
         present: bool = True,
         host_ip: str = "127.0.0.1",
     ):
@@ -45,11 +54,11 @@ class FakeDocker:
         project = "unrelated" if self.foreign else self.project
         config = (
             PROJECT_ROOT.parent / "unrelated-checkout" / "compose.yml"
-            if self.foreign_checkout else COMPOSE_FILE
+            if self.foreign_checkout
+            else COMPOSE_FILE
         )
         workdir = (
-            PROJECT_ROOT.parent / "unrelated-checkout"
-            if self.foreign_workdir else PROJECT_ROOT
+            PROJECT_ROOT.parent / "unrelated-checkout" if self.foreign_workdir else PROJECT_ROOT
         )
         return {
             "Id": "abc123456789",
@@ -64,9 +73,7 @@ class FakeDocker:
                 },
             },
             "HostConfig": {
-                "PortBindings": {
-                    "5432/tcp": [{"HostIp": self.host_ip, "HostPort": "54329"}]
-                }
+                "PortBindings": {"5432/tcp": [{"HostIp": self.host_ip, "HostPort": "54329"}]}
             },
             "State": {
                 "Running": self.state != "stopped",
@@ -187,9 +194,7 @@ def test_preflight_rejects_libpq_target_overrides_before_docker(
     monkeypatch: pytest.MonkeyPatch, option: str
 ) -> None:
     """Case: UT-M4A-DB-LIFECYCLE"""
-    monkeypatch.setenv(
-        "DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead?" + option
-    )
+    monkeypatch.setenv("DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead?" + option)
     with pytest.raises(DatabaseLifecycleError, match="does not target"):
         _check_url(54329, "flowstead", required=True)
 
@@ -198,9 +203,7 @@ def test_preflight_allows_plain_configured_loopback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Case: UT-M4A-DB-LIFECYCLE"""
-    monkeypatch.setenv(
-        "DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead"
-    )
+    monkeypatch.setenv("DATABASE_URL", "postgresql://127.0.0.1:54329/flowstead")
     _check_url(54329, "flowstead", required=True)
 
 
@@ -208,19 +211,22 @@ class PriorVerifyDocker(FakeDocker):
     """A real prior verify-N Compose provenance shape on the controller port."""
 
     def __init__(
-        self, state_root: Path, *, project: str = "verify-33",
-        working_dir: Path | None = None, config_file: Path | None = None,
-        state: str = "healthy", host_ip: str = "127.0.0.1",
+        self,
+        state_root: Path,
+        *,
+        project: str = "verify-33",
+        working_dir: Path | None = None,
+        config_file: Path | None = None,
+        state: str = "healthy",
+        host_ip: str = "127.0.0.1",
     ) -> None:
         super().__init__(state=state, host_ip=host_ip)
         self.verify_project = project
         self.verify_working_dir = (
-            working_dir if working_dir is not None
-            else state_root / "worktrees" / project
+            working_dir if working_dir is not None else state_root / "worktrees" / project
         )
         self.verify_config = (
-            config_file if config_file is not None
-            else self.verify_working_dir / "compose.yml"
+            config_file if config_file is not None else self.verify_working_dir / "compose.yml"
         )
 
     def _container(self) -> dict:
@@ -234,7 +240,8 @@ class PriorVerifyDocker(FakeDocker):
 
 
 def test_healthy_prior_verify_database_is_reused_without_mutation(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Case: UT-M4A-DB-LIFECYCLE"""
     state_root = tmp_path / "omp-control-plane-e2e"
@@ -249,7 +256,9 @@ def test_healthy_prior_verify_database_is_reused_without_mutation(
     ("foreign_root", "wrong_workdir", "wrong_config", "wrong_project"),
 )
 def test_prior_verify_lookalikes_still_fail_closed(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, lookalike: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    lookalike: str,
 ) -> None:
     """Case: UT-M4A-DB-LIFECYCLE"""
     state_root = tmp_path / "omp-control-plane-e2e"
@@ -272,7 +281,9 @@ def test_prior_verify_lookalikes_still_fail_closed(
 
 @pytest.mark.parametrize("state", ("unhealthy", "starting"))
 def test_prior_verify_database_is_never_restarted_by_another_run(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, state: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    state: str,
 ) -> None:
     """Case: UT-M4A-DB-LIFECYCLE"""
     state_root = tmp_path / "omp-control-plane-e2e"
@@ -285,7 +296,9 @@ def test_prior_verify_database_is_never_restarted_by_another_run(
 
 @pytest.mark.parametrize("host_ip", ("0.0.0.0", "::", ""))
 def test_prior_verify_wildcard_bindings_are_still_foreign(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, host_ip: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    host_ip: str,
 ) -> None:
     """Case: UT-M4A-DB-LIFECYCLE"""
     state_root = tmp_path / "omp-control-plane-e2e"

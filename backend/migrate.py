@@ -6,17 +6,16 @@ import argparse
 import os
 import re
 import uuid
-from urllib.parse import SplitResult, unquote, urlsplit
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import SplitResult, unquote, urlsplit
 
 import psycopg
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine
-
 
 BACKEND_ROOT = Path(__file__).resolve().parent
 ALEMBIC_INI = BACKEND_ROOT / "migrations" / "alembic.ini"
@@ -225,8 +224,10 @@ def _schema_catalog(
         # The reference is compiled on the same PostgreSQL instance; only
         # schema qualification differs between the two catalog snapshots.
         normalized = [
-            tuple(value.replace(schema + ".", "app.") if isinstance(value, str) else value
-                  for value in row)
+            tuple(
+                value.replace(schema + ".", "app.") if isinstance(value, str) else value
+                for value in row
+            )
             for row in rows
         ]
         result[kind] = tuple(sorted(normalized))
@@ -266,7 +267,9 @@ def _reference_catalog(
 
 
 def _validate_schema(
-    connection: psycopg.Connection[Any], *, include_forecast_metadata: bool,
+    connection: psycopg.Connection[Any],
+    *,
+    include_forecast_metadata: bool,
     allow_extensions: bool = False,
 ) -> None:
     """Require historical objects, permitting only additive descendant DDL.
@@ -286,7 +289,8 @@ def _validate_schema(
         actual = _table_columns(connection, "app", table)
         matches = (
             all(actual.get(name) == definition for name, definition in expected.items())
-            if allow_extensions else actual == expected
+            if allow_extensions
+            else actual == expected
         )
         if not matches:
             raise MigrationStateError(f"app.{table} columns do not match the approved baseline")
@@ -300,9 +304,7 @@ def _validate_schema(
             # Preserve the full PostgreSQL-parsed definition of every
             # historical (table, column/constraint/index name).
             actual_by_key = {(row[0], row[1]): row for row in actual_catalog[kind]}
-            matches = all(
-                actual_by_key.get((row[0], row[1])) == row for row in reference
-            )
+            matches = all(actual_by_key.get((row[0], row[1])) == row for row in reference)
         else:
             matches = actual_catalog[kind] == reference
         if not matches:
@@ -332,8 +334,9 @@ def _validate_schema_migrations(connection: psycopg.Connection[Any]) -> tuple[st
     if table_kind != ("r",):
         raise MigrationStateError("public.schema_migrations is not the historical table")
 
-    column_metadata = set(connection.execute(
-        """
+    column_metadata = set(
+        connection.execute(
+            """
         SELECT a.attname, pg_get_expr(d.adbin, d.adrelid),
                a.attidentity, a.attgenerated
         FROM pg_attribute AS a
@@ -343,7 +346,8 @@ def _validate_schema_migrations(connection: psycopg.Connection[Any]) -> tuple[st
         WHERE n.nspname = 'public' AND c.relname = 'schema_migrations'
           AND a.attnum > 0 AND NOT a.attisdropped
         """
-    ).fetchall())
+        ).fetchall()
+    )
     if column_metadata != {
         ("version", None, "", ""),
         ("applied_at", "now()", "", ""),
@@ -363,7 +367,9 @@ def _validate_schema_migrations(connection: psycopg.Connection[Any]) -> tuple[st
     if constraints != [
         ("schema_migrations_pkey", "p", True, False, False, "PRIMARY KEY (version)")
     ]:
-        raise MigrationStateError("public.schema_migrations constraints differ from historical shape")
+        raise MigrationStateError(
+            "public.schema_migrations constraints differ from historical shape"
+        )
     return tuple(
         row[0]
         for row in connection.execute(
@@ -386,10 +392,11 @@ def _alembic_revision(connection: psycopg.Connection[Any]) -> str | None:
         WHERE n.nspname = 'public' AND c.relname = 'alembic_version'
         """
     ).fetchone()
-    expected_columns = {
-        "version_num": ("character varying", 32, None, None, "NO")
-    }
-    if table_kind != ("r",) or _table_columns(connection, "public", "alembic_version") != expected_columns:
+    expected_columns = {"version_num": ("character varying", 32, None, None, "NO")}
+    if (
+        table_kind != ("r",)
+        or _table_columns(connection, "public", "alembic_version") != expected_columns
+    ):
         raise MigrationStateError("public.alembic_version table shape is not the Alembic baseline")
 
     metadata = connection.execute(
@@ -416,7 +423,9 @@ def _alembic_revision(connection: psycopg.Connection[Any]) -> str | None:
     if metadata != [(None, "", "")] or constraints != [
         ("p", True, False, False, "PRIMARY KEY (version_num)")
     ]:
-        raise MigrationStateError("public.alembic_version integrity constraints differ from Alembic")
+        raise MigrationStateError(
+            "public.alembic_version integrity constraints differ from Alembic"
+        )
 
     rows = connection.execute("SELECT version_num FROM public.alembic_version").fetchall()
     if len(rows) > 1:
@@ -464,23 +473,17 @@ def _inspect_state(database_url: str) -> DatabaseState:
             try:
                 known = script.get_revision(alembic_revision)
             except Exception as exc:
-                raise MigrationStateError(
-                    f"unknown Alembic revision: {alembic_revision}"
-                ) from exc
+                raise MigrationStateError(f"unknown Alembic revision: {alembic_revision}") from exc
             if known is None or not _is_descendant(script, alembic_revision, markers[-1]):
                 raise MigrationStateError("Alembic revision disagrees with historical markers")
             # Version markers alone do not prove descendant schema integrity.
             # Additive local revisions are allowed; dropped/weakened historical
             # columns, constraints or indexes are not.
             if alembic_revision != markers[-1]:
-                _validate_schema(
-                    connection, include_forecast_metadata=True, allow_extensions=True
-                )
+                _validate_schema(connection, include_forecast_metadata=True, allow_extensions=True)
                 return DatabaseState(False, markers[-1], alembic_revision)
         if len(markers) >= 3:
-            _validate_schema(
-                connection, include_forecast_metadata=True, allow_extensions=True
-            )
+            _validate_schema(connection, include_forecast_metadata=True, allow_extensions=True)
         else:
             _validate_schema(connection, include_forecast_metadata=len(markers) == 2)
         return DatabaseState(False, markers[-1], alembic_revision)
@@ -500,7 +503,9 @@ def _prepare_existing(database_url: str, state: DatabaseState) -> None:
         if state.marker_revision == "001_initial" and state.alembic_revision != "001_initial":
             raise MigrationStateError("Alembic revision is ahead of historical migration markers")
         if not _is_descendant(script, state.alembic_revision, state.marker_revision):  # type: ignore[arg-type]
-            raise MigrationStateError("Alembic revision disagrees with historical migration markers")
+            raise MigrationStateError(
+                "Alembic revision disagrees with historical migration markers"
+            )
         return
 
     assert state.marker_revision is not None
@@ -577,9 +582,7 @@ def _require_disposable_database(database_url: str, *, disposable: bool) -> None
         )
 
 
-def migrate(
-    database_url: str, rollback: bool = False, *, disposable: bool = False
-) -> None:
+def migrate(database_url: str, rollback: bool = False, *, disposable: bool = False) -> None:
     """Upgrade safely; downgrade only an explicitly disposable, isolated local DB."""
     if rollback:
         _require_disposable_database(database_url, disposable=disposable)
@@ -602,8 +605,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("operation", choices=("upgrade", "current"), nargs="?", default="upgrade")
     parser.add_argument("--rollback", action="store_true")
-    parser.add_argument("--disposable", action="store_true",
-                        help="required for rollback on an isolated flowstead_test_<uuid> DB")
+    parser.add_argument(
+        "--disposable",
+        action="store_true",
+        help="required for rollback on an isolated flowstead_test_<uuid> DB",
+    )
     parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL"))
     args = parser.parse_args()
     if not args.database_url:

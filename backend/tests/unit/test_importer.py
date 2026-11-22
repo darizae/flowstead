@@ -5,12 +5,11 @@ import json
 from pathlib import Path
 
 import pytest
-
 from backend.importer import (
     APPROVED_PLANT_IDS,
     CSV_COLUMNS,
-    ImportValidationError,
     SOURCE_SHA,
+    ImportValidationError,
     validate_source,
 )
 
@@ -26,11 +25,23 @@ def _write_source(
         if row_quality == "missing":
             values[0] = ""
         rows.append(
-            [plant_id, timestamp, values[0], row_quality, values[1], "valid", values[2], "valid",
-             values[3], "invalid"]
+            [
+                plant_id,
+                timestamp,
+                values[0],
+                row_quality,
+                values[1],
+                "valid",
+                values[2],
+                "valid",
+                values[3],
+                "invalid",
+            ]
         )
-    data.write_text(",".join(CSV_COLUMNS) + "\n" + "\n".join(",".join(row) for row in rows) + "\n",
-                    encoding="utf-8")
+    data.write_text(
+        ",".join(CSV_COLUMNS) + "\n" + "\n".join(",".join(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         json.dumps(
@@ -83,6 +94,8 @@ def test_unknown_quality_is_rejected(tmp_path: Path) -> None:
 
 def test_manifest_path_cannot_import_unknown_plant(tmp_path: Path) -> None:
     manifest, data = _write_source(tmp_path)
-    data.write_text(data.read_text(encoding="utf-8").replace("plant-01", "unknown"), encoding="utf-8")
+    data.write_text(
+        data.read_text(encoding="utf-8").replace("plant-01", "unknown"), encoding="utf-8"
+    )
     with pytest.raises(ImportValidationError, match="SHA-256"):
         validate_source(manifest, data, SOURCE_SHA)

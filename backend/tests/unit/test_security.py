@@ -36,7 +36,10 @@ def test_security_headers_exact_cors_and_request_caps() -> None:
     health = client.get("/api/v1/health")
     assert health.status_code == 200
     assert health.headers["cache-control"] == "no-store"
-    assert health.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+    assert (
+        health.headers["content-security-policy"]
+        == "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+    )
     assert health.headers["referrer-policy"] == "no-referrer"
     assert health.headers["x-content-type-options"] == "nosniff"
     assert health.headers["x-frame-options"] == "DENY"
@@ -74,8 +77,12 @@ def test_rate_limit_is_bounded_and_ignores_untrusted_forwarding() -> None:
         create_app(security_config=_config(requests_per_window=2, max_clients=1)),
         client=("203.0.113.10", 50000),
     )
-    assert client.get("/api/v1/health", headers={"X-Forwarded-For": "198.51.100.1"}).status_code == 200
-    assert client.get("/api/v1/health", headers={"X-Forwarded-For": "198.51.100.2"}).status_code == 200
+    assert (
+        client.get("/api/v1/health", headers={"X-Forwarded-For": "198.51.100.1"}).status_code == 200
+    )
+    assert (
+        client.get("/api/v1/health", headers={"X-Forwarded-For": "198.51.100.2"}).status_code == 200
+    )
     denied = client.get("/api/v1/health", headers={"X-Forwarded-For": "198.51.100.3"})
     assert denied.status_code == 429
     assert denied.headers["retry-after"] == "60"
@@ -95,10 +102,13 @@ def test_trusted_proxy_uses_closest_untrusted_forwarded_address() -> None:
     headers = {"X-Forwarded-For": "198.51.100.7, 10.0.0.3"}
     assert client.get("/api/v1/health", headers=headers).status_code == 200
     assert client.get("/api/v1/health", headers=headers).status_code == 429
-    assert client.get(
-        "/api/v1/health",
-        headers={"X-Forwarded-For": "198.51.100.8, 10.0.0.3"},
-    ).status_code == 200
+    assert (
+        client.get(
+            "/api/v1/health",
+            headers={"X-Forwarded-For": "198.51.100.8, 10.0.0.3"},
+        ).status_code
+        == 200
+    )
     assert client.get("/api/v1/health", headers={"X-Forwarded-For": "not-an-ip"}).status_code == 400
 
 
@@ -144,9 +154,7 @@ def test_forecast_requests_rate_limited_per_principal_and_plant() -> None:
     app.state.database.enqueue_forecast = fake_enqueue  # type: ignore[method-assign]
     client = TestClient(app)
 
-    ok = client.post(
-        "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-a")
-    )
+    ok = client.post("/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-a"))
     assert ok.status_code == 202
     denied = client.post(
         "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-a")
@@ -160,10 +168,16 @@ def test_forecast_requests_rate_limited_per_principal_and_plant() -> None:
         }
     }
     # A different principal on the same Plant is not throttled by op-a's slot.
-    assert client.post(
-        "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-b")
-    ).status_code == 202
+    assert (
+        client.post(
+            "/api/v1/plants/plant-01/forecast-requests", headers=principal_headers("op-b")
+        ).status_code
+        == 202
+    )
     # A different Plant for the same principal is not throttled either.
-    assert client.post(
-        "/api/v1/plants/plant-02/forecast-requests", headers=principal_headers("op-a")
-    ).status_code == 202
+    assert (
+        client.post(
+            "/api/v1/plants/plant-02/forecast-requests", headers=principal_headers("op-a")
+        ).status_code
+        == 202
+    )

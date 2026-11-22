@@ -48,11 +48,19 @@ class SecurityConfig:
     def from_env(cls, environ: Mapping[str, str] | None = None) -> SecurityConfig:
         values = os.environ if environ is None else environ
         return cls(
-            requests_per_window=_bounded_int(values, "FLOWSTEAD_RATE_LIMIT_REQUESTS", 600, 1, 100_000),
-            window_seconds=_bounded_int(values, "FLOWSTEAD_RATE_LIMIT_WINDOW_SECONDS", 60, 1, 3_600),
+            requests_per_window=_bounded_int(
+                values, "FLOWSTEAD_RATE_LIMIT_REQUESTS", 600, 1, 100_000
+            ),
+            window_seconds=_bounded_int(
+                values, "FLOWSTEAD_RATE_LIMIT_WINDOW_SECONDS", 60, 1, 3_600
+            ),
             max_clients=_bounded_int(values, "FLOWSTEAD_RATE_LIMIT_MAX_CLIENTS", 4_096, 1, 100_000),
-            max_body_bytes=_bounded_int(values, "FLOWSTEAD_MAX_REQUEST_BODY_BYTES", 16_384, 0, 1_048_576),
-            max_target_bytes=_bounded_int(values, "FLOWSTEAD_MAX_REQUEST_TARGET_BYTES", 8_192, 256, 65_536),
+            max_body_bytes=_bounded_int(
+                values, "FLOWSTEAD_MAX_REQUEST_BODY_BYTES", 16_384, 0, 1_048_576
+            ),
+            max_target_bytes=_bounded_int(
+                values, "FLOWSTEAD_MAX_REQUEST_TARGET_BYTES", 8_192, 256, 65_536
+            ),
             trusted_proxies=_networks(values.get("FLOWSTEAD_TRUSTED_PROXIES", "")),
             cors_origins=_origins(values.get("FLOWSTEAD_CORS_ORIGINS", _DEFAULT_CORS_ORIGINS)),
             forecast_requests_per_window=_bounded_int(
@@ -95,7 +103,11 @@ class ClientRateLimiter:
             return True, self._limit - len(requests), 0
 
     def _prune_clients(self, cutoff: float) -> None:
-        expired = [client for client, requests in self._requests.items() if not requests or requests[-1] <= cutoff]
+        expired = [
+            client
+            for client, requests in self._requests.items()
+            if not requests or requests[-1] <= cutoff
+        ]
         for client in expired:
             del self._requests[client]
 
@@ -232,7 +244,9 @@ def _set_security_headers(headers: MutableHeaders, scope: Scope) -> None:
             headers[name] = value
 
 
-def _bounded_int(values: Mapping[str, str], name: str, default: int, minimum: int, maximum: int) -> int:
+def _bounded_int(
+    values: Mapping[str, str], name: str, default: int, minimum: int, maximum: int
+) -> int:
     raw = values.get(name, str(default)).strip()
     try:
         value = int(raw)
@@ -245,9 +259,15 @@ def _bounded_int(values: Mapping[str, str], name: str, default: int, minimum: in
 
 def _networks(raw: str) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
     try:
-        return tuple(ipaddress.ip_network(item.strip(), strict=False) for item in raw.split(",") if item.strip())
+        return tuple(
+            ipaddress.ip_network(item.strip(), strict=False)
+            for item in raw.split(",")
+            if item.strip()
+        )
     except ValueError as error:
-        raise SecurityConfigurationError("FLOWSTEAD_TRUSTED_PROXIES contains an invalid CIDR") from error
+        raise SecurityConfigurationError(
+            "FLOWSTEAD_TRUSTED_PROXIES contains an invalid CIDR"
+        ) from error
 
 
 def _origins(raw: str) -> tuple[str, ...]:
@@ -257,7 +277,11 @@ def _origins(raw: str) -> tuple[str, ...]:
         if not origin:
             continue
         parsed = urlsplit(origin)
-        is_loopback_http = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "::1", "localhost"}
+        is_loopback_http = parsed.scheme == "http" and parsed.hostname in {
+            "127.0.0.1",
+            "::1",
+            "localhost",
+        }
         if (
             parsed.scheme not in {"https", "http"}
             or (parsed.scheme == "http" and not is_loopback_http)
@@ -269,7 +293,9 @@ def _origins(raw: str) -> tuple[str, ...]:
             or parsed.fragment
             or origin == "*"
         ):
-            raise SecurityConfigurationError("FLOWSTEAD_CORS_ORIGINS must contain exact HTTPS or loopback HTTP origins")
+            raise SecurityConfigurationError(
+                "FLOWSTEAD_CORS_ORIGINS must contain exact HTTPS or loopback HTTP origins"
+            )
         normalized = f"{parsed.scheme}://{parsed.netloc}"
         if normalized not in result:
             result.append(normalized)

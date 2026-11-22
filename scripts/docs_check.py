@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -16,7 +16,9 @@ ACTIVE_COMMAND_DOCS = (
     ROOT / "docs/planning/HANDOFF_SEQUENCE.md",
     ROOT / "docs/planning/IMPLEMENTATION_SPEC.md",
 )
-CASE_ID = re.compile(r"\b(?:CLOUD|DB|DOC|E2E|IDB|IT|MSG|OPS|SEC|UI|UT)-M\d+[A-Z]?-[A-Z0-9-]+\b")
+CASE_ID = re.compile(
+    r"\b(?:CLOUD|DB|DOC|E2E|IDB|IT|MSG|OPS|SEC|UI|UT)-M\d+[A-Z]?-[A-Z0-9-]+\b"
+)
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 RECIPE = re.compile(r"(?m)^([A-Za-z0-9_-]+)(?:\s+[^:\n]*)?:")
 JUST_CALL = re.compile(r"\bjust\s+([A-Za-z0-9_-]+|--list)\b")
@@ -41,7 +43,16 @@ M1_CONTRACT_DOCS = (
 
 def tracked_markdown() -> tuple[Path, ...]:
     result = subprocess.run(
-        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md"],
+        [
+            "git",
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--",
+            "*.md",
+        ],
         cwd=ROOT,
         check=True,
         capture_output=True,
@@ -73,30 +84,52 @@ def check_links(paths: tuple[Path, ...], routes: set[str]) -> list[str]:
         for match in LINK.finditer(text):
             line = text.count("\n", 0, match.start()) + 1
             raw = match.group(1).strip()
-            target = raw[1 : raw.index(">")] if raw.startswith("<") and ">" in raw else raw.split()[0]
+            target = (
+                raw[1 : raw.index(">")]
+                if raw.startswith("<") and ">" in raw
+                else raw.split()[0]
+            )
             parsed = urlsplit(target)
             if parsed.scheme or target.startswith("//"):
                 continue
             if parsed.path.startswith("/api/"):
                 route = unquote(parsed.path)
                 if route not in routes:
-                    errors.append(f"{source.relative_to(ROOT)}:{line}: unknown API route link {route}")
+                    errors.append(
+                        f"{source.relative_to(ROOT)}:{line}: unknown API route link {route}"
+                    )
                 continue
-            destination = source if not parsed.path else (source.parent / unquote(parsed.path)).resolve()
+            destination = (
+                source
+                if not parsed.path
+                else (source.parent / unquote(parsed.path)).resolve()
+            )
             if not destination.exists():
-                errors.append(f"{source.relative_to(ROOT)}:{line}: missing link target {target}")
+                errors.append(
+                    f"{source.relative_to(ROOT)}:{line}: missing link target {target}"
+                )
                 continue
-            if parsed.fragment and destination.is_file() and destination.suffix.lower() == ".md":
+            if (
+                parsed.fragment
+                and destination.is_file()
+                and destination.suffix.lower() == ".md"
+            ):
                 fragment = unquote(parsed.fragment).lower()
                 if fragment not in heading_anchors(destination):
-                    errors.append(f"{source.relative_to(ROOT)}:{line}: missing heading #{fragment} in {destination.relative_to(ROOT)}")
+                    errors.append(
+                        f"{source.relative_to(ROOT)}:{line}: missing heading #{fragment} in {destination.relative_to(ROOT)}"
+                    )
     return errors
 
 
 def api_routes() -> set[tuple[str, str]]:
     """Read FastAPI routes across the router modules without importing dependencies."""
     paths = [ROOT / "backend/src/flowstead_api/main.py"]
-    paths.extend(sorted((ROOT / "backend/src/flowstead_api/interfaces/http/routers").glob("*.py")))
+    paths.extend(
+        sorted(
+            (ROOT / "backend/src/flowstead_api/interfaces/http/routers").glob("*.py")
+        )
+    )
     routes: set[tuple[str, str]] = set()
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -104,11 +137,21 @@ def api_routes() -> set[tuple[str, str]]:
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             for decorator in node.decorator_list:
-                if not isinstance(decorator, ast.Call) or not isinstance(decorator.func, ast.Attribute):
+                if not isinstance(decorator, ast.Call) or not isinstance(
+                    decorator.func, ast.Attribute
+                ):
                     continue
-                if decorator.func.attr.lower() not in {"get", "post", "put", "patch", "delete"}:
+                if decorator.func.attr.lower() not in {
+                    "get",
+                    "post",
+                    "put",
+                    "patch",
+                    "delete",
+                }:
                     continue
-                if not decorator.args or not isinstance(decorator.args[0], ast.Constant):
+                if not decorator.args or not isinstance(
+                    decorator.args[0], ast.Constant
+                ):
                     continue
                 routes.add((decorator.func.attr.upper(), decorator.args[0].value))
     return routes
@@ -126,19 +169,27 @@ def check_backend_contract(routes: set[tuple[str, str]]) -> list[str]:
             f"{contract_path.relative_to(ROOT)}: missing current API route {method} {route}"
         )
     for method, route in sorted(documented_routes - routes):
-        errors.append(f"{contract_path.relative_to(ROOT)}: stale API route {method} {route}")
+        errors.append(
+            f"{contract_path.relative_to(ROOT)}: stale API route {method} {route}"
+        )
 
     for path in M1_CONTRACT_DOCS:
         text = path.read_text(encoding="utf-8")
         for value in M1_VALUES:
             if value not in text:
-                errors.append(f"{path.relative_to(ROOT)}: missing immutable M1 value {value}")
+                errors.append(
+                    f"{path.relative_to(ROOT)}: missing immutable M1 value {value}"
+                )
 
     importer = (ROOT / "backend/importer.py").read_text(encoding="utf-8")
-    importer += (ROOT / "backend/src/flowstead_api/domain/m1.py").read_text(encoding="utf-8")
+    importer += (ROOT / "backend/src/flowstead_api/domain/m1.py").read_text(
+        encoding="utf-8"
+    )
     for value in M1_VALUES[:3]:
         if value not in importer:
-            errors.append(f"backend/importer.py: immutable M1 value differs from docs: {value}")
+            errors.append(
+                f"backend/importer.py: immutable M1 value differs from docs: {value}"
+            )
     return errors
 
 
@@ -149,7 +200,9 @@ def _module_exports(path: Path) -> set[str]:
         if isinstance(node, (ast.AsyncFunctionDef, ast.ClassDef, ast.FunctionDef)):
             names.add(node.name)
         elif isinstance(node, ast.Assign):
-            names.update(target.id for target in node.targets if isinstance(target, ast.Name))
+            names.update(
+                target.id for target in node.targets if isinstance(target, ast.Name)
+            )
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.add(node.target.id)
         elif isinstance(node, ast.ImportFrom):
@@ -166,7 +219,9 @@ def check_recipes(justfile: str) -> list[str]:
             name = match.group(1)
             if name != "--list" and name not in recipes:
                 line = text.count("\n", 0, match.start()) + 1
-                errors.append(f"{path.relative_to(ROOT)}:{line}: unknown just recipe {name}")
+                errors.append(
+                    f"{path.relative_to(ROOT)}:{line}: unknown just recipe {name}"
+                )
 
     references = set(
         re.findall(
@@ -186,7 +241,10 @@ def check_recipes(justfile: str) -> list[str]:
     )
     for module in sorted(modules):
         relative = Path(*module.split(".")).with_suffix(".py")
-        if not (ROOT / relative).exists() and not (ROOT / "backend/src" / relative).exists():
+        if (
+            not (ROOT / relative).exists()
+            and not (ROOT / "backend/src" / relative).exists()
+        ):
             errors.append(f"justfile: missing referenced module {module}")
 
     for line_number, line in enumerate(justfile.splitlines(), start=1):
@@ -198,9 +256,13 @@ def check_recipes(justfile: str) -> list[str]:
             continue
         app_dir = re.search(r"--app-dir\s+([A-Za-z0-9_./-]+)", line)
         module_root = ROOT / (app_dir.group(1) if app_dir else ".")
-        module_path = module_root.joinpath(*target.group(1).split(".")).with_suffix(".py")
+        module_path = module_root.joinpath(*target.group(1).split(".")).with_suffix(
+            ".py"
+        )
         if not module_path.is_file():
-            errors.append(f"justfile:{line_number}: missing Uvicorn module {target.group(1)}")
+            errors.append(
+                f"justfile:{line_number}: missing Uvicorn module {target.group(1)}"
+            )
             continue
         if target.group(2) not in _module_exports(module_path):
             errors.append(
@@ -261,7 +323,9 @@ def check_case_index() -> list[str]:
 
     inventory = re.search(r"\*\*Inventory:\*\*\s*(\d+)\s+distinct indexed cases", text)
     if inventory is None:
-        errors.append(f"{index_path.relative_to(ROOT)}: missing distinct-case inventory")
+        errors.append(
+            f"{index_path.relative_to(ROOT)}: missing distinct-case inventory"
+        )
     elif int(inventory.group(1)) != len(indexed):
         errors.append(
             f"{index_path.relative_to(ROOT)}: inventory says {inventory.group(1)}, "
@@ -280,8 +344,13 @@ def main() -> int:
     errors.extend(check_case_index())
     errors.extend(check_backend_contract(routes))
     if errors:
-        raise SystemExit("documentation check failed:\n" + "\n".join(f"- {error}" for error in errors))
-    print(f"documentation check passed: {len(markdown)} Markdown files, links, recipes, sources, routes, M1 values, and case IDs")
+        raise SystemExit(
+            "documentation check failed:\n"
+            + "\n".join(f"- {error}" for error in errors)
+        )
+    print(
+        f"documentation check passed: {len(markdown)} Markdown files, links, recipes, sources, routes, M1 values, and case IDs"
+    )
     return 0
 
 

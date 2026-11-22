@@ -1,8 +1,8 @@
 """Guardrail tests for production operator smoke with owner-protected secret files."""
+
 from __future__ import annotations
 
 import importlib.util
-import os
 from pathlib import Path
 
 import pytest
@@ -51,7 +51,7 @@ def test_smoke_defaults_do_not_enqueue_forecasts() -> None:
     text = SCRIPT.read_text()
     assert 'parser.add_argument("--enqueue-one", action="store_true"' in text
     assert 'parser.add_argument("--auth-only", action="store_true"' in text
-    assert 'FLOWSTEAD_SUPABASE_PUBLISHABLE_KEY' in text
+    assert "FLOWSTEAD_SUPABASE_PUBLISHABLE_KEY" in text
     assert '"Authorization"] = "Bearer " + token' in text
     assert "access_token" in text
     assert "passwords.clear()" in text

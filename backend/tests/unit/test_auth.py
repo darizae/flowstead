@@ -238,6 +238,7 @@ def test_production_configuration_rejects_bypasses_and_missing_authority(
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
 
+
 def test_malformed_jwks_key_type_fails_closed() -> None:
     """Case: UT-M5-FAIL — an invalid remote JWK must never produce a server error."""
     private_key, _ = _key("key-a")
@@ -310,7 +311,9 @@ def test_es256_signed_jwt_is_accepted_from_configured_jwks() -> None:
     # Signature, issuer, audience, issued-at and expiry are still mandatory.
     without_nbf = _claims()
     without_nbf.pop("nbf")
-    token_without_nbf = jwt.encode(without_nbf, private_key, algorithm="ES256", headers={"kid": "ec-key"})
+    token_without_nbf = jwt.encode(
+        without_nbf, private_key, algorithm="ES256", headers={"kid": "ec-key"}
+    )
     assert verifier.verify(token_without_nbf) == Principal(sub="operator-a")
 
     future_nbf = _claims(nbf=int((datetime.now(UTC) + timedelta(minutes=10)).timestamp()))
@@ -319,5 +322,7 @@ def test_es256_signed_jwt_is_accepted_from_configured_jwks() -> None:
 
     without_exp = dict(without_nbf)
     without_exp.pop("exp")
-    bad_exp_token = jwt.encode(without_exp, private_key, algorithm="ES256", headers={"kid": "ec-key"})
+    bad_exp_token = jwt.encode(
+        without_exp, private_key, algorithm="ES256", headers={"kid": "ec-key"}
+    )
     _rejected(verifier, bad_exp_token)

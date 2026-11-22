@@ -9,11 +9,10 @@ from pathlib import Path
 from urllib.parse import urlunsplit
 
 import psycopg
-from psycopg import sql
 import pytest
-
 from backend.importer import ImportValidationError, import_m1
 from backend.migrate import _require_local_database_url, migrate
+from psycopg import sql
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 MANIFEST = os.environ.get("FLOWSTEAD_M1_MANIFEST")
@@ -46,7 +45,8 @@ def isolated_url() -> Iterator[str]:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             admin.execute(
                 "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = %s AND pid <> pg_backend_pid()", (name,)
+                "WHERE datname = %s AND pid <> pg_backend_pid()",
+                (name,),
             )
             admin.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))
 
@@ -60,12 +60,18 @@ def test_migration_and_full_import_are_idempotent(isolated_url: str) -> None:
     """Cases: DB-M4A-FRESH, IT-M2-MIGRATE"""
     migrate(isolated_url)
     assert import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
-    first = (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
-             _count(isolated_url, "ingest_batches"))
+    first = (
+        _count(isolated_url, "plants"),
+        _count(isolated_url, "hourly_readings"),
+        _count(isolated_url, "ingest_batches"),
+    )
     assert first == (5, 43_800, 1)
     assert not import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
-    assert (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
-            _count(isolated_url, "ingest_batches")) == first
+    assert (
+        _count(isolated_url, "plants"),
+        _count(isolated_url, "hourly_readings"),
+        _count(isolated_url, "ingest_batches"),
+    ) == first
 
 
 def test_tampered_source_sha_does_not_change_database(isolated_url: str) -> None:
@@ -77,10 +83,16 @@ def test_tampered_source_sha_does_not_change_database(isolated_url: str) -> None
 def test_repeated_migration_preserves_imported_data(isolated_url: str) -> None:
     """Case: IT-M2-MIGRATE"""
     assert import_m1(isolated_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
-    before = (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
-              _count(isolated_url, "ingest_batches"))
+    before = (
+        _count(isolated_url, "plants"),
+        _count(isolated_url, "hourly_readings"),
+        _count(isolated_url, "ingest_batches"),
+    )
     assert before == (5, 43_800, 1)
     migrate(isolated_url)
     migrate(isolated_url)
-    assert (_count(isolated_url, "plants"), _count(isolated_url, "hourly_readings"),
-            _count(isolated_url, "ingest_batches")) == before
+    assert (
+        _count(isolated_url, "plants"),
+        _count(isolated_url, "hourly_readings"),
+        _count(isolated_url, "ingest_batches"),
+    ) == before

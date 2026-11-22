@@ -11,10 +11,9 @@ from collections.abc import Iterator
 from urllib.parse import urlunsplit
 
 import psycopg
-from psycopg import sql
 import pytest
-
 from backend.migrate import _require_local_database_url, migrate
+from psycopg import sql
 
 
 @pytest.fixture

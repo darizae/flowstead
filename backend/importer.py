@@ -129,7 +129,10 @@ def _validate_manifest_units(raw: dict[str, Any]) -> None:
             entry = channels.get(channel)
             if not isinstance(entry, dict) or entry.get("unit") != expected_unit:
                 raise _fail("manifest units do not exactly match the M1 contract")
-            if entry.get("value_column") != channel or entry.get("quality_column") != f"{channel}_quality":
+            if (
+                entry.get("value_column") != channel
+                or entry.get("quality_column") != f"{channel}_quality"
+            ):
                 raise _fail("manifest channel columns do not exactly match the M1 contract")
         return
     units = raw.get("units")
@@ -137,9 +140,7 @@ def _validate_manifest_units(raw: dict[str, Any]) -> None:
         units = schema.get("units")
     if units is None and isinstance(raw.get("columns"), list):
         units = {
-            item.get("name"): item.get("unit")
-            for item in raw["columns"]
-            if isinstance(item, dict)
+            item.get("name"): item.get("unit") for item in raw["columns"] if isinstance(item, dict)
         }
     if units != EXPECTED_UNITS:
         raise _fail("manifest units do not exactly match the M1 contract")
@@ -174,8 +175,6 @@ def _file_entry(raw: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if not 0 < size <= MAX_BYTES or not 0 < rows <= MAX_ROWS:
         raise _fail("manifest telemetry.csv exceeds the M1 bounds")
     return "telemetry.csv", {"sha256": digest, "bytes": size, "rows": rows}
-
-
 
 
 def load_manifest(path: Path, source_sha: str) -> Manifest:
@@ -330,7 +329,9 @@ def _iter_readings(path: Path) -> Iterator[Reading]:
             yield reading
 
 
-def validate_source(manifest_path: Path, data_path: Path, source_sha: str) -> tuple[Manifest, list[Reading]]:
+def validate_source(
+    manifest_path: Path, data_path: Path, source_sha: str
+) -> tuple[Manifest, list[Reading]]:
     manifest = load_manifest(manifest_path, source_sha)
     data = _safe_data_path(manifest, data_path)
     actual_sha, actual_bytes = _file_digest(data)
@@ -366,96 +367,97 @@ def _reading_values(reading: Reading) -> tuple[Any, ...]:
 def import_m1(database_url: str, manifest_path: Path, data_path: Path, source_sha: str) -> bool:
     manifest, readings = validate_source(manifest_path, data_path, source_sha)
     content_sha = manifest.expected_sha256
-    with psycopg.connect(database_url) as connection, connection.transaction():
-        with connection.cursor() as cursor:
+    with (
+        psycopg.connect(database_url) as connection,
+        connection.transaction(),
+        connection.cursor() as cursor,
+    ):
+        cursor.execute(
+            "SELECT id, source_sha, schema_version, generator_version, seed, "
+            "manifest_sha256, row_count FROM app.ingest_batches "
+            "WHERE content_sha256 = %s",
+            (content_sha,),
+        )
+        existing = cursor.fetchone()
+        if existing is not None:
+            if tuple(existing[1:]) != (
+                source_sha,
+                manifest.schema_version,
+                manifest.generator_version,
+                manifest.seed,
+                manifest.digest,
+                len(readings),
+            ):
+                raise _fail("existing content digest has incompatible provenance")
             cursor.execute(
-                "SELECT id, source_sha, schema_version, generator_version, seed, "
-                "manifest_sha256, row_count FROM app.ingest_batches "
-                "WHERE content_sha256 = %s",
-                (content_sha,),
+                "SELECT count(*) FROM app.hourly_readings WHERE source_batch_id = %s",
+                (existing[0],),
             )
-            existing = cursor.fetchone()
-            if existing is not None:
-                if tuple(existing[1:]) != (
-                    source_sha,
-                    manifest.schema_version,
-                    manifest.generator_version,
-                    manifest.seed,
-                    manifest.digest,
-                    len(readings),
-                ):
-                    raise _fail("existing content digest has incompatible provenance")
-                cursor.execute(
-                    "SELECT count(*) FROM app.hourly_readings WHERE source_batch_id = %s",
-                    (existing[0],),
-                )
-                if cursor.fetchone()[0] != len(readings):
-                    raise _fail("existing ingest batch is incomplete")
-                return False
-            cursor.execute("SELECT count(*) FROM app.ingest_batches")
-            if cursor.fetchone()[0]:
-                raise _fail("a different M1 content digest is already imported")
-            for plant_id in sorted(APPROVED_PLANT_IDS):
-                plant = APPROVED_PLANTS[plant_id]
-                cursor.execute(
-                    """INSERT INTO app.plants
+            if cursor.fetchone()[0] != len(readings):
+                raise _fail("existing ingest batch is incomplete")
+            return False
+        cursor.execute("SELECT count(*) FROM app.ingest_batches")
+        if cursor.fetchone()[0]:
+            raise _fail("a different M1 content digest is already imported")
+        for plant_id in sorted(APPROVED_PLANT_IDS):
+            plant = APPROVED_PLANTS[plant_id]
+            cursor.execute(
+                """INSERT INTO app.plants
                         (plant_id, name, city, state_code, timezone, latitude, longitude,
                          hydraulic_capacity_gal_h, public_demo)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, true)""",
-                    (
-                        plant_id,
-                        plant["name"],
-                        plant["city"],
-                        plant["state_code"],
-                        plant["timezone"],
-                        plant["latitude"],
-                        plant["longitude"],
-                        plant["hydraulic_capacity_gal_h"],
-                    ),
-                )
-            cursor.execute(
-                """INSERT INTO app.ingest_batches
+                (
+                    plant_id,
+                    plant["name"],
+                    plant["city"],
+                    plant["state_code"],
+                    plant["timezone"],
+                    plant["latitude"],
+                    plant["longitude"],
+                    plant["hydraulic_capacity_gal_h"],
+                ),
+            )
+        cursor.execute(
+            """INSERT INTO app.ingest_batches
                     (content_sha256, source_sha, schema_version, generator_version, seed,
                      manifest_sha256, row_count, content_bytes)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id""",
-                (
-                    content_sha,
-                    source_sha,
-                    manifest.schema_version,
-                    manifest.generator_version,
-                    manifest.seed,
-                    manifest.digest,
-                    len(readings),
-                    manifest.expected_bytes,
-                ),
-            )
-            batch_id = cursor.fetchone()[0]
-            cursor.executemany(
-                """INSERT INTO app.hourly_readings
+            (
+                content_sha,
+                source_sha,
+                manifest.schema_version,
+                manifest.generator_version,
+                manifest.seed,
+                manifest.digest,
+                len(readings),
+                manifest.expected_bytes,
+            ),
+        )
+        batch_id = cursor.fetchone()[0]
+        cursor.executemany(
+            """INSERT INTO app.hourly_readings
                     (plant_id, timestamp_utc, influent_flow, influent_flow_quality,
                      rainfall, rainfall_quality, dissolved_oxygen, dissolved_oxygen_quality,
                      effluent_ph, effluent_ph_quality, source_batch_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                ((*_reading_values(reading), batch_id) for reading in readings),
-            )
-            # Import locally to keep the source validator independent from
-            # the runtime messaging package while sharing this transaction.
-            from flowstead_api.message_store import emit_ingest_completed
+            ((*_reading_values(reading), batch_id) for reading in readings),
+        )
+        # Import locally to keep the source validator independent from
+        # the runtime messaging package while sharing this transaction.
+        from flowstead_api.message_store import emit_ingest_completed
 
-            # Historical 001/002 databases remain stampable without
-            # fabricating events for imports that predate the outbox.
-            if cursor.execute(
-                "SELECT to_regclass('app.message_outbox')"
-            ).fetchone()[0] is not None:
-                emit_ingest_completed(
-                    connection,
-                    batch_id=batch_id,
-                    plant_ids=list(manifest.plants),
-                    source_sha=source_sha,
-                    content_sha256=content_sha,
-                    reading_count=len(readings),
-                )
+        # Historical 001/002 databases remain stampable without
+        # fabricating events for imports that predate the outbox.
+        if cursor.execute("SELECT to_regclass('app.message_outbox')").fetchone()[0] is not None:
+            emit_ingest_completed(
+                connection,
+                batch_id=batch_id,
+                plant_ids=list(manifest.plants),
+                source_sha=source_sha,
+                content_sha256=content_sha,
+                reading_count=len(readings),
+            )
     return True
 
 

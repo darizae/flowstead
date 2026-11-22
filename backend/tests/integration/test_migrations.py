@@ -9,13 +9,13 @@ import uuid
 from pathlib import Path
 from urllib.parse import urlunsplit
 
-import psycopg
-from psycopg import sql
-import pytest
-
 import backend.migrate as migrations
+import psycopg
+import pytest
 from backend.importer import import_m1
 from backend.migrate import MigrationStateError, _require_local_database_url, migrate
+from psycopg import sql
+
 from flowstead_api.database import Database
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -51,61 +51,59 @@ def isolated_url() -> str:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             admin.execute(
                 "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = %s AND pid <> pg_backend_pid()", (name,)
+                "WHERE datname = %s AND pid <> pg_backend_pid()",
+                (name,),
             )
             admin.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))
 
 
 def _historical_upgrade(url: str, *, sample: bool = True) -> None:
-    with psycopg.connect(url) as connection:
-        with connection.transaction():
+    with psycopg.connect(url) as connection, connection.transaction():
+        connection.execute(
+            "CREATE TABLE public.schema_migrations ("
+            "version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
+        )
+        connection.execute(INITIAL_SQL.read_text(encoding="utf-8"))
+        connection.execute("INSERT INTO public.schema_migrations(version) VALUES ('001_initial')")
+        connection.execute(METADATA_SQL.read_text(encoding="utf-8"))
+        connection.execute(
+            "INSERT INTO public.schema_migrations(version) VALUES ('002_forecast_metadata')"
+        )
+        if sample:
             connection.execute(
-                "CREATE TABLE public.schema_migrations ("
-                "version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
+                "INSERT INTO app.ingest_batches "
+                "(content_sha256, source_sha, schema_version, generator_version, seed, "
+                "manifest_sha256, row_count, content_bytes) VALUES "
+                "('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', "
+                "'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'm1.v1', 'test', 20250101, "
+                "'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', 1, 1)"
             )
-            connection.execute(INITIAL_SQL.read_text(encoding="utf-8"))
             connection.execute(
-                "INSERT INTO public.schema_migrations(version) VALUES ('001_initial')"
+                "INSERT INTO app.plants "
+                "(plant_id, name, city, state_code, timezone, latitude, longitude, "
+                "hydraulic_capacity_gal_h) VALUES "
+                "('plant-01', 'Test Plant', 'Tampa', 'FL', 'America/New_York', "
+                "27.95, -82.45, 1000)"
             )
-            connection.execute(METADATA_SQL.read_text(encoding="utf-8"))
             connection.execute(
-                "INSERT INTO public.schema_migrations(version) VALUES ('002_forecast_metadata')"
+                "INSERT INTO app.hourly_readings "
+                "(plant_id, timestamp_utc, influent_flow, influent_flow_quality, rainfall, "
+                "rainfall_quality, dissolved_oxygen, dissolved_oxygen_quality, effluent_ph, "
+                "effluent_ph_quality, source_batch_id) VALUES "
+                "('plant-01', '2025-01-01T00:00:00Z', 12.5, 'valid', NULL, 'missing', "
+                "2.1, 'valid', 7.2, 'invalid', 1)"
             )
-            if sample:
-                connection.execute(
-                    "INSERT INTO app.ingest_batches "
-                    "(content_sha256, source_sha, schema_version, generator_version, seed, "
-                    "manifest_sha256, row_count, content_bytes) VALUES "
-                    "('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', "
-                    "'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'm1.v1', 'test', 20250101, "
-                    "'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', 1, 1)"
-                )
-                connection.execute(
-                    "INSERT INTO app.plants "
-                    "(plant_id, name, city, state_code, timezone, latitude, longitude, "
-                    "hydraulic_capacity_gal_h) VALUES "
-                    "('plant-01', 'Test Plant', 'Tampa', 'FL', 'America/New_York', "
-                    "27.95, -82.45, 1000)"
-                )
-                connection.execute(
-                    "INSERT INTO app.hourly_readings "
-                    "(plant_id, timestamp_utc, influent_flow, influent_flow_quality, rainfall, "
-                    "rainfall_quality, dissolved_oxygen, dissolved_oxygen_quality, effluent_ph, "
-                    "effluent_ph_quality, source_batch_id) VALUES "
-                    "('plant-01', '2025-01-01T00:00:00Z', 12.5, 'valid', NULL, 'missing', "
-                    "2.1, 'valid', 7.2, 'invalid', 1)"
-                )
-                connection.execute(
-                    "INSERT INTO app.forecast_issuances "
-                    "(plant_id, issued_at, model_version, source_revision, physical_bound_rule) "
-                    "VALUES ('plant-01', '2025-01-01T01:00:00Z', 'baseline-v1', 'm1', "
-                    "'nonnegative_influent_flow')"
-                )
-                connection.execute(
-                    "INSERT INTO app.forecast_hours "
-                    "(issuance_id, target_time, predicted_flow, hour_number) "
-                    "VALUES (1, '2025-01-01T02:00:00Z', 12.5, 1)"
-                )
+            connection.execute(
+                "INSERT INTO app.forecast_issuances "
+                "(plant_id, issued_at, model_version, source_revision, physical_bound_rule) "
+                "VALUES ('plant-01', '2025-01-01T01:00:00Z', 'baseline-v1', 'm1', "
+                "'nonnegative_influent_flow')"
+            )
+            connection.execute(
+                "INSERT INTO app.forecast_hours "
+                "(issuance_id, target_time, predicted_flow, hour_number) "
+                "VALUES (1, '2025-01-01T02:00:00Z', 12.5, 1)"
+            )
 
 
 def _snapshot(url: str) -> dict[str, str]:
@@ -120,31 +118,29 @@ def _snapshot(url: str) -> dict[str, str]:
         "public.schema_migrations": "version",
     }
     result: dict[str, str] = {}
-    with psycopg.connect(url) as connection:
-        with connection.cursor() as cursor:
-            for table, order in tables.items():
-                digest = hashlib.sha256()
-                # Hash the immutable *historical* fields. A later Alembic
-                # revision is allowed to add columns without changing M1 data.
-                selected = (
-                    ", ".join(migrations.EXPECTED_COLUMNS[table.removeprefix("app.")])
-                    if table.startswith("app.") else "*"
-                )
-                with cursor.copy(
-                    f"COPY (SELECT {selected} FROM {table} ORDER BY {order}) "
-                    "TO STDOUT WITH (FORMAT CSV)"
-                ) as copy:
-                    for block in copy:
-                        digest.update(block)
-                result[table] = digest.hexdigest()
+    with psycopg.connect(url) as connection, connection.cursor() as cursor:
+        for table, order in tables.items():
+            digest = hashlib.sha256()
+            # Hash the immutable *historical* fields. A later Alembic
+            # revision is allowed to add columns without changing M1 data.
+            selected = (
+                ", ".join(migrations.EXPECTED_COLUMNS[table.removeprefix("app.")])
+                if table.startswith("app.")
+                else "*"
+            )
+            with cursor.copy(
+                f"COPY (SELECT {selected} FROM {table} ORDER BY {order}) "
+                "TO STDOUT WITH (FORMAT CSV)"
+            ) as copy:
+                for block in copy:
+                    digest.update(block)
+            result[table] = digest.hexdigest()
     return result
 
 
 def _version(url: str) -> str | None:
     with psycopg.connect(url) as connection:
-        row = connection.execute(
-            "SELECT to_regclass('public.alembic_version')"
-        ).fetchone()
+        row = connection.execute("SELECT to_regclass('public.alembic_version')").fetchone()
         if row is None or row[0] is None:
             return None
         return connection.execute("SELECT version_num FROM public.alembic_version").fetchone()[0]
@@ -154,12 +150,12 @@ def test_fresh_alembic_head_has_approved_schema(isolated_url: str) -> None:
     """Case: DB-M4A-FRESH"""
     migrate(isolated_url)
     with psycopg.connect(isolated_url) as connection:
-        assert set(
-            row[0] for row in connection.execute(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = 'app'"
+        assert {
+            row[0]
+            for row in connection.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'app'"
             ).fetchall()
-        ) == set(migrations.EXPECTED_COLUMNS) | {
+        } == set(migrations.EXPECTED_COLUMNS) | {
             "message_outbox",
             "message_inbox",
             "message_failures",
@@ -187,12 +183,8 @@ def test_old_populated_database_is_stamped_without_data_change(isolated_url: str
     migrate(isolated_url)
     after = _snapshot(isolated_url)
     assert {
-        table: digest for table, digest in after.items()
-        if table != "public.schema_migrations"
-    } == {
-        table: digest for table, digest in before.items()
-        if table != "public.schema_migrations"
-    }
+        table: digest for table, digest in after.items() if table != "public.schema_migrations"
+    } == {table: digest for table, digest in before.items() if table != "public.schema_migrations"}
     assert _version(isolated_url) == "003_jetstream_messages"
 
 
@@ -205,17 +197,15 @@ def test_full_immutable_m1_and_forecast_are_preserved_on_stamp(isolated_url: str
     receipt = Database(isolated_url).build_forecast("plant-01")
     assert receipt.available and len(receipt.points) == 12
     with psycopg.connect(isolated_url) as connection:
-        assert connection.execute("SELECT count(*) FROM app.hourly_readings").fetchone() == (43_800,)
+        assert connection.execute("SELECT count(*) FROM app.hourly_readings").fetchone() == (
+            43_800,
+        )
     before = _snapshot(isolated_url)
     migrate(isolated_url)
     after = _snapshot(isolated_url)
     assert {
-        table: digest for table, digest in after.items()
-        if table != "public.schema_migrations"
-    } == {
-        table: digest for table, digest in before.items()
-        if table != "public.schema_migrations"
-    }
+        table: digest for table, digest in after.items() if table != "public.schema_migrations"
+    } == {table: digest for table, digest in before.items() if table != "public.schema_migrations"}
     assert _version(isolated_url) == "003_jetstream_messages"
 
 
@@ -232,22 +222,17 @@ def test_partial_schema_is_rejected_without_mutation(isolated_url: str) -> None:
 
 
 @pytest.mark.parametrize("mismatch", ["index", "constraint"])
-def test_same_name_wrong_definition_is_never_stamped(
-    isolated_url: str, mismatch: str
-) -> None:
+def test_same_name_wrong_definition_is_never_stamped(isolated_url: str, mismatch: str) -> None:
     """Case: DB-M4A-MISMATCH"""
     _historical_upgrade(isolated_url)
     with psycopg.connect(isolated_url) as connection:
         if mismatch == "index":
             connection.execute("DROP INDEX app.hourly_readings_timestamp_idx")
             connection.execute(
-                "CREATE INDEX hourly_readings_timestamp_idx "
-                "ON app.hourly_readings (plant_id)"
+                "CREATE INDEX hourly_readings_timestamp_idx ON app.hourly_readings (plant_id)"
             )
         else:
-            connection.execute(
-                "ALTER TABLE app.plants DROP CONSTRAINT plants_state_code_check"
-            )
+            connection.execute("ALTER TABLE app.plants DROP CONSTRAINT plants_state_code_check")
             connection.execute(
                 "ALTER TABLE app.plants ADD CONSTRAINT plants_state_code_check "
                 "CHECK (state_code IN ('FL', 'TX'))"
@@ -267,21 +252,16 @@ def test_known_revision_in_malformed_alembic_table_is_rejected(
     _historical_upgrade(isolated_url)
     with psycopg.connect(isolated_url) as connection:
         connection.execute(
-            "CREATE TABLE public.alembic_version "
-            "(version_num varchar(32) PRIMARY KEY)"
+            "CREATE TABLE public.alembic_version (version_num varchar(32) PRIMARY KEY)"
         )
-        connection.execute(
-            "INSERT INTO public.alembic_version VALUES ('002_forecast_metadata')"
-        )
+        connection.execute("INSERT INTO public.alembic_version VALUES ('002_forecast_metadata')")
         if broken == "primary_key":
             connection.execute(
-                "ALTER TABLE public.alembic_version "
-                "DROP CONSTRAINT alembic_version_pkey"
+                "ALTER TABLE public.alembic_version DROP CONSTRAINT alembic_version_pkey"
             )
         elif broken == "column_width":
             connection.execute(
-                "ALTER TABLE public.alembic_version "
-                "ALTER COLUMN version_num TYPE varchar(64)"
+                "ALTER TABLE public.alembic_version ALTER COLUMN version_num TYPE varchar(64)"
             )
         else:
             connection.execute(
@@ -302,9 +282,7 @@ def test_unknown_alembic_revision_is_rejected_without_mutation(isolated_url: str
         connection.execute(
             "CREATE TABLE public.alembic_version (version_num varchar(32) PRIMARY KEY)"
         )
-        connection.execute(
-            "INSERT INTO public.alembic_version VALUES ('unrecognized_change')"
-        )
+        connection.execute("INSERT INTO public.alembic_version VALUES ('unrecognized_change')")
     before = _snapshot(isolated_url)
     with pytest.raises(MigrationStateError, match="unknown Alembic revision"):
         migrate(isolated_url)
@@ -313,21 +291,17 @@ def test_unknown_alembic_revision_is_rejected_without_mutation(isolated_url: str
 
 
 @pytest.mark.parametrize("broken", ("primary_key", "default"))
-def test_drifted_historical_marker_table_is_never_stamped(
-    isolated_url: str, broken: str
-) -> None:
+def test_drifted_historical_marker_table_is_never_stamped(isolated_url: str, broken: str) -> None:
     """Case: DB-M4A-MISMATCH"""
     _historical_upgrade(isolated_url)
     with psycopg.connect(isolated_url) as connection:
         if broken == "primary_key":
             connection.execute(
-                "ALTER TABLE public.schema_migrations "
-                "DROP CONSTRAINT schema_migrations_pkey"
+                "ALTER TABLE public.schema_migrations DROP CONSTRAINT schema_migrations_pkey"
             )
         else:
             connection.execute(
-                "ALTER TABLE public.schema_migrations "
-                "ALTER COLUMN applied_at DROP DEFAULT"
+                "ALTER TABLE public.schema_migrations ALTER COLUMN applied_at DROP DEFAULT"
             )
     before = _snapshot(isolated_url)
     with pytest.raises(MigrationStateError, match=r"public[.]schema_migrations"):
@@ -336,9 +310,7 @@ def test_drifted_historical_marker_table_is_never_stamped(
     assert _version(isolated_url) is None
 
 
-def _install_local_descendant(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def _install_local_descendant(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Create a disposable 004 revision for repeat and drift checks."""
     local_script = tmp_path / "alembic"
     shutil.copytree(migrations.ALEMBIC_INI.parent / "alembic", local_script)
@@ -357,8 +329,7 @@ def _install_local_descendant(
     )
     local_ini = tmp_path / "alembic.ini"
     local_ini.write_text(
-        f"[alembic]\nscript_location = {local_script}\n"
-        "sqlalchemy.url = postgresql+psycopg://\n",
+        f"[alembic]\nscript_location = {local_script}\nsqlalchemy.url = postgresql+psycopg://\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(migrations, "ALEMBIC_INI", local_ini)
@@ -388,7 +359,9 @@ def test_repeat_and_local_descendant_upgrade_revert(
 
 @pytest.mark.parametrize("malformed", ("table", "column", "constraint", "index"))
 def test_recognized_descendant_rejects_baseline_drift(
-    isolated_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    isolated_url: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     malformed: str,
 ) -> None:
     """Case: DB-M4A-MISMATCH"""
@@ -404,9 +377,7 @@ def test_recognized_descendant_rejects_baseline_drift(
         elif malformed == "column":
             connection.execute("ALTER TABLE app.plants DROP COLUMN city")
         elif malformed == "constraint":
-            connection.execute(
-                "ALTER TABLE app.plants DROP CONSTRAINT plants_state_code_check"
-            )
+            connection.execute("ALTER TABLE app.plants DROP CONSTRAINT plants_state_code_check")
             connection.execute(
                 "ALTER TABLE app.plants ADD CONSTRAINT plants_state_code_check "
                 "CHECK (state_code IN ('FL', 'TX'))"
@@ -414,8 +385,7 @@ def test_recognized_descendant_rejects_baseline_drift(
         else:
             connection.execute("DROP INDEX app.hourly_readings_timestamp_idx")
             connection.execute(
-                "CREATE INDEX hourly_readings_timestamp_idx "
-                "ON app.hourly_readings (plant_id)"
+                "CREATE INDEX hourly_readings_timestamp_idx ON app.hourly_readings (plant_id)"
             )
 
     before = None if malformed in {"table", "column"} else _snapshot(isolated_url)

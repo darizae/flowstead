@@ -23,9 +23,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
-def seed_isolated_database(
-    isolated_service_url: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def seed_isolated_database(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Only seed the disposable per-test DB; never reset configured DATABASE_URL."""
     monkeypatch.setitem(globals(), "DATABASE_URL", isolated_service_url)
     import_m1(isolated_service_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)

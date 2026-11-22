@@ -22,9 +22,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
-def seed_isolated_database(
-    isolated_service_url: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def seed_isolated_database(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Only seed the disposable per-test DB; never reset configured DATABASE_URL."""
     monkeypatch.setitem(globals(), "DATABASE_URL", isolated_service_url)
     import_m1(isolated_service_url, Path(MANIFEST), Path(DATA), SOURCE_SHA)
@@ -53,11 +51,29 @@ def test_disjoint_principals_receive_disjoint_private_reads(client: TestClient) 
 
     headers_a = principal_headers("operator-a")
     headers_b = principal_headers("operator-b")
-    assert [plant["plant_id"] for plant in client.get("/api/v1/plants", headers=headers_a).json()["plants"]] == ["plant-01"]
-    assert [plant["plant_id"] for plant in client.get("/api/v1/plants", headers=headers_b).json()["plants"]] == ["plant-02"]
+    assert [
+        plant["plant_id"]
+        for plant in client.get("/api/v1/plants", headers=headers_a).json()["plants"]
+    ] == ["plant-01"]
+    assert [
+        plant["plant_id"]
+        for plant in client.get("/api/v1/plants", headers=headers_b).json()["plants"]
+    ] == ["plant-02"]
     assert client.get("/api/v1/plants/plant-02/latest", headers=headers_a).status_code == 404
-    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z", headers=headers_a).status_code == 200
-    assert client.get("/api/v1/plants/plant-02/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z", headers=headers_a).status_code == 404
+    assert (
+        client.get(
+            "/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z",
+            headers=headers_a,
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            "/api/v1/plants/plant-02/history?from=2025-01-01T00:00:00Z&to=2025-01-01T02:00:00Z",
+            headers=headers_a,
+        ).status_code
+        == 404
+    )
 
 
 def test_private_denials_and_bounded_windows(client: TestClient) -> None:
@@ -65,18 +81,41 @@ def test_private_denials_and_bounded_windows(client: TestClient) -> None:
     _grant("operator-a", "plant-01")
     assert client.get("/api/v1/plants").status_code == 401
     assert client.get("/api/v1/plants/plant-01/latest").status_code == 401
-    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T00:30:00Z", headers=principal_headers("operator-a")).status_code == 422
-    assert client.get("/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00-05:00&to=2025-01-01T02:00:00-05:00", headers=principal_headers("operator-a")).status_code == 422
-    assert client.get("/api/v1/plants/unknown/latest", headers=principal_headers("operator-a")).status_code == 404
+    assert (
+        client.get(
+            "/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00Z&to=2025-01-01T00:30:00Z",
+            headers=principal_headers("operator-a"),
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            "/api/v1/plants/plant-01/history?from=2025-01-01T00:00:00-05:00&to=2025-01-01T02:00:00-05:00",
+            headers=principal_headers("operator-a"),
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            "/api/v1/plants/unknown/latest", headers=principal_headers("operator-a")
+        ).status_code
+        == 404
+    )
     malicious = "plant-01' OR '1'='1"
-    assert client.get(
-        f"/api/v1/plants/{malicious}/latest",
-        headers=principal_headers("operator-a"),
-    ).status_code == 404
-    assert client.get(
-        "/api/v1/plants",
-        headers={"Authorization": "Bearer forged.invalid.token"},
-    ).status_code == 401
+    assert (
+        client.get(
+            f"/api/v1/plants/{malicious}/latest",
+            headers=principal_headers("operator-a"),
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            "/api/v1/plants",
+            headers={"Authorization": "Bearer forged.invalid.token"},
+        ).status_code
+        == 401
+    )
     with psycopg.connect(DATABASE_URL) as connection:  # type: ignore[arg-type]
         assert connection.execute("SELECT count(*) FROM app.plants").fetchone() == (5,)
 
@@ -94,7 +133,11 @@ def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:
     public = client.get("/api/v1/public/plants")
     assert public.status_code == 200
     assert {plant["plant_id"] for plant in public.json()["plants"]} == {
-        "plant-01", "plant-02", "plant-03", "plant-04", "plant-05"
+        "plant-01",
+        "plant-02",
+        "plant-03",
+        "plant-04",
+        "plant-05",
     }
     assert client.get("/api/v1/public/plants/plant-01/latest").status_code == 200
     body = client.get(
@@ -102,8 +145,12 @@ def test_public_is_exactly_the_verified_allowlist(client: TestClient) -> None:
     ).json()
     assert len(body["readings"]) == 2
     assert set(body["readings"][0]["measurements"]) == {
-        "influent_flow", "rainfall", "dissolved_oxygen", "effluent_ph"
+        "influent_flow",
+        "rainfall",
+        "dissolved_oxygen",
+        "effluent_ph",
     }
+
 
 def test_report_pdf_public_and_private_authorization(client: TestClient) -> None:
     _grant("operator-a", "plant-01")
@@ -115,5 +162,15 @@ def test_report_pdf_public_and_private_authorization(client: TestClient) -> None
     assert "attachment" in public.headers["content-disposition"]
     assert client.get("/api/v1/public/plants/unknown/report.pdf").status_code == 404
     assert client.get("/api/v1/plants/plant-01/report.pdf").status_code == 401
-    assert client.get("/api/v1/plants/plant-01/report.pdf", headers=principal_headers("operator-a")).status_code == 200
-    assert client.get("/api/v1/plants/plant-01/report.pdf", headers=principal_headers("operator-b")).status_code == 404
+    assert (
+        client.get(
+            "/api/v1/plants/plant-01/report.pdf", headers=principal_headers("operator-a")
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            "/api/v1/plants/plant-01/report.pdf", headers=principal_headers("operator-b")
+        ).status_code
+        == 404
+    )

@@ -103,8 +103,7 @@ def seeded_url(isolated_service_url: str, monkeypatch: pytest.MonkeyPatch) -> st
                 )
         with connection.cursor() as cursor:
             cursor.executemany(
-                "INSERT INTO app.operator_plant_access "
-                "(subject_id, plant_id) VALUES (%s, %s)",
+                "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
                 [("operator-a", "plant-01"), ("operator-a", "plant-02")],
             )
     return isolated_service_url
@@ -121,8 +120,7 @@ def _headers() -> dict[str, str]:
 def _write_bounded_import(tmp_path: Path) -> tuple[Path, Path]:
     data = tmp_path / "telemetry.csv"
     rows = [
-        [plant_id, "2026-11-18T00:00:00Z", "100", "valid", "0", "valid",
-         "2", "valid", "7", "valid"]
+        [plant_id, "2026-11-18T00:00:00Z", "100", "valid", "0", "valid", "2", "valid", "7", "valid"]
         for plant_id in sorted(APPROVED_PLANT_IDS)
     ]
     data.write_text(
@@ -165,24 +163,21 @@ def test_command_is_authorized_transactional_and_observably_queued(
     """Cases: MSG-M4B-PUBLISH, MSG-M4B-PAUSE, MSG-M4B-AUTH"""
     client = _client(seeded_url)
 
-    queued = client.post(
-        "/api/v1/plants/plant-01/forecast-requests", headers=_headers()
-    )
+    queued = client.post("/api/v1/plants/plant-01/forecast-requests", headers=_headers())
 
     assert queued.status_code == 202
     assert queued.json()["status"] == "queued"
     correlation_id = queued.json()["correlation_id"]
-    status = client.get(
-        f"/api/v1/forecast-requests/{correlation_id}", headers=_headers()
-    )
+    status = client.get(f"/api/v1/forecast-requests/{correlation_id}", headers=_headers())
     assert status.status_code == 200 and status.json()["status"] == "queued"
-    assert client.post(
-        "/api/v1/plants/plant-01/forecast-requests",
-        headers=principal_headers("operator-b"),
-    ).status_code == 404
-    assert client.post(
-        "/api/v1/public/plants/plant-01/forecast-requests"
-    ).status_code == 404
+    assert (
+        client.post(
+            "/api/v1/plants/plant-01/forecast-requests",
+            headers=principal_headers("operator-b"),
+        ).status_code
+        == 404
+    )
+    assert client.post("/api/v1/public/plants/plant-01/forecast-requests").status_code == 404
     assert client.get("/api/v1/public/plants/plant-01/latest").status_code == 200
 
     with psycopg.connect(seeded_url) as connection:
@@ -226,15 +221,12 @@ def test_forecast_status_is_requester_scoped_across_shared_plant_reads(
     """Case: SEC-M19-AUTHZ — same-Plant, different requester must not read a job."""
     with psycopg.connect(seeded_url) as connection, connection.transaction():
         connection.execute(
-            "INSERT INTO app.operator_plant_access (subject_id, plant_id) "
-            "VALUES (%s, %s)",
+            "INSERT INTO app.operator_plant_access (subject_id, plant_id) VALUES (%s, %s)",
             ("operator-shared", "plant-01"),
         )
     client = _client(seeded_url)
 
-    owner = client.post(
-        "/api/v1/plants/plant-01/forecast-requests", headers=_headers()
-    )
+    owner = client.post("/api/v1/plants/plant-01/forecast-requests", headers=_headers())
     assert owner.status_code == 202
     owner_correlation = owner.json()["correlation_id"]
 
@@ -252,17 +244,21 @@ def test_forecast_status_is_requester_scoped_across_shared_plant_reads(
     assert "operator" not in json.dumps(leaked.json())
 
     # The requester still reads their own job; the shared user reads their own.
-    assert client.get(
-        f"/api/v1/forecast-requests/{owner_correlation}", headers=_headers()
-    ).status_code == 200
+    assert (
+        client.get(f"/api/v1/forecast-requests/{owner_correlation}", headers=_headers()).status_code
+        == 200
+    )
     own = client.post(
         "/api/v1/plants/plant-01/forecast-requests",
         headers=principal_headers("operator-shared"),
     ).json()
-    assert client.get(
-        f"/api/v1/forecast-requests/{own['correlation_id']}",
-        headers=principal_headers("operator-shared"),
-    ).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/forecast-requests/{own['correlation_id']}",
+            headers=principal_headers("operator-shared"),
+        ).status_code
+        == 200
+    )
 
 
 async def _reset_isolated_broker() -> None:
@@ -344,16 +340,12 @@ def test_import_events_commit_atomically_and_publish_to_real_jetstream(
             WHERE status = 'published' AND jetstream_sequence IS NOT NULL
             """
         ).fetchone() == (5,)
-        before = connection.execute(
-            "SELECT count(*) FROM app.message_outbox"
-        ).fetchone()
+        before = connection.execute("SELECT count(*) FROM app.message_outbox").fetchone()
     data.write_text(data.read_text().replace(",100,", ",101,", 1))
     with pytest.raises(ImportValidationError, match="SHA-256"):
         import_m1(isolated_service_url, manifest, data, SOURCE_SHA)
     with psycopg.connect(isolated_service_url) as connection:
-        assert connection.execute(
-            "SELECT count(*) FROM app.message_outbox"
-        ).fetchone() == before
+        assert connection.execute("SELECT count(*) FROM app.message_outbox").fetchone() == before
 
 
 @pytest.mark.skipif(
@@ -366,23 +358,22 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
     """Cases: MSG-M4B-FLOW, MSG-M4B-DUP, MSG-M4B-OUTAGE, MSG-M4B-PAUSE, MSG-M4B-POISON"""
     asyncio.run(_reset_isolated_broker())
     client = _client(seeded_url)
-    queued = client.post(
-        "/api/v1/plants/plant-01/forecast-requests", headers=_headers()
-    ).json()
+    queued = client.post("/api/v1/plants/plant-01/forecast-requests", headers=_headers()).json()
 
     # A real controlled broker stop cannot change the committed queue or break
     # ordinary reads; restarting the same JetStream volume resumes delivery.
-    subprocess.run(
-        ["docker", "compose", "stop", "nats"], cwd=REPO_ROOT, check=True
-    )
+    subprocess.run(["docker", "compose", "stop", "nats"], cwd=REPO_ROOT, check=True)
     try:
         with pytest.raises(NoServersError):
             asyncio.run(connect(NATS_URL))
         assert client.get("/api/v1/public/plants/plant-01/latest").status_code == 200
-        assert client.get(
-            f"/api/v1/forecast-requests/{queued['correlation_id']}",
-            headers=_headers(),
-        ).json()["status"] == "queued"
+        assert (
+            client.get(
+                f"/api/v1/forecast-requests/{queued['correlation_id']}",
+                headers=_headers(),
+            ).json()["status"]
+            == "queued"
+        )
         with psycopg.connect(seeded_url) as connection:
             assert connection.execute(
                 "SELECT status FROM app.message_outbox WHERE event_id = %s",
@@ -440,9 +431,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
         nc = await connect(NATS_URL)
         try:
             js = nc.jetstream()
-            data = json.dumps(
-                stream_event[1], sort_keys=True, separators=(",", ":")
-            ).encode()
+            data = json.dumps(stream_event[1], sort_keys=True, separators=(",", ":")).encode()
             await js.publish(stream_event[0], data)
         finally:
             await nc.drain()
@@ -466,9 +455,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
     # Two distinct authorized requests delivered in reverse creation order
     # both terminate without duplicating the deterministic issuance.
     reordered = [
-        client.post(
-            "/api/v1/plants/plant-01/forecast-requests", headers=_headers()
-        ).json()
+        client.post("/api/v1/plants/plant-01/forecast-requests", headers=_headers()).json()
         for _ in range(2)
     ]
     with psycopg.connect(seeded_url) as connection:
@@ -539,9 +526,12 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
     asyncio.run(publish_poison())
     assert asyncio.run(_work(seeded_url)) == [1]
     with psycopg.connect(seeded_url) as connection:
-        assert connection.execute(
-            "SELECT count(*) FROM app.message_failures WHERE terminal = true"
-        ).fetchone()[0] >= 1
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM app.message_failures WHERE terminal = true"
+            ).fetchone()[0]
+            >= 1
+        )
         assert connection.execute(
             "SELECT count(*) FROM app.forecast_issuances WHERE plant_id = 'plant-02'"
         ).fetchone() == (0,)
@@ -569,9 +559,7 @@ def test_real_jetstream_flow_duplicate_outage_poison_and_retry_exhaustion(
             """,
             (issuance_id, latest + timedelta(hours=1)),
         )
-    failed = client.post(
-        "/api/v1/plants/plant-02/forecast-requests", headers=_headers()
-    ).json()
+    failed = client.post("/api/v1/plants/plant-02/forecast-requests", headers=_headers()).json()
     assert asyncio.run(_dispatch(seeded_url)) >= 1
     deliveries = asyncio.run(_work(seeded_url, MAX_DELIVERIES))
     assert deliveries == [1] * MAX_DELIVERIES

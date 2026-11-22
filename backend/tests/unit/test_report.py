@@ -12,7 +12,15 @@ from flowstead_api.report import MAX_REPORT_BYTES, render_report, safe_report_fi
 
 @pytest.fixture
 def plant() -> PlantRow:
-    return PlantRow("plant-01", "Márisma North / Very Long Demonstration Plant", "Miami", "FL", "America/New_York", Decimal(25), Decimal(-80))
+    return PlantRow(
+        "plant-01",
+        "Márisma North / Very Long Demonstration Plant",
+        "Miami",
+        "FL",
+        "America/New_York",
+        Decimal(25),
+        Decimal(-80),
+    )
 
 
 def _forecast(plant: PlantRow) -> ForecastRead:
@@ -37,22 +45,34 @@ def test_report_is_pdf_bounded_and_safe_filename(plant: PlantRow) -> None:
         (Decimal("12.5"), None, Decimal("2.1"), Decimal("7.2")),
         ("valid", "missing", "invalid", "valid"),
     )
-    content = render_report(plant, reading, _forecast(plant), generated_at_utc=datetime(2025, 1, 2, tzinfo=UTC))
+    content = render_report(
+        plant, reading, _forecast(plant), generated_at_utc=datetime(2025, 1, 2, tzinfo=UTC)
+    )
     assert content.startswith(b"%PDF-")
     assert len(content) <= MAX_REPORT_BYTES
-    assert safe_report_filename(plant) == "flowstead-marisma-north-very-long-demonstration-plant-plant-01.pdf"
+    assert (
+        safe_report_filename(plant)
+        == "flowstead-marisma-north-very-long-demonstration-plant-plant-01.pdf"
+    )
     assert b"/" not in safe_report_filename(plant).encode()
 
 
 def test_report_handles_no_data_and_unavailable_forecast(plant: PlantRow) -> None:
-    content = render_report(plant, None, ForecastRead(plant, ForecastBuild(
-        issued_at_utc=None,
-        model_version="seasonal_naive_24h_v1",
-        source_revision=None,
-        physical_bound_rule="nonnegative_influent_flow",
-        points=(),
-        unavailable_reason="no_observations",
-    )))
+    content = render_report(
+        plant,
+        None,
+        ForecastRead(
+            plant,
+            ForecastBuild(
+                issued_at_utc=None,
+                model_version="seasonal_naive_24h_v1",
+                source_revision=None,
+                physical_bound_rule="nonnegative_influent_flow",
+                points=(),
+                unavailable_reason="no_observations",
+            ),
+        ),
+    )
     assert content.startswith(b"%PDF-")
 
 

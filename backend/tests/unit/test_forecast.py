@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from flowstead_api.forecast import FlowObservation, backtest, forecast_for_issuance
 
-UTC = timezone.utc
 ISSUED = datetime(2025, 1, 2, 12, tzinfo=UTC)
 
 
@@ -36,8 +35,7 @@ def test_horizon_is_exactly_twelve_ordered_utc_hours() -> None:
 def test_valid_seasonal_source_is_preferred_over_persistence() -> None:
     source = [observation(ISSUED, 999)]
     source.extend(
-        observation(ISSUED - timedelta(hours=23 - offset), 200 + offset)
-        for offset in range(12)
+        observation(ISSUED - timedelta(hours=23 - offset), 200 + offset) for offset in range(12)
     )
 
     result = forecast_for_issuance(source, ISSUED)
@@ -64,7 +62,10 @@ def test_missing_or_invalid_seasonal_source_uses_latest_six_hour_persistence() -
 
 def test_forecast_is_explicitly_unavailable_without_valid_source() -> None:
     result = forecast_for_issuance(
-        [observation(ISSUED, 1, "invalid"), observation(ISSUED - timedelta(hours=1), None, "missing")],
+        [
+            observation(ISSUED, 1, "invalid"),
+            observation(ISSUED - timedelta(hours=1), None, "missing"),
+        ],
         ISSUED,
     )
     assert not result.available
@@ -72,13 +73,9 @@ def test_forecast_is_explicitly_unavailable_without_valid_source() -> None:
     assert result.points == ()
 
 
-
 def test_backtest_excludes_invalid_truth_and_uses_no_future_features() -> None:
     start = datetime(2025, 1, 1, tzinfo=UTC)
-    source = [
-        observation(start + timedelta(hours=hour), hour)
-        for hour in range(48)
-    ]
+    source = [observation(start + timedelta(hours=hour), hour) for hour in range(48)]
     source[-2] = observation(source[-2].timestamp_utc, source[-2].value, "invalid")
 
     receipt = backtest(source, holdout_hours=8)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta, timezone
+from datetime import UTC, timedelta
 
 import pytest
 from pydantic import ValidationError
@@ -34,11 +34,9 @@ def test_four_channels_require_canonical_units_and_preserve_flags() -> None:
 
 
 def test_history_window_is_utc_aligned_and_half_open() -> None:
-    from_utc, to_utc = parse_window(
-        "2025-01-01T00:00:00Z", "2025-01-08T00:00:00+00:00"
-    )
+    from_utc, to_utc = parse_window("2025-01-01T00:00:00Z", "2025-01-08T00:00:00+00:00")
     assert to_utc - from_utc == timedelta(hours=168)
-    assert from_utc.tzinfo == timezone.utc
+    assert from_utc.tzinfo == UTC
 
     with pytest.raises(ValueError):
         _parse_utc_hour("2025-01-01T00:00:00-05:00")
