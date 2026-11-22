@@ -2,6 +2,8 @@
 
 **Design reference:** [flowstead-ui.html](reference/flowstead-ui.html) (approved layout and session-state direction). Tasks 007–012 produce real browser, map and export evidence; unavailable evidence remains UNVERIFIED, not a pre-implementation blocker.
 
+**Proposed follow-up (not yet implemented):** [Flowstead brand-mark elastic jump — detailed implementation and test plan](FLOWSTEAD_BRAND_MOTION_PLAN.md). The new movement is limited to clicking the existing brand icon/link and must not change the approved application structure, route behavior, keyboard access or release scope.
+
 ## User journeys
 
 1. Signed-out public visitor opens **Plants**, sees all five validated fictional M1 Plants through read-only synthetic public endpoints, selects via actual Florida map or list, sees latest four measurements and 24/72/168-hour history, 12-hour forecast and permitted downloads. Public deployment must use actual configured hosting, credentials and safe resource limits; this does not block local implementation. Never display account-specific private fields or pretend to be logged in.
