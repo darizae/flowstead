@@ -21,15 +21,6 @@ export function labelForecastPoints(points: ForecastPoint[], plantTimeZone: stri
   return labelHistoryPoints(points.map((point) => ({ timestampUtc: point.timestampUtc, value: point.value, quality: 'valid' as const })), { timezone: plantTimeZone });
 }
 
-export function niceDomain(values: number[]): [number, number] {
-  if (values.length === 0) return [0, 1];
-  const low = Math.min(...values);
-  const high = Math.max(...values);
-  if (low === high) return [low - 1, high + 1];
-  const pad = (high - low) * 0.08;
-  return [low - pad, high + pad];
-}
-
 export function fullForecastLabel(forecast: ForecastResponse): string {
   if (forecast.status === 'unavailable') return 'Forecast unavailable';
   if (forecast.issued_at_utc && forecast.model_version) {

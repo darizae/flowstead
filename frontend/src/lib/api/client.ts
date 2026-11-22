@@ -25,74 +25,47 @@ export class ApiClient {
   clearToken(): void { this.token = undefined; }
   setAuthFailureHandler(handler: ((status: 401 | 403 | 404) => void) | undefined): void { this.authFailureHandler = handler; }
   get hasPrincipal(): boolean { return Boolean(this.token); }
-  private async get<T>(resource: string): Promise<T> {
-    const headers = new Headers({ Accept: 'application/json' });
+  /**
+   * Shared transport for every request (#31): auth header, timeout, and
+   * centralized error mapping. 401/403 are authenticated access failures and
+   * notify the auth handler; 404 is an ordinary missing resource and does not
+   * trigger cache invalidation (#32).
+   */
+  private async request(resource: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(init.headers);
     if (this.token) headers.set('Authorization', `Bearer ${this.token}`);
     let response: Response;
-    try { response = await this.fetcher(`${this.basePath}${resource}`, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }); }
+    try { response = await this.fetcher(`${this.basePath}${resource}`, { ...init, headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }); }
     catch { throw new ApiError('network', 'Unable to reach Flowstead. Check your connection and try again.'); }
-    if (!response.ok) {
-      let detail: ErrorDetail = {};
-      try { const payload = await response.json() as { detail?: ErrorDetail }; detail = payload.detail ?? {}; } catch { /* non-json error */ }
-      if (response.status === 401) {
-        this.authFailureHandler?.(401);
-        throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
-      }
-      if (response.status === 403) {
-        this.authFailureHandler?.(403);
-        throw new ApiError('plant_not_found', 'Plant not available.', 403);
-      }
-      if (response.status === 404) {
-        this.authFailureHandler?.(404);
-        throw new ApiError('plant_not_found', 'Plant not available.', 404);
-      }
-      throw new ApiError('http', detail.message ?? 'Flowstead returned an error.', response.status);
+    if (response.ok) return response;
+    let detail: ErrorDetail = {};
+    try { const payload = await response.json() as { detail?: ErrorDetail }; detail = payload.detail ?? {}; } catch { /* non-json error */ }
+    if (response.status === 401) {
+      this.authFailureHandler?.(401);
+      throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
     }
+    if (response.status === 403) {
+      this.authFailureHandler?.(403);
+      throw new ApiError('plant_not_found', detail.message ?? 'Plant not available.', 403);
+    }
+    if (response.status === 404) {
+      throw new ApiError('plant_not_found', detail.message ?? 'Plant not available.', 404);
+    }
+    throw new ApiError('http', detail.message ?? 'Flowstead returned an error.', response.status);
+  }
+  private async get<T>(resource: string): Promise<T> {
+    const response = await this.request(resource, { method: 'GET', headers: new Headers({ Accept: 'application/json' }) });
     try { return await response.json() as T; }
     catch { throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
   }
   private async post<T>(resource: string): Promise<T> {
-    const headers = new Headers({ Accept: 'application/json' });
-    if (this.token) headers.set('Authorization', `Bearer ${this.token}`);
-    let response: Response;
-    try { response = await this.fetcher(`${this.basePath}${resource}`, { method: 'POST', headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }); }
-    catch { throw new ApiError('network', 'Unable to reach Flowstead. Check your connection and try again.'); }
-    if (!response.ok) {
-      let detail: ErrorDetail = {};
-      try { const payload = await response.json() as { detail?: ErrorDetail }; detail = payload.detail ?? {}; } catch { /* non-json error */ }
-      if (response.status === 401) {
-        this.authFailureHandler?.(401);
-        throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
-      }
-      if (response.status === 403 || response.status === 404) {
-        this.authFailureHandler?.(response.status);
-        throw new ApiError('plant_not_found', detail.message ?? 'Plant not available.', response.status);
-      }
-      throw new ApiError('http', detail.message ?? 'Flowstead returned an error.', response.status);
-    }
+    const response = await this.request(resource, { method: 'POST', headers: new Headers({ Accept: 'application/json' }) });
     try { return await response.json() as T; }
     catch { throw new ApiError('invalid_response', 'Flowstead returned an unreadable response.', response.status); }
   }
   async downloadReport(plantId: string): Promise<{ blob: Blob; fileName: string }> {
-    const headers = new Headers({ Accept: 'application/pdf' });
-    if (this.token) headers.set('Authorization', `Bearer ${this.token}`);
-    const path = `${this.basePath}${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/report.pdf`;
-    let response: Response;
-    try { response = await this.fetcher(path, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }); }
-    catch { throw new ApiError('network', 'Unable to reach Flowstead. Check your connection and try again.'); }
-    if (!response.ok) {
-      let detail: ErrorDetail = {};
-      try { const payload = await response.json() as { detail?: ErrorDetail }; detail = payload.detail ?? {}; } catch { /* non-json error */ }
-      if (response.status === 401) {
-        this.authFailureHandler?.(401);
-        throw new ApiError('unauthorized', 'Your session is no longer authorized.', 401);
-      }
-      if (response.status === 403 || response.status === 404) {
-        this.authFailureHandler?.(response.status);
-        throw new ApiError('plant_not_found', detail.message ?? 'Plant not available.', response.status);
-      }
-      throw new ApiError('http', detail.message ?? 'Flowstead returned an error.', response.status);
-    }
+    const resource = `${this.hasPrincipal ? '/plants' : '/public/plants'}/${encodeURIComponent(plantId)}/report.pdf`;
+    const response = await this.request(resource, { method: 'GET', headers: new Headers({ Accept: 'application/pdf' }) });
     const blob = await response.blob();
     const disposition = response.headers.get('Content-Disposition') ?? '';
     const match = disposition.match(/filename=\"([A-Za-z0-9._-]+)\"/i);
