@@ -252,17 +252,19 @@ startup without asking for the database administrator password. The VM was
 placed through one graceful SOFTRESET for an unresponsive SSH daemon; its
 stop/restart and any resumed run must be verified, not assumed complete.
 
-**Test identities — USER FORM OPEN, NOT AN EXTENSION POPUP:** The owner
-confirmed the visible Supabase Auth Admin dialog is the actual *Create a new
-user* form, with Email address, User Password and Auto confirm user. The
-previous browser-agent interpretation as an autofill popup was incorrect.
-As of the most recent SQL verification, no matching users exist for
-`flowstead-test-operator-a@example.invalid` or
-`flowstead-test-operator-b@example.invalid`. Create each test identity with a
-unique private password and Auto confirm enabled, **without inviting real
-third-party inboxes**. Do not store or share credentials in chat. Obtain the
-two real `auth.users.id` values and grant intentionally different Plant IDs
-through reviewed operator authorization DML before conducting T-017 E2E tests.
+**Test identities — CREATED, CONFIRMED, SCOPED (2026-11-22):** The
+owner used the actual Supabase Auth Admin Create New User dialog with unique
+private passwords and Auto confirm. Read-only SQL verified that the two
+non-deliverable test accounts now exist and are confirmed:
+`flowstead-test-operator-a@example.invalid` and
+`flowstead-test-operator-b@example.invalid`. Scoped idempotent database
+grants were applied after verifying real `auth.users.id` subjects. Operator
+A has precisely `plant-01` and `plant-02`; operator B has precisely
+`plant-03`, `plant-04`, and `plant-05`. SQL verification confirmed five
+disjoint operator access rows and no additional test grants. **Real JWT
+authorization via hosted FastAPI is still unverified** because the existing
+VM is in a graceful SOFTRESET transition and worker/API are not yet running.
+No test passwords or tokens were copied into Git or chat.
 
 **Current release conclusion:** Frontend DOMAIN/TLS/FAVICON passed. Backend
 origin DOMAIN/TLS passed, but application HTTPS 200, outbox dispatch,

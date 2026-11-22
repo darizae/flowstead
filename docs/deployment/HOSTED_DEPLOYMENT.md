@@ -122,12 +122,13 @@ PASS may be recorded before a successful `--resume` and live smoke.
 
 ### Auth test-operator accounts
 
-No Auth test identities have been verified as created. The owner clarified
-that the dialog **is the real Supabase Auth Admin Create new user form**,
-not a browser password-manager popup. The two proposed non-deliverable
-identifiers are `flowstead-test-operator-a@example.invalid` and
-`flowstead-test-operator-b@example.invalid`. Each requires a unique private
-password and **Auto confirm user** to avoid sending confirmation email.
-The owner can submit that real form twice. Verify resulting Auth user IDs
-before assigning distinct Plant entitlements; never insert directly into
-managed `auth.users` or invite unknown real email recipients.
+Both test identities were subsequently created through the actual
+Supabase Auth Admin form and confirmed: `flowstead-test-operator-a@example.invalid`
+and `flowstead-test-operator-b@example.invalid`. Their real `auth.users.id`
+subjects were verified, and distinct grants were applied to
+`app.operator_plant_access`: A → `plant-01`, `plant-02`; B →
+`plant-03`, `plant-04`, `plant-05`. A final SQL query verified both
+confirmed users and all five scoped grants. No passwords, cookies,
+service-role keys, or JWTs were copied into Git or chat. Actual end-to-end
+authenticated API tests remain blocked until the existing VM completes
+its graceful restart and the restricted worker/API services are running.
